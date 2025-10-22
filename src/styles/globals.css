@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Poppins Font Face Declarations */
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('../assets/fonts/poppins/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Custom global styles */
+@layer base {
+  html {
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-neutral-50 text-neutral-900;
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  
+  /* Dark mode styles */
+  .dark body {
+    @apply bg-neutral-900 text-neutral-100;
+  }
+}
+
+@layer components {
+  /* Custom component styles with new color palette */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+  }
+  
+  .btn-highlight {
+    @apply bg-highlight-500 hover:bg-highlight-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+  }
+  
+  .btn-outline-secondary {
+    @apply border-2 border-secondary-500 text-secondary-500 hover:bg-secondary-500 hover:text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 border border-neutral-200;
+  }
+  
+  .dark .card {
+    @apply bg-neutral-800 border-neutral-700;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white;
+  }
+  
+  .dark .input-field {
+    @apply bg-neutral-700 border-neutral-600 text-white;
+  }
+  
+  /* Navigation styles */
+  .nav-link {
+    @apply text-neutral-600 hover:text-primary-500 transition duration-200;
+  }
+  
+  .nav-link-active {
+    @apply text-primary-500 font-medium;
+  }
+  
+  /* Hero section styles */
+  .hero-gradient {
+    @apply bg-gradient-to-r from-primary-500 to-secondary-500;
+  }
+  
+  /* Text styles */
+  .text-primary {
+    @apply text-primary-500;
+  }
+  
+  .text-secondary {
+    @apply text-secondary-500;
+  }
+  
+  .text-highlight {
+    @apply text-highlight-500;
+  }
+}
+
+@layer utilities {
+  /* Custom utility classes with new colors */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-highlight {
+    @apply bg-gradient-to-r from-primary-500 to-highlight-500 bg-clip-text text-transparent;
+  }
+  
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(32, 142, 170, 0.3);
+  }
+  
+  .shadow-glow-secondary {
+    box-shadow: 0 0 20px rgba(94, 196, 227, 0.3);
+  }
+  
+  .shadow-glow-highlight {
+    box-shadow: 0 0 20px rgba(193, 210, 36, 0.3);
+  }
+  
+  /* Background utilities */
+  .bg-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgba(32, 142, 170, 0.1) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
+  
+  /* Poppins Font Weight Utilities */
+  .font-thin {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 100;
+  }
+  
+  .font-extralight {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 200;
+  }
+  
+  .font-light {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 300;
+  }
+  
+  .font-normal {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 400;
+  }
+  
+  .font-medium {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 500;
+  }
+  
+  .font-semibold {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 600;
+  }
+  
+  .font-bold {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+  }
+  
+  .font-extrabold {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 800;
+  }
+  
+  .font-black {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 900;
+  }
+}
