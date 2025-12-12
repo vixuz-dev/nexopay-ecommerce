@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash, HiOutlineHome } from 'react-icons/hi2';
+import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
 
 const LoginForm = ({ onLoginSuccess, onBack }) => {
@@ -195,25 +195,14 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Al iniciar sesión, aceptas nuestros{' '}
-            <a href="/terminos" className="text-primary-600 hover:underline">
+            <Link to="/terminos" className="text-primary-600 hover:underline">
               Términos y Condiciones
-            </a>{' '}
+            </Link>{' '}
             y{' '}
-            <a href="/privacidad" className="text-primary-600 hover:underline">
+            <Link to="/privacidad" className="text-primary-600 hover:underline">
               Aviso de Privacidad
-            </a>
+            </Link>
           </p>
-        </div>
-
-        {/* Link al inicio */}
-        <div className="mt-4 text-center">
-          <Link 
-            to="/" 
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition-colors duration-200"
-          >
-            <HiOutlineHome className="w-4 h-4" />
-            Ir al inicio
-          </Link>
         </div>
       </div>
     </motion.div>

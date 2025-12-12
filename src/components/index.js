@@ -5,9 +5,15 @@ export { Footer } from './layout/Footer';
 // Common components
 export { Hero } from './common/Hero';
 export { Features } from './common/Features';
+export { default as Navbar } from './common/Navbar';
+export { default as NavItem } from './common/NavItem';
+export { default as SearchBar } from './common/SearchBar';
+export { default as UserAvatar } from './common/UserAvatar';
+export { default as BannerCarousel } from './common/BannerCarousel';
 
 // Form components
-export { ContactForm } from './forms/ContactForm';
+export { LoginForm } from './forms/LoginForm';
+export { RegistroForm } from './forms/RegistroForm';
 
 // Section components
 export * from './sections';

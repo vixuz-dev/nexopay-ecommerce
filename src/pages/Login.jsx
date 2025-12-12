@@ -1,54 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { SEO } from '../components/common/SEO';
 import { LoginForm } from '../components/forms/LoginForm';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Login = () => {
+  const navigate = useNavigate();
+
   const handleLoginSuccess = (data) => {
-    // Redirigir a dashboard o página principal
+    // Redirigir a dashboard o página principal después del login
     console.log('Login exitoso:', data);
-    // Aquí podrías redirigir a un dashboard o página principal
-    window.location.href = '/';
+    // Aquí podrías redirigir a un dashboard
+    // Por ahora redirigimos a la raíz (que también es /iniciar-sesion)
+    navigate('/iniciar-sesion');
   };
 
   const handleBack = () => {
     // Regresar a la página anterior
-    window.history.back();
-  };
-
-  const keywords = [
-    'login NexoPay',
-    'iniciar sesión crédito digital',
-    'acceso cuenta NexoPay',
-    'login fintech México',
-    'sesión plataforma crédito',
-    'acceso usuario NexoPay',
-    'login pago a plazos'
-  ];
-
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "Login NexoPay",
-    "url": "https://www.nexopay.com/login",
-    "description": "Inicia sesión en tu cuenta NexoPay y accede a tu línea de crédito digital. Login seguro con teléfono y contraseña.",
-    "mainEntity": {
-      "@type": "FinancialService",
-      "name": "NexoPay - Login",
-      "description": "Inicio de sesión para usuarios de crédito digital"
-    }
+    navigate(-1);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
-      <SEO
-        title="Login NexoPay - Inicia sesión"
-        description="Inicia sesión en tu cuenta NexoPay y accede a tu línea de crédito digital. Login seguro con teléfono y contraseña."
-        keywords={keywords}
-        schema={schema}
-      />
-      
       <div className="w-full max-w-lg mx-auto px-6">
         {/* Logo */}
         <div className="text-center mb-8">

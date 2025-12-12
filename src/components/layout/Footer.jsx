@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { HiOutlineEnvelope, HiOutlinePhone, HiOutlineMapPin, HiOutlineShieldCheck } from 'react-icons/hi2';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
 
@@ -31,27 +32,12 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Usuarios */}
+          {/* Enlaces */}
           <div>
-            <h4 className="text-lg font-semibold mb-6 text-gray-800">Para Usuarios</h4>
+            <h4 className="text-lg font-semibold mb-6 text-gray-800">Enlaces</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Solicitar crédito</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Cómo funciona</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Beneficios</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Comercios afiliados</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">App móvil</a></li>
-            </ul>
-          </div>
-
-          {/* Proveedores */}
-          <div>
-            <h4 className="text-lg font-semibold mb-6 text-gray-800">Para Proveedores</h4>
-            <ul className="space-y-3">
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Únete como proveedor</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Beneficios B2B</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Integración API</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Dashboard</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Soporte técnico</a></li>
+              <li><Link to="/iniciar-sesion" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Iniciar sesión</Link></li>
+              <li><Link to="/registro" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Registrarse</Link></li>
             </ul>
           </div>
 

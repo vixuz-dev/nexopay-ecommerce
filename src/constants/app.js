@@ -13,10 +13,8 @@ export const APP_CONFIG = {
 
 export const ROUTES = {
   HOME: '/',
-  ABOUT: '/about',
-  CONTACT: '/contact',
-  LOGIN: '/login',
-  REGISTER: '/register',
+  LOGIN: '/iniciar-sesion',
+  REGISTER: '/registro',
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
   SETTINGS: '/settings',
