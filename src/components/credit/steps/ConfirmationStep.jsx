@@ -8,7 +8,7 @@ import {
   HiOutlineShoppingBag,
   HiOutlineCamera
 } from 'react-icons/hi2';
-import { useCreditForm } from '../CreditWizard';
+import { useCreditForm } from '../../../stores/creditFormStore';
 
 const ConfirmationStep = () => {
   const { formData } = useCreditForm();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi2';
+import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineCheckCircle } from 'react-icons/hi2';
 
 const NavigationButtons = ({ currentStep, totalSteps, onPrevious, onNext }) => {
   const isFirstStep = currentStep === 1;
@@ -28,12 +28,21 @@ const NavigationButtons = ({ currentStep, totalSteps, onPrevious, onNext }) => {
         onClick={onNext}
         className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
           isLastStep
-            ? 'bg-green-600 hover:bg-green-700'
+            ? 'bg-primary-600 hover:bg-primary-700'
             : 'bg-primary-600 hover:bg-primary-700'
         }`}
       >
-        {isLastStep ? 'Confirmar' : 'Siguiente'}
-        {!isLastStep && <HiOutlineChevronRight className="w-5 h-5" />}
+        {isLastStep ? (
+          <>
+            <HiOutlineCheckCircle className="w-5 h-5" />
+            Solicita tu crédito ahora
+          </>
+        ) : (
+          <>
+            Siguiente
+            <HiOutlineChevronRight className="w-5 h-5" />
+          </>
+        )}
       </button>
     </div>
   );

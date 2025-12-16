@@ -10,7 +10,8 @@ const Dropdown = ({
   placeholder = 'Selecciona una opción',
   label,
   className = '',
-  disabled = false
+  disabled = false,
+  error = null
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -57,7 +58,9 @@ const Dropdown = ({
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
-          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 appearance-none bg-white text-left flex items-center justify-between ${
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 appearance-none bg-white text-left flex items-center justify-between ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } ${
             disabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'text-gray-900 cursor-pointer hover:border-gray-400'
           } ${!displayValue ? 'text-gray-500' : ''}`}
         >
@@ -96,6 +99,9 @@ const Dropdown = ({
           </div>
         )}
       </div>
+      {error && (
+        <p className="mt-1 text-sm text-red-600">{error}</p>
+      )}
     </div>
   );
 };

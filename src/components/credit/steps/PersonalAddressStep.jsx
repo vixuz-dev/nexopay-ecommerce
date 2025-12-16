@@ -1,20 +1,70 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCreditForm } from '../../../stores/creditFormStore';
+import { personalAddressSchema } from '../../../schemas/creditFormSchemas';
 import Dropdown from '../../common/Dropdown';
 
-const PersonalAddressStep = ({ formData, updateFormData }) => {
+const PersonalAddressStep = ({ setCustomNextHandler }) => {
+  const { formData, updateFormData, goToNextStep } = useCreditForm();
   const addressData = formData.personalAddress || {};
 
-  const handleChange = (e) => {
-    updateFormData({
-      personalAddress: {
-        ...addressData,
-        [e.target.name]: e.target.value
-      }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    watch,
+    setValue,
+    trigger
+  } = useForm({
+    resolver: zodResolver(personalAddressSchema),
+    mode: 'onChange',
+    defaultValues: {
+      calle: addressData.calle || '',
+      numeroExterior: addressData.numeroExterior || '',
+      numeroInterior: addressData.numeroInterior || '',
+      colonia: addressData.colonia || '',
+      ciudad: addressData.ciudad || '',
+      estado: addressData.estado || '',
+      codigoPostal: addressData.codigoPostal || '',
+      referencias: addressData.referencias || ''
+    }
+  });
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      updateFormData({
+        personalAddress: value
+      });
     });
+    return () => subscription.unsubscribe();
+  }, [watch, updateFormData]);
+
+  useEffect(() => {
+    if (setCustomNextHandler) {
+      setCustomNextHandler(() => {
+        handleSubmit(
+          () => {
+            goToNextStep();
+          },
+          () => {
+            trigger();
+          }
+        )();
+      });
+    }
+  }, [isValid, handleSubmit, goToNextStep, setCustomNextHandler, trigger]);
+
+  const handleChange = (e) => {
+    setValue(e.target.name, e.target.value, { shouldValidate: true });
+  };
+
+  const handleDropdownChange = (e) => {
+    const { name, value } = e.target;
+    setValue(name, value, { shouldValidate: true });
   };
 
   const estados = [
-    { value: '', label: 'Selecciona un estado' },
     { value: 'Aguascalientes', label: 'Aguascalientes' },
     { value: 'Baja California', label: 'Baja California' },
     { value: 'Baja California Sur', label: 'Baja California Sur' },
@@ -50,7 +100,6 @@ const PersonalAddressStep = ({ formData, updateFormData }) => {
   ];
 
   const ciudades = [
-    { value: '', label: 'Selecciona una ciudad' },
     { value: 'Ciudad de México', label: 'Ciudad de México' },
     { value: 'Guadalajara', label: 'Guadalajara' },
     { value: 'Monterrey', label: 'Monterrey' },
@@ -84,36 +133,42 @@ const PersonalAddressStep = ({ formData, updateFormData }) => {
         </p>
       </div>
 
-      <div className="space-y-6">
+      <form onSubmit={handleSubmit(() => {})} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="calle" className="block text-sm font-semibold text-gray-700 mb-2">
-              Calle
+              Calle <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               id="calle"
-              name="calle"
-              value={addressData.calle || ''}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+              {...register('calle')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                errors.calle ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Ingresa el nombre de la calle"
             />
+            {errors.calle && (
+              <p className="mt-1 text-sm text-red-600">{errors.calle.message}</p>
+            )}
           </div>
 
           <div>
             <label htmlFor="numeroExterior" className="block text-sm font-semibold text-gray-700 mb-2">
-              Número exterior
+              Número exterior <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               id="numeroExterior"
-              name="numeroExterior"
-              value={addressData.numeroExterior || ''}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+              {...register('numeroExterior')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                errors.numeroExterior ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Número exterior"
             />
+            {errors.numeroExterior && (
+              <p className="mt-1 text-sm text-red-600">{errors.numeroExterior.message}</p>
+            )}
           </div>
 
           <div>
@@ -123,81 +178,107 @@ const PersonalAddressStep = ({ formData, updateFormData }) => {
             <input
               type="text"
               id="numeroInterior"
-              name="numeroInterior"
-              value={addressData.numeroInterior || ''}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+              {...register('numeroInterior')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                errors.numeroInterior ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Número interior (opcional)"
             />
+            {errors.numeroInterior && (
+              <p className="mt-1 text-sm text-red-600">{errors.numeroInterior.message}</p>
+            )}
           </div>
 
           <div>
             <label htmlFor="colonia" className="block text-sm font-semibold text-gray-700 mb-2">
-              Colonia
+              Colonia <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               id="colonia"
-              name="colonia"
-              value={addressData.colonia || ''}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+              {...register('colonia')}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                errors.colonia ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Nombre de la colonia"
+            />
+            {errors.colonia && (
+              <p className="mt-1 text-sm text-red-600">{errors.colonia.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="ciudad" className="block text-sm font-semibold text-gray-700 mb-2">
+              Ciudad <span className="text-red-500">*</span>
+            </label>
+            <Dropdown
+              id="ciudad"
+              name="ciudad"
+              value={watch('ciudad') || ''}
+              onChange={(e) => {
+                setValue('ciudad', e.target.value, { shouldValidate: true });
+              }}
+              options={ciudades}
+              placeholder="Selecciona una ciudad"
+              error={errors.ciudad?.message}
             />
           </div>
 
-          <Dropdown
-            id="ciudad"
-            name="ciudad"
-            label="Ciudad"
-            value={addressData.ciudad || ''}
-            onChange={handleChange}
-            options={ciudades}
-            placeholder="Selecciona una ciudad"
-          />
-
-          <Dropdown
-            id="estado"
-            name="estado"
-            label="Estado"
-            value={addressData.estado || ''}
-            onChange={handleChange}
-            options={estados}
-            placeholder="Selecciona un estado"
-          />
+          <div>
+            <label htmlFor="estado" className="block text-sm font-semibold text-gray-700 mb-2">
+              Estado <span className="text-red-500">*</span>
+            </label>
+            <Dropdown
+              id="estado"
+              name="estado"
+              value={watch('estado') || ''}
+              onChange={(e) => {
+                setValue('estado', e.target.value, { shouldValidate: true });
+              }}
+              options={estados}
+              placeholder="Selecciona un estado"
+              error={errors.estado?.message}
+            />
+          </div>
         </div>
 
         <div>
           <label htmlFor="codigoPostal" className="block text-sm font-semibold text-gray-700 mb-2">
-            Código postal
+            Código postal <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             id="codigoPostal"
-            name="codigoPostal"
-            value={addressData.codigoPostal || ''}
-            onChange={handleChange}
+            {...register('codigoPostal')}
             maxLength="5"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+              errors.codigoPostal ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="00000"
           />
+          {errors.codigoPostal && (
+            <p className="mt-1 text-sm text-red-600">{errors.codigoPostal.message}</p>
+          )}
         </div>
 
         <div>
           <label htmlFor="referencias" className="block text-sm font-semibold text-gray-700 mb-2">
-            Referencias de ubicación
+            Referencias de ubicación <span className="text-red-500">*</span>
           </label>
           <textarea
             id="referencias"
-            name="referencias"
-            value={addressData.referencias || ''}
-            onChange={handleChange}
+            {...register('referencias')}
             rows="3"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 resize-none"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 resize-none ${
+              errors.referencias ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="Ej: Cerca del parque, entre calles X y Y, edificio de color..."
           />
+          {errors.referencias && (
+            <p className="mt-1 text-sm text-red-600">{errors.referencias.message}</p>
+          )}
         </div>
-      </div>
+      </form>
     </div>
   );
 };

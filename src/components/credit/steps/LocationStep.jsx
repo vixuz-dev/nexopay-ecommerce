@@ -1,23 +1,23 @@
 import React from 'react';
+import { useCreditForm } from '../../../stores/creditFormStore';
 import GoogleMapPicker from '../GoogleMapPicker';
 
-const LocationStep = ({ formData, updateFormData }) => {
+const LocationStep = () => {
+  const { formData, updateFormData } = useCreditForm();
   const locationData = formData.location || {};
 
   const handleLocationSelect = (location) => {
     updateFormData({
       location: {
         ...locationData,
-        coordinates: {
-          lat: location.lat,
-          lng: location.lng
-        }
+        lat: location.lat,
+        lng: location.lng
       }
     });
   };
 
-  const initialLocation = locationData.coordinates 
-    ? { lat: locationData.coordinates.lat, lng: locationData.coordinates.lng }
+  const initialLocation = locationData.lat && locationData.lng
+    ? { lat: locationData.lat, lng: locationData.lng }
     : null;
 
   return (

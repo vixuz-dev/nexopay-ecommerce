@@ -1,56 +1,80 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { HiOutlineInformationCircle, HiOutlineUser, HiOutlineCreditCard, HiOutlineDocumentText, HiOutlineShoppingBag } from 'react-icons/hi2';
-import { useCreditForm } from '../CreditWizard';
+import { useCreditForm } from '../../../stores/creditFormStore';
+import { eligibilitySchema } from '../../../schemas/creditFormSchemas';
 
-const TellUsAboutYouStep = () => {
-  const { formData, updateFormData } = useCreditForm();
+const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
+  const { formData, updateFormData, goToNextStep } = useCreditForm();
   const eligibilityData = formData.eligibility || {};
 
-  const handleChange = (field, value) => {
-    const newData = { ...eligibilityData, [field]: value };
-    
-    if (field === 'solicitud_aprobada' && value === false) {
-      newData.solicitud_aprobada_periodo = '';
-      newData.solicitud_aprobada_ultimos_2_meses = false;
-      newData.solicitud_aprobada_ultimos_3_4_meses = false;
-      newData.solicitud_aprobada_ultimos_5_6_meses = false;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    watch,
+    setValue,
+    trigger
+  } = useForm({
+    resolver: zodResolver(eligibilitySchema),
+    mode: 'onChange',
+    defaultValues: {
+      edad: eligibilityData.edad || undefined,
+      residencia_pais: eligibilityData.residencia_pais !== undefined ? eligibilityData.residencia_pais : undefined,
+      ingreso_mensual: eligibilityData.ingreso_mensual || undefined,
+      antiguedad_laboral: eligibilityData.antiguedad_laboral || undefined,
+      uso_tarjeta_credito: eligibilityData.uso_tarjeta_credito !== undefined ? eligibilityData.uso_tarjeta_credito : undefined,
+      pago_servicios_debito_transferencia: eligibilityData.pago_servicios_debito_transferencia !== undefined ? eligibilityData.pago_servicios_debito_transferencia : undefined,
+      solicitud_aprobada: eligibilityData.solicitud_aprobada !== undefined ? eligibilityData.solicitud_aprobada : undefined,
+      solicitud_aprobada_periodo: eligibilityData.solicitud_aprobada_periodo || undefined,
+      solicitud_rechazada: eligibilityData.solicitud_rechazada !== undefined ? eligibilityData.solicitud_rechazada : undefined,
+      solicitud_rechazada_periodo: eligibilityData.solicitud_rechazada_periodo || undefined,
+      total_compra: eligibilityData.total_compra || undefined
     }
-    
-    if (field === 'solicitud_aprobada_periodo') {
-      newData.solicitud_aprobada_ultimos_2_meses = value === 'ultimos_2_meses';
-      newData.solicitud_aprobada_ultimos_3_4_meses = value === '3_4_meses';
-      newData.solicitud_aprobada_ultimos_5_6_meses = value === '5_6_meses';
+  });
+
+  const solicitudAprobada = watch('solicitud_aprobada');
+  const solicitudRechazada = watch('solicitud_rechazada');
+
+  useEffect(() => {
+    if (setCustomNextHandler) {
+      setCustomNextHandler(() => {
+        handleSubmit(
+          (data) => {
+            // Guardar en el store solo cuando el formulario es válido y se avanza
+            updateFormData({
+              eligibility: data
+            });
+            goToNextStep();
+          },
+          () => {
+            trigger();
+          }
+        )();
+      });
     }
-    
-    if (field === 'solicitud_rechazada' && value === false) {
-      newData.solicitud_rechazada_periodo = '';
-      newData.solicitud_rechazada_ultimos_2_meses = false;
-      newData.solicitud_rechazada_ultimos_3_4_meses = false;
-      newData.solicitud_rechazada_ultimos_5_6_meses = false;
-    }
-    
-    if (field === 'solicitud_rechazada_periodo') {
-      newData.solicitud_rechazada_ultimos_2_meses = value === 'ultimos_2_meses';
-      newData.solicitud_rechazada_ultimos_3_4_meses = value === '3_4_meses';
-      newData.solicitud_rechazada_ultimos_5_6_meses = value === '5_6_meses';
-    }
-    
-    updateFormData({ eligibility: newData });
-  };
+  }, [isValid, handleSubmit, goToNextStep, setCustomNextHandler, trigger]);
 
   const handleBooleanChange = (field, value) => {
-    handleChange(field, value === 'Si');
+    const boolValue = value === 'Si';
+    setValue(field, boolValue, { shouldValidate: true });
+    
+    // Limpiar periodos cuando se cambia a false
+    if (field === 'solicitud_aprobada' && boolValue === false) {
+      setValue('solicitud_aprobada_periodo', undefined, { shouldValidate: true });
+    }
+    if (field === 'solicitud_rechazada' && boolValue === false) {
+      setValue('solicitud_rechazada_periodo', undefined, { shouldValidate: true });
+    }
   };
 
-  const handleNumberChange = (field, value) => {
-    const numValue = value === '' ? '' : parseInt(value, 10);
-    if (!isNaN(numValue) || value === '') {
-      handleChange(field, value === '' ? '' : numValue);
-    }
+  const handlePeriodoChange = (field, value) => {
+    setValue(field, value, { shouldValidate: true });
   };
 
   return (
-    <div>
+    <form onSubmit={handleSubmit(() => {})}>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Conozcámonos mejor
@@ -90,18 +114,23 @@ const TellUsAboutYouStep = () => {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="edad" className="block text-sm font-semibold text-gray-700 mb-2">
                   ¿Cuántos años tienes? <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  id="edad"
                   min="18"
                   max="100"
-                  value={eligibilityData.edad || ''}
-                  onChange={(e) => handleNumberChange('edad', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                {...register('edad')}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                    errors.edad ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Ingresa tu edad"
                 />
+                {errors.edad && (
+                  <p className="mt-1 text-sm text-red-600">{errors.edad.message}</p>
+                )}
               </div>
 
               <div>
@@ -113,7 +142,7 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="residencia_pais"
-                      checked={eligibilityData.residencia_pais === true}
+                      checked={watch('residencia_pais') === true}
                       onChange={() => handleBooleanChange('residencia_pais', 'Si')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
@@ -123,44 +152,57 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="residencia_pais"
-                      checked={eligibilityData.residencia_pais === false}
+                      checked={watch('residencia_pais') === false}
                       onChange={() => handleBooleanChange('residencia_pais', 'No')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700">No</span>
                   </label>
                 </div>
+                {errors.residencia_pais && (
+                  <p className="mt-1 text-sm text-red-600">{errors.residencia_pais.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="ingreso_mensual" className="block text-sm font-semibold text-gray-700 mb-2">
                   ¿Cuál es tu ingreso mensual aproximado? (MXN) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
+                  id="ingreso_mensual"
                   min="0"
-                  value={eligibilityData.ingreso_mensual || ''}
-                  onChange={(e) => handleNumberChange('ingreso_mensual', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                {...register('ingreso_mensual')}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                    errors.ingreso_mensual ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Ingresa tu ingreso mensual"
                 />
+                {errors.ingreso_mensual && (
+                  <p className="mt-1 text-sm text-red-600">{errors.ingreso_mensual.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="antiguedad_laboral" className="block text-sm font-semibold text-gray-700 mb-2">
                   ¿Cuánto tiempo llevas en tu trabajo actual? <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
+                    id="antiguedad_laboral"
                     min="0"
-                    value={eligibilityData.antiguedad_laboral || ''}
-                    onChange={(e) => handleNumberChange('antiguedad_laboral', e.target.value)}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                    {...register('antiguedad_laboral')}
+                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                      errors.antiguedad_laboral ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Número de meses"
                   />
                   <span className="text-sm text-gray-500 whitespace-nowrap">meses</span>
                 </div>
+                {errors.antiguedad_laboral && (
+                  <p className="mt-1 text-sm text-red-600">{errors.antiguedad_laboral.message}</p>
+                )}
               </div>
             </div>
           </section>
@@ -183,7 +225,7 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="uso_tarjeta_credito"
-                      checked={eligibilityData.uso_tarjeta_credito === true}
+                      checked={watch('uso_tarjeta_credito') === true}
                       onChange={() => handleBooleanChange('uso_tarjeta_credito', 'Si')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
@@ -193,13 +235,16 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="uso_tarjeta_credito"
-                      checked={eligibilityData.uso_tarjeta_credito === false}
+                      checked={watch('uso_tarjeta_credito') === false}
                       onChange={() => handleBooleanChange('uso_tarjeta_credito', 'No')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700">No</span>
                   </label>
                 </div>
+                {errors.uso_tarjeta_credito && (
+                  <p className="mt-1 text-sm text-red-600">{errors.uso_tarjeta_credito.message}</p>
+                )}
               </div>
 
               <div>
@@ -211,7 +256,7 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="pago_servicios_debito_transferencia"
-                      checked={eligibilityData.pago_servicios_debito_transferencia === true}
+                      checked={watch('pago_servicios_debito_transferencia') === true}
                       onChange={() => handleBooleanChange('pago_servicios_debito_transferencia', 'Si')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
@@ -221,13 +266,16 @@ const TellUsAboutYouStep = () => {
                     <input
                       type="radio"
                       name="pago_servicios_debito_transferencia"
-                      checked={eligibilityData.pago_servicios_debito_transferencia === false}
+                      checked={watch('pago_servicios_debito_transferencia') === false}
                       onChange={() => handleBooleanChange('pago_servicios_debito_transferencia', 'No')}
                       className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700">No</span>
                   </label>
                 </div>
+                {errors.pago_servicios_debito_transferencia && (
+                  <p className="mt-1 text-sm text-red-600">{errors.pago_servicios_debito_transferencia.message}</p>
+                )}
               </div>
             </div>
           </section>
@@ -251,7 +299,7 @@ const TellUsAboutYouStep = () => {
                       <input
                         type="radio"
                         name="solicitud_aprobada"
-                        checked={eligibilityData.solicitud_aprobada === true}
+                        checked={watch('solicitud_aprobada') === true}
                         onChange={() => handleBooleanChange('solicitud_aprobada', 'Si')}
                         className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
@@ -261,16 +309,19 @@ const TellUsAboutYouStep = () => {
                       <input
                         type="radio"
                         name="solicitud_aprobada"
-                        checked={eligibilityData.solicitud_aprobada === false}
+                        checked={watch('solicitud_aprobada') === false}
                         onChange={() => handleBooleanChange('solicitud_aprobada', 'No')}
                         className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
                       <span className="text-sm text-gray-700">No</span>
                     </label>
                   </div>
+                  {errors.solicitud_aprobada && (
+                    <p className="mt-1 text-sm text-red-600">{errors.solicitud_aprobada.message}</p>
+                  )}
                 </div>
 
-                {eligibilityData.solicitud_aprobada === true && (
+                {solicitudAprobada === true && (
                   <div className="mt-4 pl-4 border-l-4 border-primary-200 bg-primary-50 rounded-r-lg p-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       ¿En qué periodo ocurrió la aprobación más reciente? <span className="text-red-500">*</span>
@@ -284,9 +335,9 @@ const TellUsAboutYouStep = () => {
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => handleChange('solicitud_aprobada_periodo', option.value)}
+                          onClick={() => handlePeriodoChange('solicitud_aprobada_periodo', option.value)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                            eligibilityData.solicitud_aprobada_periodo === option.value
+                            watch('solicitud_aprobada_periodo') === option.value
                               ? 'bg-primary-600 text-white shadow-md'
                               : 'bg-white border border-gray-300 text-gray-700 hover:border-primary-400'
                           }`}
@@ -295,6 +346,9 @@ const TellUsAboutYouStep = () => {
                         </button>
                       ))}
                     </div>
+                    {errors.solicitud_aprobada_periodo && (
+                      <p className="mt-1 text-sm text-red-600">{errors.solicitud_aprobada_periodo.message}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -309,7 +363,7 @@ const TellUsAboutYouStep = () => {
                       <input
                         type="radio"
                         name="solicitud_rechazada"
-                        checked={eligibilityData.solicitud_rechazada === true}
+                        checked={watch('solicitud_rechazada') === true}
                         onChange={() => handleBooleanChange('solicitud_rechazada', 'Si')}
                         className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
@@ -319,16 +373,19 @@ const TellUsAboutYouStep = () => {
                       <input
                         type="radio"
                         name="solicitud_rechazada"
-                        checked={eligibilityData.solicitud_rechazada === false}
+                        checked={watch('solicitud_rechazada') === false}
                         onChange={() => handleBooleanChange('solicitud_rechazada', 'No')}
                         className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                       />
                       <span className="text-sm text-gray-700">No</span>
                     </label>
                   </div>
+                  {errors.solicitud_rechazada && (
+                    <p className="mt-1 text-sm text-red-600">{errors.solicitud_rechazada.message}</p>
+                  )}
                 </div>
 
-                {eligibilityData.solicitud_rechazada === true && (
+                {solicitudRechazada === true && (
                   <div className="mt-4 pl-4 border-l-4 border-primary-200 bg-primary-50 rounded-r-lg p-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       ¿En qué periodo ocurrió el rechazo más reciente? <span className="text-red-500">*</span>
@@ -342,9 +399,9 @@ const TellUsAboutYouStep = () => {
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => handleChange('solicitud_rechazada_periodo', option.value)}
+                          onClick={() => handlePeriodoChange('solicitud_rechazada_periodo', option.value)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                            eligibilityData.solicitud_rechazada_periodo === option.value
+                            watch('solicitud_rechazada_periodo') === option.value
                               ? 'bg-primary-600 text-white shadow-md'
                               : 'bg-white border border-gray-300 text-gray-700 hover:border-primary-400'
                           }`}
@@ -353,6 +410,9 @@ const TellUsAboutYouStep = () => {
                         </button>
                       ))}
                     </div>
+                    {errors.solicitud_rechazada_periodo && (
+                      <p className="mt-1 text-sm text-red-600">{errors.solicitud_rechazada_periodo.message}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -368,22 +428,27 @@ const TellUsAboutYouStep = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                ¿Cuál es el total de tu compra? (MXN) <span className="text-red-500">*</span>
+              <label htmlFor="total_compra" className="block text-sm font-semibold text-gray-700 mb-2">
+                ¿Cuál es el total del producto que deseas comprar en NexoPay? (MXN) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
+                id="total_compra"
                 min="0"
-                value={eligibilityData.total_compra || ''}
-                onChange={(e) => handleNumberChange('total_compra', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                {...register('total_compra')}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                  errors.total_compra ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Ingresa el total de tu compra"
               />
+              {errors.total_compra && (
+                <p className="mt-1 text-sm text-red-600">{errors.total_compra.message}</p>
+              )}
             </div>
           </section>
         </div>
       </div>
-    </div>
+    </form>
   );
 };
 

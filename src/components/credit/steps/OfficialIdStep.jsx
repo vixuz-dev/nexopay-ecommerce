@@ -1,11 +1,12 @@
-import React from 'react';
-import { HiOutlineExclamationCircle, HiOutlineDocumentText } from 'react-icons/hi2';
+import React, { useEffect, useState } from 'react';
+import { HiOutlineExclamationCircle, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi2';
 import FileUploader from '../../common/FileUploader';
-import { useCreditForm } from '../CreditWizard';
+import { useCreditForm } from '../../../stores/creditFormStore';
 
-const OfficialIdStep = () => {
-  const { formData, updateFormData } = useCreditForm();
+const OfficialIdStep = ({ setCustomNextHandler }) => {
+  const { formData, updateFormData, goToNextStep } = useCreditForm();
   const officialIdData = formData.officialId || {};
+  const [validationError, setValidationError] = useState('');
 
   const handleFrontImageSelect = (file, imageUrl) => {
     updateFormData({
@@ -15,6 +16,10 @@ const OfficialIdStep = () => {
         frontUrl: imageUrl
       }
     });
+    // Limpiar error de validación cuando se selecciona una imagen
+    if (imageUrl) {
+      setValidationError('');
+    }
   };
 
   const handleBackImageSelect = (file, imageUrl) => {
@@ -25,7 +30,42 @@ const OfficialIdStep = () => {
         backUrl: imageUrl
       }
     });
+    // Limpiar error de validación cuando se selecciona una imagen
+    if (imageUrl) {
+      setValidationError('');
+    }
   };
+
+  useEffect(() => {
+    if (setCustomNextHandler) {
+      setCustomNextHandler(() => {
+        // Validar que ambas imágenes estén presentes
+        const hasFront = officialIdData.frontUrl && officialIdData.frontFile;
+        const hasBack = officialIdData.backUrl && officialIdData.backFile;
+        
+        if (!hasFront && !hasBack) {
+          setValidationError('Debes subir ambas partes de tu identificación (frontal y trasera) para continuar');
+        } else if (!hasFront) {
+          setValidationError('Debes subir la parte frontal de tu identificación para continuar');
+        } else if (!hasBack) {
+          setValidationError('Debes subir la parte trasera de tu identificación para continuar');
+        } else {
+          // Si ambas están presentes, continuar
+          setValidationError('');
+          goToNextStep();
+          return;
+        }
+        
+        // Hacer scroll al error
+        setTimeout(() => {
+          const errorElement = document.getElementById('official-id-validation-error');
+          if (errorElement) {
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      });
+    }
+  }, [setCustomNextHandler, officialIdData.frontUrl, officialIdData.frontFile, officialIdData.backUrl, officialIdData.backFile, goToNextStep]);
 
   const tips = [
     'Asegúrate de que todos los datos sean legibles',
@@ -77,7 +117,7 @@ const OfficialIdStep = () => {
                 <HiOutlineDocumentText className="w-6 h-6 text-primary-600" />
               </div>
               <h3 className="font-bold text-gray-900 text-lg">
-                Parte frontal
+                Parte frontal <span className="text-red-500">*</span>
               </h3>
             </div>
             <FileUploader
@@ -96,7 +136,7 @@ const OfficialIdStep = () => {
                 <HiOutlineDocumentText className="w-6 h-6 text-primary-600" />
               </div>
               <h3 className="font-bold text-gray-900 text-lg">
-                Parte trasera
+                Parte trasera <span className="text-red-500">*</span>
               </h3>
             </div>
             <FileUploader
@@ -110,7 +150,20 @@ const OfficialIdStep = () => {
           </div>
         </div>
 
-        {officialIdData.frontUrl && officialIdData.backUrl && (
+        {validationError && (
+          <div id="official-id-validation-error" className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <HiOutlineXCircle className="w-5 h-5 text-red-600 mt-0.5" />
+              </div>
+              <p className="text-sm font-semibold text-red-800 leading-relaxed">
+                {validationError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {officialIdData.frontUrl && officialIdData.backUrl && !validationError && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
