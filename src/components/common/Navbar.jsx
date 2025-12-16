@@ -4,6 +4,9 @@ import { HiOutlineBars3, HiOutlineXMark, HiOutlineBell, HiOutlineShoppingCart, H
 import NavItem from './NavItem';
 import SearchBar from './SearchBar';
 import UserAvatar from './UserAvatar';
+import useCartStore from '../../stores/cartStore';
+import useUIStore from '../../stores/uiStore';
+import { ROUTES, getProductsByCategoryUrl } from '../../utils/routes';
 import nexoLogo from '../../assets/images/nexo-white-logo.webp';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
 
@@ -16,27 +19,33 @@ const Navbar = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const totalItems = useCartStore((state) => state.getTotalItems());
+  const openCartSidebar = useUIStore((state) => state.openCartSidebar);
 
   const defaultNavItems = [
     {
       label: 'Categorías',
-      path: '/categorias',
+      path: ROUTES.PRODUCTS,
       dropdown: [
-        { label: 'Electrónica', path: '/categorias/electronica' },
-        { label: 'Computadoras', path: '/categorias/computadoras' },
-        { label: 'Audio', path: '/categorias/audio' },
-        { label: 'Tablets', path: '/categorias/tablets' },
-        { label: 'Televisores', path: '/categorias/televisores' },
-        { label: 'Fotografía', path: '/categorias/fotografia' }
+        { label: 'Electrónica', path: getProductsByCategoryUrl('Electrónica') },
+        { label: 'Computadoras', path: getProductsByCategoryUrl('Computadoras') },
+        { label: 'Audio', path: getProductsByCategoryUrl('Audio') },
+        { label: 'Tablets', path: getProductsByCategoryUrl('Tablets') },
+        { label: 'Televisores', path: getProductsByCategoryUrl('Televisores') },
+        { label: 'Fotografía', path: getProductsByCategoryUrl('Fotografía') },
+        { label: 'Smartwatches', path: getProductsByCategoryUrl('Smartwatches') },
+        { label: 'Gaming', path: getProductsByCategoryUrl('Gaming') },
+        { label: 'Monitores', path: getProductsByCategoryUrl('Monitores') },
+        { label: 'Accesorios', path: getProductsByCategoryUrl('Accesorios') }
       ]
     },
     {
       label: 'Ofertas',
-      path: '/ofertas'
+      path: ROUTES.OFFERS
     },
     {
       label: 'Mis compras',
-      path: '/mis-compras'
+      path: ROUTES.MY_ORDERS
     },
     {
       label: 'Para ti',
@@ -89,8 +98,8 @@ const Navbar = ({
               <HiOutlineBell className="w-6 h-6" />
             </button>
 
-            <Link
-              to="/carrito"
+            <button
+              onClick={openCartSidebar}
               className={`p-2 rounded-full transition-colors duration-200 relative ${
                 isHomePage 
                   ? 'text-white hover:bg-white/20' 
@@ -99,10 +108,12 @@ const Navbar = ({
               aria-label="Carrito de compras"
             >
               <HiOutlineShoppingCart className="w-6 h-6" />
-              <span className="absolute top-0 right-0 w-4 h-4 bg-highlight-500 rounded-full text-xs text-white flex items-center justify-center">
-                0
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 w-5 h-5 bg-highlight-500 rounded-full text-xs text-white flex items-center justify-center font-semibold">
+                  {totalItems > 99 ? '99+' : totalItems}
               </span>
-            </Link>
+              )}
+            </button>
 
             <UserAvatar isHomePage={isHomePage} />
           </div>
@@ -194,16 +205,20 @@ const Navbar = ({
                 <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
                   <HiOutlineBell className="w-6 h-6" />
                 </button>
-                <Link
-                  to="/carrito"
+                <button
+                  onClick={() => {
+                    openCartSidebar();
+                    closeMobileMenu();
+                  }}
                   className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
-                  onClick={closeMobileMenu}
                 >
                   <HiOutlineShoppingCart className="w-6 h-6" />
-                  <span className="absolute top-0 right-0 w-4 h-4 bg-highlight-500 rounded-full text-xs text-white flex items-center justify-center">
-                    0
+                  {totalItems > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-highlight-500 rounded-full text-xs text-white flex items-center justify-center font-semibold">
+                      {totalItems > 99 ? '99+' : totalItems}
                   </span>
-                </Link>
+                  )}
+                </button>
                 <div onClick={closeMobileMenu}>
                   <UserAvatar isHomePage={false} />
                 </div>

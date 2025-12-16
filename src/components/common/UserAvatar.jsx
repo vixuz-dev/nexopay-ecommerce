@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineUser, HiOutlineCreditCard, HiOutlineShoppingBag, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
+import { HiOutlineUser, HiOutlineCreditCard, HiOutlineShoppingBag, HiOutlineArrowRightOnRectangle, HiOutlineIdentification } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
+import { ROUTES } from '../../utils/routes';
 
 const UserAvatar = ({ isHomePage = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,7 +83,7 @@ const UserAvatar = ({ isHomePage = false }) => {
       >
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 py-2">
           <Link
-          to="/mi-cuenta"
+            to={ROUTES.MY_ACCOUNT}
           className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
         >
           <HiOutlineUser className="w-5 h-5" />
@@ -90,7 +91,15 @@ const UserAvatar = ({ isHomePage = false }) => {
         </Link>
 
         <Link
-          to="/solicitud-credito"
+            to={ROUTES.MY_PROFILE}
+            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+          >
+            <HiOutlineIdentification className="w-5 h-5" />
+            <span>Mi perfil</span>
+          </Link>
+
+          <Link
+            to={ROUTES.CREDIT_REQUEST}
           className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
         >
           <HiOutlineCreditCard className="w-5 h-5" />
@@ -98,7 +107,7 @@ const UserAvatar = ({ isHomePage = false }) => {
         </Link>
 
         <Link
-          to="/mis-compras"
+            to={ROUTES.MY_ORDERS}
           className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
         >
           <HiOutlineShoppingBag className="w-5 h-5" />

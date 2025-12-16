@@ -3,3 +3,4 @@ export { useLocalStorage } from './useLocalStorage';
 export { useApi } from './useApi';
 export { useDebounce } from './useDebounce';
 export { useToggle } from './useToggle';
+export { useProducts, useProduct, getCategories } from './useProducts';

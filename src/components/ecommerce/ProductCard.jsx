@@ -1,9 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HiOutlineShoppingCart, HiOutlineHeart } from 'react-icons/hi2';
 import ProductPlaceholder from '../common/ProductPlaceholder';
+import useCartStore from '../../stores/cartStore';
+import useUIStore from '../../stores/uiStore';
+import { ROUTES } from '../../utils/routes';
 
 const ProductCard = ({ product, showAddToCart = false }) => {
+  const navigate = useNavigate();
+  const addItem = useCartStore((state) => state.addItem);
+  const openCartSidebar = useUIStore((state) => state.openCartSidebar);
+  
   const {
     id,
     name,
@@ -16,6 +23,15 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     inStock = true
   } = product;
 
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (inStock) {
+      addItem(product, 1);
+      openCartSidebar(); // Abrir el sidebar del carrito
+    }
+  };
+
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -24,8 +40,8 @@ const ProductCard = ({ product, showAddToCart = false }) => {
   };
 
   const calculateMonthlyPayment = (totalPrice) => {
-    // Ejemplo: dividir en 4 quincenas
-    return totalPrice / 4;
+    // Dividir en 6 mensualidades
+    return totalPrice / 6;
   };
 
   return (
@@ -78,7 +94,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           )}
 
           {/* Product Name */}
-          <Link to={`/producto/${id}`}>
+          <Link to={`/producto?id=${id}${category ? `&category=${encodeURIComponent(category)}` : ''}`}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-primary-600 transition-colors">
               {name}
             </h3>
@@ -107,7 +123,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
             
             {/* Monthly Payment */}
             <p className="text-sm text-primary-600 font-medium mt-1">
-              Desde {formatPrice(calculateMonthlyPayment(price))} quincenal
+              Desde {formatPrice(calculateMonthlyPayment(price))} mensual
             </p>
           </div>
         </div>
@@ -115,6 +131,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
         {/* Add to Cart Button */}
         {showAddToCart && (
           <button
+            onClick={handleAddToCart}
             disabled={!inStock}
             className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 mt-auto ${
               inStock
