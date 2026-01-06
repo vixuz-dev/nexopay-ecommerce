@@ -46,19 +46,6 @@ const Navbar = ({
     {
       label: 'Mis compras',
       path: ROUTES.MY_ORDERS
-    },
-    {
-      label: 'Para ti',
-      path: '/para-ti'
-    },
-    {
-      label: 'Los más buscados',
-      path: '/mas-buscados'
-    },
-    {
-      label: 'Favoritos',
-      path: '/favoritos',
-      icon: <HiOutlineHeart className="w-5 h-5" />
     }
   ];
 
@@ -97,6 +84,18 @@ const Navbar = ({
             >
               <HiOutlineBell className="w-6 h-6" />
             </button>
+
+            <Link
+              to="/favoritos"
+              className={`p-2 rounded-full transition-colors duration-200 ${
+                isHomePage 
+                  ? 'text-white hover:bg-white/20' 
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              aria-label="Favoritos"
+            >
+              <HiOutlineHeart className="w-6 h-6" />
+            </Link>
 
             <button
               onClick={openCartSidebar}
@@ -205,6 +204,13 @@ const Navbar = ({
                 <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
                   <HiOutlineBell className="w-6 h-6" />
                 </button>
+                <Link
+                  to="/favoritos"
+                  onClick={closeMobileMenu}
+                  className="p-2 text-gray-700 hover:text-primary-600 transition-colors"
+                >
+                  <HiOutlineHeart className="w-6 h-6" />
+                </Link>
                 <button
                   onClick={() => {
                     openCartSidebar();

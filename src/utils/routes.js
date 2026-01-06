@@ -23,6 +23,7 @@ export const ROUTES = {
   // Carrito y compras
   CART: '/carrito',
   CHECKOUT: '/pago',
+  ORDER_CONFIRMATION: '/confirmacion',
   MY_ORDERS: '/mis-compras',
   OFFERS: '/ofertas',
 

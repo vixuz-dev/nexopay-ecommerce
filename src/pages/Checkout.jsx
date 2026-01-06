@@ -5,18 +5,44 @@ import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import {
-  HiOutlineXMark,
   HiOutlineChevronLeft,
   HiOutlineCreditCard,
   HiOutlineLockClosed,
+  HiOutlineCalendarDays,
+  HiOutlineBanknotes,
+  HiOutlineBuildingStorefront,
+  HiOutlineCheckCircle,
+  HiOutlineShieldCheck,
+  HiOutlineDocumentText,
 } from 'react-icons/hi2';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity, updateSize, getSubtotal, clearCart, isEmpty } = useCartStore();
-  const [paymentMethod, setPaymentMethod] = useState('credit-card');
-  const [expiryMonth, setExpiryMonth] = useState('05');
-  const [expiryYear, setExpiryYear] = useState('2024');
+  const { 
+    items, 
+    getSubtotal, 
+    isEmpty,
+    deferralMonths,
+    getInitialPayment,
+    getDeferredAmount,
+    getMonthlyPayment,
+    getPaymentSchedule,
+    clearCart,
+  } = useCartStore();
+  
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [saveCard, setSaveCard] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Datos del formulario de tarjeta
+  const [cardData, setCardData] = useState({
+    cardNumber: '',
+    cardHolder: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvv: '',
+  });
 
   // Redirigir si el carrito está vacío
   useEffect(() => {
@@ -24,12 +50,6 @@ const Checkout = () => {
       navigate(ROUTES.CART);
     }
   }, [isEmpty, navigate]);
-
-  const [paymentData, setPaymentData] = useState({
-    nameOnCard: 'Juan Pérez',
-    cardNumber: '2153',
-    cvv: '156',
-  });
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -40,291 +60,427 @@ const Checkout = () => {
     }).format(amount);
   };
 
+  const formatDate = (date) => {
+    return new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+  };
+
   const subtotal = getSubtotal();
   const shipping = subtotal > 5000 ? 0 : 200;
   const total = subtotal + shipping;
+  const initialPayment = getInitialPayment();
+  const deferredAmount = getDeferredAmount();
+  const monthlyPayment = getMonthlyPayment();
+  const paymentSchedule = getPaymentSchedule();
 
-  const handleRemoveItem = (itemId, size) => {
-    removeItem(itemId, size);
+  const handleCardDataChange = (field, value) => {
+    setCardData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleQuantityChange = (itemId, size, newQuantity) => {
-    updateQuantity(itemId, newQuantity, size);
-  };
+  const handleCheckout = async () => {
+    if (!acceptedTerms) {
+      alert('Por favor acepta los términos y condiciones');
+      return;
+    }
 
-  const handleSizeChange = (itemId, oldSize, newSize) => {
-    updateSize(itemId, oldSize, newSize);
+    setIsProcessing(true);
+
+    // Simular procesamiento de pago
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Navegar a confirmación
+    navigate(ROUTES.ORDER_CONFIRMATION);
+    
+    setIsProcessing(false);
   };
 
   if (isEmpty()) {
-    return null; // El useEffect redirigirá
+    return null;
   }
 
-  const handlePaymentDataChange = (field, value) => {
-    setPaymentData(prev => ({ ...prev, [field]: value }));
-  };
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1).padStart(2, '0'),
+    label: String(i + 1).padStart(2, '0'),
+  }));
 
-  const handleCheckout = () => {
-    // TODO: Implementar lógica de checkout
-    console.log('Procesando pago...', { paymentMethod, paymentData, total, items });
-    // Aquí se procesaría el pago y luego limpiar el carrito
-    // clearCart();
-    // navigate(ROUTES.MY_ORDERS);
-  };
-
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const month = i + 1;
-    return month.toString().padStart(2, '0');
-  });
-
-  const years = Array.from({ length: 10 }, (_, i) => {
-    return (new Date().getFullYear() + i).toString();
-  });
+  const years = Array.from({ length: 10 }, (_, i) => ({
+    value: String(new Date().getFullYear() + i),
+    label: String(new Date().getFullYear() + i),
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Columna Izquierda - Carrito de Compras */}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Carrito de Compras</h1>
+        {/* Breadcrumb */}
+        <div className="mb-6">
+          <Link
+            to={ROUTES.CART}
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors text-sm"
+          >
+            <HiOutlineChevronLeft className="w-4 h-4" />
+            Volver al carrito
+          </Link>
+        </div>
 
-            {/* Tabla de Productos */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            Finalizar Compra
+          </h1>
+          <p className="text-gray-600">
+            Revisa tu pedido y completa el pago inicial
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda - Resumen y Calendario */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Resumen del Pedido (Solo lectura) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Producto</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Tamaño</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Cantidad</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Precio Total</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {items.map((item) => (
-                      <tr key={`${item.id}-${item.size}`} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
-                              ) : (
-                                <span className="text-xs text-gray-400">Imagen</span>
-                              )}
-                            </div>
-                            <span className="font-medium text-gray-900">{item.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <select
-                            value={item.size}
-                            onChange={(e) => handleSizeChange(item.id, item.size, e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                          >
-                            <option value="Estándar">Estándar</option>
-                            <option value="Pequeño">Pequeño</option>
-                            <option value="Mediano">Mediano</option>
-                            <option value="Grande">Grande</option>
-                          </select>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                              -
-                            </button>
-                            <span className="w-12 text-center font-medium text-gray-900">{item.quantity}</span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold text-gray-900">{formatPrice(item.total)}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleRemoveItem(item.id, item.size)}
-                            className="text-gray-400 hover:text-red-600 transition-colors"
-                            aria-label="Eliminar producto"
-                          >
-                            <HiOutlineXMark className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="font-semibold text-gray-900">Resumen del Pedido</h2>
+              </div>
+              
+              <div className="divide-y divide-gray-100">
+                {items.map((item) => (
+                  <div key={`${item.id}-${item.size}`} className="px-6 py-4 flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                          Imagen
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.size} · Cantidad: {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatPrice(item.total)}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Resumen del Pedido */}
-              <div className="border-t border-gray-200 px-6 py-6 bg-gray-50">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-gray-700">
-                    <span>Subtotal:</span>
-                    <span className="font-medium">{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>Envío:</span>
-                    <span className="font-medium">
-                      {shipping === 0 ? (
-                        <span className="text-green-600">Gratis</span>
-                      ) : (
-                        formatPrice(shipping)
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-200">
-                    <span>Total:</span>
-                    <span>{formatPrice(total)}</span>
-                  </div>
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600 mb-3">
+                  <span>Envío</span>
+                  <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200">
+                  <span>Total</span>
+                  <span>{formatPrice(total)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Continuar Comprando */}
-            <Link
-              to={ROUTES.PRODUCTS}
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors mt-6"
-            >
-              <HiOutlineChevronLeft className="w-5 h-5" />
-              <span>Continuar Comprando</span>
-            </Link>
-          </div>
-
-          {/* Columna Derecha - Información de Pago */}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Información de Pago</h1>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-              {/* Método de Pago */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-4">Método de Pago</label>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-4 border-2 border-primary-500 rounded-lg cursor-pointer bg-primary-50">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="credit-card"
-                      checked={paymentMethod === 'credit-card'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5 text-primary-600 focus:ring-primary-500"
-                    />
-                    <HiOutlineCreditCard className="w-6 h-6 text-primary-600" />
-                    <span className="font-medium text-gray-900">Tarjeta de Crédito</span>
-                  </label>
-                  <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-colors">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="paypal"
-                      checked={paymentMethod === 'paypal'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <span className="text-xs font-bold text-blue-600">PayPal</span>
+            {/* Calendario de Pagos */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
+                    <HiOutlineCalendarDays className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900">Calendario de Pagos</h2>
+                    <p className="text-sm text-gray-600">Tu plan a {deferralMonths} meses sin intereses</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Pago Inicial Destacado */}
+              <div className="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      ✓
                     </div>
-                    <span className="font-medium text-gray-900">PayPal</span>
-                  </label>
+                    <div>
+                      <p className="font-semibold text-gray-900">Pago Inicial (30%)</p>
+                      <p className="text-sm text-gray-600">Hoy, {formatDate(new Date())}</p>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-primary-600">
+                    {formatPrice(initialPayment)}
+                  </span>
                 </div>
               </div>
 
-              {paymentMethod === 'credit-card' && (
-                <>
-                  {/* Nombre en la Tarjeta */}
+              {/* Lista de Pagos Mensuales */}
+              <div className="px-6 py-4">
+                <p className="text-sm font-medium text-gray-700 mb-4">
+                  Pagos mensuales restantes ({formatPrice(deferredAmount)} en {deferralMonths} meses):
+                </p>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {paymentSchedule.map((payment) => (
+                    <div
+                      key={payment.number}
+                      className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-medium text-sm">
+                          {payment.number}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Pago {payment.number}</p>
+                          <p className="text-sm text-gray-600">{formatDate(payment.date)}</p>
+                        </div>
+                      </div>
+                      <span className="font-semibold text-gray-900">
+                        {formatPrice(payment.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumen del Total */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total de pagos mensuales:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(deferredAmount)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha - Método de Pago */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Monto a Pagar Hoy */}
+            <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <HiOutlineBanknotes className="w-6 h-6" />
+                <span className="font-medium">Pago de hoy</span>
+              </div>
+              <div className="text-4xl font-bold mb-2">
+                {formatPrice(initialPayment)}
+              </div>
+              <p className="text-primary-100 text-sm">
+                30% del total para apartar tus productos
+              </p>
+            </div>
+
+            {/* Método de Pago */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Método de Pago</h3>
+              
+              <div className="space-y-3 mb-6">
+                {/* Tarjeta */}
+                <label 
+                  className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    paymentMethod === 'card' 
+                      ? 'border-primary-500 bg-primary-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="card"
+                    checked={paymentMethod === 'card'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-5 h-5 text-primary-600 focus:ring-primary-500"
+                  />
+                  <HiOutlineCreditCard className={`w-6 h-6 ${paymentMethod === 'card' ? 'text-primary-600' : 'text-gray-400'}`} />
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">Tarjeta de Débito/Crédito</span>
+                    <p className="text-xs text-gray-500">Visa, Mastercard, American Express</p>
+                  </div>
+                </label>
+
+                {/* Oxxo Pay */}
+                <label 
+                  className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    paymentMethod === 'oxxo' 
+                      ? 'border-primary-500 bg-primary-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="oxxo"
+                    checked={paymentMethod === 'oxxo'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-5 h-5 text-primary-600 focus:ring-primary-500"
+                  />
+                  <HiOutlineBuildingStorefront className={`w-6 h-6 ${paymentMethod === 'oxxo' ? 'text-primary-600' : 'text-gray-400'}`} />
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">Efectivo en OXXO</span>
+                    <p className="text-xs text-gray-500">Paga con efectivo en cualquier OXXO</p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Formulario de Tarjeta */}
+              {paymentMethod === 'card' && (
+                <div className="space-y-4 mb-6 pt-4 border-t border-gray-200">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nombre en la Tarjeta:
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de tarjeta
                     </label>
                     <input
                       type="text"
-                      value={paymentData.nameOnCard}
-                      onChange={(e) => handlePaymentDataChange('nameOnCard', e.target.value)}
+                      value={cardData.cardNumber}
+                      onChange={(e) => handleCardDataChange('cardNumber', e.target.value.replace(/\D/g, '').slice(0, 16))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Juan Pérez"
+                      placeholder="1234 5678 9012 3456"
                     />
                   </div>
 
-                  {/* Número de Tarjeta */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Número de Tarjeta:
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre en la tarjeta
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={paymentData.cardNumber}
-                        onChange={(e) => handlePaymentDataChange('cardNumber', e.target.value.replace(/\D/g, '').slice(-4))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pl-12"
-                        placeholder="**** **** **** 2153"
-                        maxLength="4"
-                      />
-                      <HiOutlineCreditCard className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    </div>
+                    <input
+                      type="text"
+                      value={cardData.cardHolder}
+                      onChange={(e) => handleCardDataChange('cardHolder', e.target.value.toUpperCase())}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="JUAN PÉREZ"
+                    />
                   </div>
 
-                  {/* Fecha de Expiración y CVV */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Fecha de Expiración:
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Vencimiento
                       </label>
                       <div className="flex gap-2">
                         <select
-                          value={expiryMonth}
-                          onChange={(e) => setExpiryMonth(e.target.value)}
-                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          value={cardData.expiryMonth}
+                          onChange={(e) => handleCardDataChange('expiryMonth', e.target.value)}
+                          className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                         >
-                          {months.map(month => (
-                            <option key={month} value={month}>{month}</option>
+                          <option value="">MM</option>
+                          {months.map(m => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
                           ))}
                         </select>
                         <select
-                          value={expiryYear}
-                          onChange={(e) => setExpiryYear(e.target.value)}
-                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          value={cardData.expiryYear}
+                          onChange={(e) => handleCardDataChange('expiryYear', e.target.value)}
+                          className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                         >
-                          {years.map(year => (
-                            <option key={year} value={year}>{year}</option>
+                          <option value="">AA</option>
+                          {years.map(y => (
+                            <option key={y.value} value={y.value}>{y.label.slice(-2)}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        CVV:
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        CVV
                       </label>
                       <input
                         type="text"
-                        value={paymentData.cvv}
-                        onChange={(e) => handlePaymentDataChange('cvv', e.target.value.replace(/\D/g, '').slice(0, 3))}
+                        value={cardData.cvv}
+                        onChange={(e) => handleCardDataChange('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="156"
-                        maxLength="3"
+                        placeholder="123"
                       />
                     </div>
                   </div>
-                </>
+
+                  {/* Guardar tarjeta para pagos recurrentes */}
+                  <label className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveCard}
+                      onChange={(e) => setSaveCard(e.target.checked)}
+                      className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded mt-0.5"
+                    />
+                    <div>
+                      <span className="font-medium text-gray-900 text-sm">
+                        Guardar tarjeta para pagos automáticos
+                      </span>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Tus pagos mensuales se cargarán automáticamente a esta tarjeta
+                      </p>
+                    </div>
+                  </label>
+                </div>
               )}
 
-              {/* Botón de Checkout */}
+              {/* Mensaje de OXXO */}
+              {paymentMethod === 'oxxo' && (
+                <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-start gap-3">
+                    <HiOutlineDocumentText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-900">
+                        Recibirás una ficha de pago
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Presenta el código de barras en cualquier OXXO para realizar tu pago inicial. 
+                        Tienes 3 días para completar el pago.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Términos y Condiciones */}
+              <label className="flex items-start gap-3 mb-6 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded mt-0.5"
+                />
+                <span className="text-sm text-gray-600">
+                  Acepto los{' '}
+                  <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
+                    términos y condiciones
+                  </Link>{' '}
+                  y el{' '}
+                  <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
+                    aviso de privacidad
+                  </Link>
+                </span>
+              </label>
+
+              {/* Botón de Pago */}
               <button
                 onClick={handleCheckout}
-                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                disabled={!acceptedTerms || isProcessing}
+                className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  acceptedTerms && !isProcessing
+                    ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-md hover:shadow-lg'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                <HiOutlineLockClosed className="w-5 h-5" />
-                Finalizar Compra
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <HiOutlineLockClosed className="w-5 h-5" />
+                    Pagar {formatPrice(initialPayment)}
+                  </>
+                )}
               </button>
+
+              {/* Seguridad */}
+              <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
+                <HiOutlineShieldCheck className="w-4 h-4" />
+                <span>Pago seguro con encriptación SSL</span>
+              </div>
             </div>
           </div>
         </div>
@@ -336,4 +492,3 @@ const Checkout = () => {
 };
 
 export default Checkout;
-

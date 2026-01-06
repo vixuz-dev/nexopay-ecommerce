@@ -156,6 +156,43 @@
   .text-highlight {
     @apply text-highlight-500;
   }
+
+  /* Carousel group for independent hover effects */
+  .carousel-group:hover .carousel-group-hover\:opacity-100 {
+    opacity: 1;
+  }
+
+  /* Override container max-width on mobile */
+  @media (min-width: 365px) {
+    .container {
+      max-width: 100%;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+
+  /* Hide scrollbar for mobile thumbnails */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {

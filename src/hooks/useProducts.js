@@ -8,7 +8,13 @@ const mockProducts = [
     price: 8999,
     originalPrice: 10999,
     discount: 18,
-    image: null,
+    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&h=800&fit=crop',
+    images: [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&h=800&fit=crop'
+    ],
     category: 'Electrónica',
     rating: 4.5,
     inStock: true,
@@ -20,6 +26,15 @@ const mockProducts = [
       ram: '6GB',
       camara: '50MP + 12MP + 5MP',
       bateria: '5000mAh'
+    },
+    variants: {
+      colors: [
+        { name: 'Negro', value: '#000000' },
+        { name: 'Azul', value: '#2563EB' },
+        { name: 'Blanco', value: '#FFFFFF' },
+        { name: 'Violeta', value: '#9333EA' }
+      ],
+      sizes: ['128GB', '256GB']
     }
   },
   {
@@ -28,7 +43,13 @@ const mockProducts = [
     price: 12999,
     originalPrice: 14999,
     discount: 13,
-    image: null,
+    image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&h=800&fit=crop',
+    images: [
+      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&h=800&fit=crop&q=80'
+    ],
     category: 'Computadoras',
     rating: 4.7,
     inStock: true,
@@ -40,6 +61,14 @@ const mockProducts = [
       ram: '8GB',
       graficos: 'Intel UHD Graphics',
       sistema: 'Windows 11'
+    },
+    variants: {
+      colors: [
+        { name: 'Plata', value: '#C0C0C0' },
+        { name: 'Negro', value: '#000000' },
+        { name: 'Azul', value: '#2563EB' }
+      ],
+      sizes: ['8GB RAM', '16GB RAM']
     }
   },
   {
@@ -48,7 +77,13 @@ const mockProducts = [
     price: 5999,
     originalPrice: null,
     discount: null,
-    image: null,
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=800&fit=crop',
+    images: [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&h=800&fit=crop'
+    ],
     category: 'Audio',
     rating: 4.8,
     inStock: true,
@@ -59,6 +94,13 @@ const mockProducts = [
       bateria: '30 horas',
       conexion: 'Bluetooth 5.0',
       peso: '254g'
+    },
+    variants: {
+      colors: [
+        { name: 'Negro', value: '#000000' },
+        { name: 'Plateado', value: '#C0C0C0' },
+        { name: 'Azul', value: '#2563EB' }
+      ]
     }
   },
   {
@@ -67,7 +109,13 @@ const mockProducts = [
     price: 10999,
     originalPrice: 12999,
     discount: 15,
-    image: null,
+    image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&h=800&fit=crop',
+    images: [
+      'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1526430752879-b9eb53fbdbf8?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1561154464-82e9adf32764?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=800&h=800&fit=crop&q=80'
+    ],
     category: 'Tablets',
     rating: 4.6,
     inStock: true,
@@ -79,6 +127,16 @@ const mockProducts = [
       camara: '12MP frontal, 12MP trasera',
       bateria: 'Hasta 10 horas',
       sistema: 'iPadOS'
+    },
+    variants: {
+      colors: [
+        { name: 'Gris Espacial', value: '#1F2937' },
+        { name: 'Rosa', value: '#EC4899' },
+        { name: 'Azul', value: '#2563EB' },
+        { name: 'Púrpura', value: '#9333EA' },
+        { name: 'Starlight', value: '#F5F5F7' }
+      ],
+      sizes: ['64GB', '256GB']
     }
   },
   {
@@ -127,7 +185,13 @@ const mockProducts = [
     price: 7999,
     originalPrice: 8999,
     discount: 11,
-    image: null,
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop',
+    images: [
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=800&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop&q=80'
+    ],
     category: 'Smartwatches',
     rating: 4.7,
     inStock: true,
@@ -139,6 +203,16 @@ const mockProducts = [
       bateria: '18 horas',
       sistema: 'watchOS 10',
       sensores: 'ECG, oxígeno en sangre'
+    },
+    variants: {
+      colors: [
+        { name: 'Negro', value: '#000000' },
+        { name: 'Blanco', value: '#FFFFFF' },
+        { name: 'Rosa', value: '#EC4899' },
+        { name: 'Azul', value: '#2563EB' },
+        { name: 'Rojo', value: '#DC2626' }
+      ],
+      sizes: ['41mm', '45mm']
     }
   },
   {

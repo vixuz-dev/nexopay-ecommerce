@@ -45,7 +45,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
   };
 
   return (
-    <div className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full">
+    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-all duration-300 overflow-hidden flex flex-col h-full max-w-[280px] mx-auto">
       {/* Product Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100 flex-shrink-0">
         {image && !image.includes('via.placeholder.com') ? (
@@ -84,18 +84,18 @@ const ProductCard = ({ product, showAddToCart = false }) => {
       </div>
 
       {/* Product Info */}
-      <div className="p-5 flex flex-col flex-1">
+      <div className="p-4 flex flex-col flex-1">
         <div className="flex-1">
           {/* Category */}
           {category && (
-            <p className="text-xs text-primary-600 font-medium mb-2 uppercase tracking-wide">
+            <p className="text-xs text-primary-600 font-medium mb-1.5 uppercase tracking-wide">
               {category}
             </p>
           )}
 
           {/* Product Name */}
           <Link to={`/producto?id=${id}${category ? `&category=${encodeURIComponent(category)}` : ''}`}>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-primary-600 transition-colors">
+            <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-primary-600 transition-colors">
               {name}
             </h3>
           </Link>
@@ -109,20 +109,20 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           )}
 
           {/* Price */}
-          <div className="mb-4">
+          <div className="mb-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-gray-900">
+              <span className="text-xl font-bold text-gray-900">
                 {formatPrice(price)}
               </span>
               {originalPrice && originalPrice > price && (
-                <span className="text-sm text-gray-500 line-through">
+                <span className="text-xs text-gray-500 line-through">
                   {formatPrice(originalPrice)}
                 </span>
               )}
             </div>
             
             {/* Monthly Payment */}
-            <p className="text-sm text-primary-600 font-medium mt-1">
+            <p className="text-xs text-primary-600 font-medium mt-1">
               Desde {formatPrice(calculateMonthlyPayment(price))} mensual
             </p>
           </div>
@@ -133,13 +133,13 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           <button
             onClick={handleAddToCart}
             disabled={!inStock}
-            className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 mt-auto ${
+            className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-auto ${
               inStock
-                ? 'bg-primary-500 hover:bg-primary-600 text-white shadow-md hover:shadow-lg'
+                ? 'bg-primary-500 hover:bg-primary-600 text-white'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            <HiOutlineShoppingCart className="w-5 h-5" />
+            <HiOutlineShoppingCart className="w-4 h-4" />
             {inStock ? 'Agregar al carrito' : 'No disponible'}
           </button>
         )}

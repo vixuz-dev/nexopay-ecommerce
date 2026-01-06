@@ -5,7 +5,13 @@ const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
+      deferralMonths: 6, // Meses globales de diferimiento (3, 6, 9, 12)
       
+      // Actualizar meses de diferimiento global
+      setDeferralMonths: (months) => {
+        set({ deferralMonths: months });
+      },
+
       // Agregar producto al carrito
       addItem: (product, quantity = 1, size = null) => {
         const items = get().items;
@@ -17,7 +23,7 @@ const useCartStore = create(
           // Si el producto ya existe, actualizar cantidad
           const updatedItems = items.map((item, index) =>
             index === existingItemIndex
-              ? { ...item, quantity: item.quantity + quantity }
+              ? { ...item, quantity: item.quantity + quantity, total: item.price * (item.quantity + quantity) }
               : item
           );
           set({ items: updatedItems });
@@ -34,7 +40,6 @@ const useCartStore = create(
             size: size || 'Estándar',
             quantity: quantity,
             total: product.price * quantity,
-            months: 6, // Default: 6 meses
           };
           set({ items: [...items, newItem] });
         }
@@ -60,17 +65,6 @@ const useCartStore = create(
         const updatedItems = items.map(item =>
           item.id === itemId && item.size === (size || 'Estándar')
             ? { ...item, quantity, total: item.price * quantity }
-            : item
-        );
-        set({ items: updatedItems });
-      },
-
-      // Actualizar meses de diferimiento
-      updateMonths: (itemId, months, size = null) => {
-        const items = get().items;
-        const updatedItems = items.map(item =>
-          item.id === itemId && item.size === (size || 'Estándar')
-            ? { ...item, months }
             : item
         );
         set({ items: updatedItems });
@@ -113,12 +107,54 @@ const useCartStore = create(
 
       // Limpiar el carrito
       clearCart: () => {
-        set({ items: [] });
+        set({ items: [], deferralMonths: 6 });
       },
 
-      // Calcular totales
+      // Calcular subtotal
       getSubtotal: () => {
         return get().items.reduce((sum, item) => sum + item.total, 0);
+      },
+
+      // Calcular pago inicial (30%)
+      getInitialPayment: () => {
+        const subtotal = get().getSubtotal();
+        return subtotal * 0.30;
+      },
+
+      // Calcular total a diferir (70%)
+      getDeferredAmount: () => {
+        const subtotal = get().getSubtotal();
+        return subtotal * 0.70;
+      },
+
+      // Calcular pago mensual
+      getMonthlyPayment: () => {
+        const deferredAmount = get().getDeferredAmount();
+        const months = get().deferralMonths;
+        return months > 0 ? deferredAmount / months : 0;
+      },
+
+      // Generar calendario de pagos
+      getPaymentSchedule: () => {
+        const monthlyPayment = get().getMonthlyPayment();
+        const months = get().deferralMonths;
+        const schedule = [];
+        
+        const today = new Date();
+        
+        for (let i = 1; i <= months; i++) {
+          const paymentDate = new Date(today);
+          paymentDate.setMonth(paymentDate.getMonth() + i);
+          
+          schedule.push({
+            number: i,
+            date: paymentDate,
+            amount: monthlyPayment,
+            status: 'pending', // pending, paid, overdue
+          });
+        }
+        
+        return schedule;
       },
 
       // Obtener cantidad total de items
@@ -133,10 +169,12 @@ const useCartStore = create(
     }),
     {
       name: 'cart-storage',
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ 
+        items: state.items,
+        deferralMonths: state.deferralMonths,
+      }),
     }
   )
 );
 
 export default useCartStore;
-

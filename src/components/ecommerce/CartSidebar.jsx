@@ -20,6 +20,9 @@ const CartSidebar = ({ isOpen, onClose }) => {
     getTotalItems,
     clearCart,
     isEmpty,
+    deferralMonths,
+    getInitialPayment,
+    getMonthlyPayment,
   } = useCartStore();
 
   const formatPrice = (amount) => {
@@ -35,6 +38,8 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const shipping = subtotal > 5000 ? 0 : 200;
   const total = subtotal + shipping;
   const totalItems = getTotalItems();
+  const initialPayment = getInitialPayment();
+  const monthlyPayment = getMonthlyPayment();
 
   const handleQuantityChange = (itemId, size, newQuantity) => {
     updateQuantity(itemId, newQuantity, size);
@@ -47,11 +52,6 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const handleViewCart = () => {
     onClose();
     navigate(ROUTES.CART);
-  };
-
-  const handleCheckout = () => {
-    onClose();
-    navigate(ROUTES.CHECKOUT);
   };
 
   return (
@@ -212,24 +212,28 @@ const CartSidebar = ({ isOpen, onClose }) => {
                   <span>{formatPrice(total)}</span>
                 </div>
               </div>
+
+              {/* Info de Financiamiento */}
+              <div className="bg-primary-50 rounded-lg p-3 mt-3 border border-primary-100">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-700">Pago inicial (30%):</span>
+                  <span className="font-semibold text-primary-600">{formatPrice(initialPayment)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>{deferralMonths} mensualidades de:</span>
+                  <span className="font-medium">{formatPrice(monthlyPayment)}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Botones */}
-            <div className="space-y-3">
-              <button
-                onClick={handleCheckout}
-                className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-              >
-                Finalizar Compra
-                <HiOutlineArrowRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleViewCart}
-                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Ver Carrito Completo
-              </button>
-            </div>
+            {/* Botón */}
+            <button
+              onClick={handleViewCart}
+              className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              Ver Carrito y Configurar Pago
+              <HiOutlineArrowRight className="w-5 h-5" />
+            </button>
 
             {/* Limpiar Carrito */}
             <button

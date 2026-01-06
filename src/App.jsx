@@ -15,6 +15,7 @@ import MyOrders from './pages/MyOrders';
 import MyProfile from './pages/MyProfile';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
             <Route path="/mi-perfil" element={<MyProfile />} />
             <Route path="/carrito" element={<Cart />} />
             <Route path="/pago" element={<Checkout />} />
+            <Route path="/confirmacion" element={<OrderConfirmation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
