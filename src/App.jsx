@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import CartSidebar from './components/ecommerce/CartSidebar';
+import ScrollToTop from './components/common/ScrollToTop';
 import useUIStore from './stores/uiStore';
 import Home from './pages/Home';
 import Registro from './pages/Registro';
@@ -13,6 +14,9 @@ import ProductDetail from './pages/ProductDetail';
 import MyAccount from './pages/MyAccount';
 import MyOrders from './pages/MyOrders';
 import MyProfile from './pages/MyProfile';
+import CreditTransactions from './pages/CreditTransactions';
+import MyInvoices from './pages/MyInvoices';
+import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
@@ -25,6 +29,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <div className="min-h-screen">
+          <ScrollToTop />
           <CartSidebar isOpen={isCartSidebarOpen} onClose={closeCartSidebar} />
           <Routes>
             <Route path="/" element={<Home />} />
@@ -36,6 +41,9 @@ function App() {
             <Route path="/mi-cuenta" element={<MyAccount />} />
             <Route path="/mis-compras" element={<MyOrders />} />
             <Route path="/mi-perfil" element={<MyProfile />} />
+            <Route path="/movimientos-credito" element={<CreditTransactions />} />
+            <Route path="/mis-facturas" element={<MyInvoices />} />
+            <Route path="/factura" element={<InvoiceDetailPage />} />
             <Route path="/carrito" element={<Cart />} />
             <Route path="/pago" element={<Checkout />} />
             <Route path="/confirmacion" element={<OrderConfirmation />} />

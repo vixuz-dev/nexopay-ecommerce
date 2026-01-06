@@ -60,12 +60,12 @@ const ProductCardHorizontal = ({ product }) => {
             {name}
           </h3>
           
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-gray-900">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
               {formatPrice(price)}
             </span>
             {originalPrice && originalPrice > price && (
-              <span className="text-xs text-gray-500 line-through">
+              <span className="text-xs text-gray-500 line-through whitespace-nowrap">
                 {formatPrice(originalPrice)}
               </span>
             )}

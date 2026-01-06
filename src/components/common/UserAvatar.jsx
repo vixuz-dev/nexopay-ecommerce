@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineUser, HiOutlineCreditCard, HiOutlineShoppingBag, HiOutlineArrowRightOnRectangle, HiOutlineIdentification } from 'react-icons/hi2';
+import { HiOutlineUser, HiOutlineCreditCard, HiOutlineShoppingBag, HiOutlineArrowRightOnRectangle, HiOutlineIdentification, HiOutlineDocumentText } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../utils/routes';
 
@@ -112,6 +112,14 @@ const UserAvatar = ({ isHomePage = false }) => {
         >
           <HiOutlineShoppingBag className="w-5 h-5" />
           <span>Mis compras</span>
+        </Link>
+
+        <Link
+            to={ROUTES.MY_INVOICES}
+          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+        >
+          <HiOutlineDocumentText className="w-5 h-5" />
+          <span>Mis facturas</span>
         </Link>
 
           <div className="border-t border-gray-200 my-2" />

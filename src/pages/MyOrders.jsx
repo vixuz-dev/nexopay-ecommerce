@@ -13,7 +13,8 @@ import {
   HiOutlineXCircle,
   HiOutlineEye,
   HiOutlineChevronDown,
-  HiOutlineChevronUp
+  HiOutlineChevronUp,
+  HiOutlineDocumentText
 } from 'react-icons/hi2';
 
 const MyOrders = () => {
@@ -397,13 +398,20 @@ const MyOrders = () => {
                       </div>
 
                       {/* Acciones */}
-                      {order.status === 'completed' && (
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                          <button className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm">
+                      <div className="mt-6 pt-6 border-t border-gray-200 flex items-center gap-3">
+                        <Link
+                          to={`/factura?orderId=${order.id}`}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+                        >
+                          <HiOutlineDocumentText className="w-4 h-4" />
+                          Ver factura y calendario de pagos
+                        </Link>
+                        {order.status === 'completed' && (
+                          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm">
                             Comprar de nuevo
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

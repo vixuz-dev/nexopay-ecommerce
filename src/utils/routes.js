@@ -30,6 +30,9 @@ export const ROUTES = {
   // Cuenta
   MY_ACCOUNT: '/mi-cuenta',
   MY_PROFILE: '/mi-perfil',
+  CREDIT_TRANSACTIONS: '/movimientos-credito',
+  MY_INVOICES: '/mis-facturas',
+  INVOICE_DETAIL: '/factura',
 
   // Legal
   TERMS: '/terminos',
