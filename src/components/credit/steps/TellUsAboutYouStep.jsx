@@ -3,7 +3,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HiOutlineInformationCircle, HiOutlineUser, HiOutlineCreditCard, HiOutlineDocumentText, HiOutlineShoppingBag } from 'react-icons/hi2';
 import { useCreditForm } from '../../../stores/creditFormStore';
-import { eligibilitySchema } from '../../../schemas/creditFormSchemas';
+import { eligibilitySchema } from '../../../schemas/credit';
+
+const mensajeErrorEspanol = (message, campo) => {
+  if (!message || typeof message !== 'string') return 'Revisa este campo';
+  const lower = message.toLowerCase();
+  if (lower.includes('expected number') || lower.includes('invalid input') || lower.includes('received undefined')) {
+    return campo === 'total_compra'
+      ? 'Ingresa el total de la compra que deseas realizar'
+      : 'Ingresa un valor válido';
+  }
+  return message;
+};
 
 const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
   const { formData, updateFormData, goToNextStep } = useCreditForm();
@@ -76,7 +87,7 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
   return (
     <form onSubmit={handleSubmit(() => {})}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-6" className="text-2xl font-bold text-gray-900 mb-2">
           Conozcámonos mejor
         </h2>
         <p className="text-gray-600">
@@ -129,7 +140,7 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
                   placeholder="Ingresa tu edad"
                 />
                 {errors.edad && (
-                  <p className="mt-1 text-sm text-red-600">{errors.edad.message}</p>
+                  <p className="mt-1 text-sm text-red-600">{mensajeErrorEspanol(errors.edad.message, 'edad')}</p>
                 )}
               </div>
 
@@ -164,45 +175,47 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
                 )}
               </div>
 
-              <div>
-                <label htmlFor="ingreso_mensual" className="block text-sm font-semibold text-gray-700 mb-2">
-                  ¿Cuál es tu ingreso mensual aproximado? (MXN) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="ingreso_mensual"
-                  min="0"
-                {...register('ingreso_mensual')}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
-                    errors.ingreso_mensual ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Ingresa tu ingreso mensual"
-                />
-                {errors.ingreso_mensual && (
-                  <p className="mt-1 text-sm text-red-600">{errors.ingreso_mensual.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="antiguedad_laboral" className="block text-sm font-semibold text-gray-700 mb-2">
-                  ¿Cuánto tiempo llevas en tu trabajo actual? <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="ingreso_mensual" className="block text-sm font-semibold text-gray-700 mb-2">
+                    ¿Cuál es tu ingreso mensual aproximado? (MXN) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
-                    id="antiguedad_laboral"
+                    id="ingreso_mensual"
                     min="0"
-                    {...register('antiguedad_laboral')}
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
-                      errors.antiguedad_laboral ? 'border-red-500' : 'border-gray-300'
+                  {...register('ingreso_mensual')}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                      errors.ingreso_mensual ? 'border-red-500' : 'border-gray-300'
                     }`}
-                    placeholder="Número de meses"
+                    placeholder="Ingresa tu ingreso mensual"
                   />
-                  <span className="text-sm text-gray-500 whitespace-nowrap">meses</span>
+                  {errors.ingreso_mensual && (
+                    <p className="mt-1 text-sm text-red-600">{mensajeErrorEspanol(errors.ingreso_mensual.message, 'ingreso_mensual')}</p>
+                  )}
                 </div>
-                {errors.antiguedad_laboral && (
-                  <p className="mt-1 text-sm text-red-600">{errors.antiguedad_laboral.message}</p>
+
+                <div>
+                  <label htmlFor="antiguedad_laboral" className="block text-sm font-semibold text-gray-700 mb-2">
+                    ¿Cuánto tiempo llevas en tu trabajo actual? <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      id="antiguedad_laboral"
+                      min="0"
+                      {...register('antiguedad_laboral')}
+                      className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                        errors.antiguedad_laboral ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Número de meses"
+                    />
+                    <span className="text-sm text-gray-500 whitespace-nowrap">meses</span>
+                  </div>
+{errors.antiguedad_laboral && (
+                  <p className="mt-1 text-sm text-red-600">{mensajeErrorEspanol(errors.antiguedad_laboral.message, 'antiguedad_laboral')}</p>
                 )}
+                </div>
               </div>
             </div>
           </section>
@@ -442,7 +455,7 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
                 placeholder="Ingresa el total de tu compra"
               />
               {errors.total_compra && (
-                <p className="mt-1 text-sm text-red-600">{errors.total_compra.message}</p>
+                <p className="mt-1 text-sm text-red-600">{mensajeErrorEspanol(errors.total_compra.message, 'total_compra')}</p>
               )}
             </div>
           </section>

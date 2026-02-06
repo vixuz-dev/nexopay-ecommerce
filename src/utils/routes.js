@@ -11,21 +11,24 @@ export const ROUTES = {
   // Autenticación
   LOGIN: '/iniciar-sesion',
   REGISTER: '/registro',
+  VALIDATE_OTP: '/validar-otp',
 
   // Crédito
   REQUEST_CREDIT: '/solicitar-credito',
   CREDIT_REQUEST: '/solicitud-credito',
+  MY_CREDIT: '/mi-credito',
+  PAY_CREDIT: '/pagar-credito',
 
   // Productos
   PRODUCTS: '/productos',
   PRODUCT_DETAIL: '/producto',
+  OFFERS: '/ofertas',
 
   // Carrito y compras
   CART: '/carrito',
   CHECKOUT: '/pago',
   ORDER_CONFIRMATION: '/confirmacion',
   MY_ORDERS: '/mis-compras',
-  OFFERS: '/ofertas',
 
   // Cuenta
   MY_ACCOUNT: '/mi-cuenta',
@@ -37,19 +40,23 @@ export const ROUTES = {
   // Legal
   TERMS: '/terminos',
   PRIVACY: '/privacidad',
+
+  // Favoritos
+  FAVORITES: '/favoritos',
 };
 
 /**
  * Genera la URL del detalle de un producto con query params
- * @param {number|string} productId - ID del producto
- * @param {string} [category] - Categoría del producto (opcional)
+ * @param {string} productName - Nombre del producto
+ * @param {number} categoryId - ID de la categoría
+ * @param {number} subcategoryId - ID de la subcategoría
  * @returns {string} - URL completa con query params
  */
-export const getProductDetailUrl = (productId, category = null) => {
-  const params = new URLSearchParams({ id: productId });
-  if (category) {
-    params.set('category', category);
-  }
+export const getProductDetailUrl = (productName, categoryId, subcategoryId) => {
+  const params = new URLSearchParams();
+  params.set('name', productName);
+  if (categoryId) params.set('categoryId', String(categoryId));
+  if (subcategoryId) params.set('subcategoryId', String(subcategoryId));
   return `${ROUTES.PRODUCT_DETAIL}?${params.toString()}`;
 };
 
@@ -103,11 +110,23 @@ export const getSearchUrl = (searchTerm) => {
 };
 
 /**
- * Genera la URL de productos filtrados por categoría
- * @param {string|string[]} categories - Categoría(s) a filtrar
- * @returns {string} - URL con filtro de categoría
+ * Genera la URL de productos filtrados por categoría y subcategoría
+ * @param {number|string} categoryId - ID de la categoría
+ * @param {number|string} [subcategoryId] - ID de la subcategoría (opcional)
+ * @param {string} [productName] - Nombre del producto para búsqueda (opcional)
+ * @param {number} [page] - Número de página (opcional, default: 1)
+ * @param {number} [totalItems] - Items por página (opcional, default: 20)
+ * @returns {string} - URL con filtros de categoría y subcategoría
  */
-export const getProductsByCategoryUrl = (categories) => {
-  return getProductsUrl({ categories });
+export const getProductsByCategoryUrl = (categoryId, subcategoryId = null, productName = '', page = 1, totalItems = 20) => {
+  const params = new URLSearchParams();
+  if (categoryId) params.set('categoryId', String(categoryId));
+  if (subcategoryId) params.set('subcategoryId', String(subcategoryId));
+  if (productName) params.set('q', productName);
+  if (page > 1) params.set('page', String(page));
+  if (totalItems !== 20) params.set('totalItems', String(totalItems));
+  
+  const queryString = params.toString();
+  return queryString ? `${ROUTES.PRODUCTS}?${queryString}` : ROUTES.PRODUCTS;
 };
 

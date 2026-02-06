@@ -8,3 +8,4 @@ export { useInvoiceByOrderId } from './useInvoiceByOrderId';
 export { useDebounce } from './useDebounce';
 export { useToggle } from './useToggle';
 export { useProducts, useProduct, getCategories } from './useProducts';
+export { useCategories } from './useCategories';

@@ -1,31 +1,28 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RegistroForm } from '../components/forms/RegistroForm';
+import { RegisterForm } from '../components/forms/RegisterForm';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../utils/routes';
 
-const Registro = () => {
+const Register = () => {
   const navigate = useNavigate();
 
-  const handleRegistroSuccess = (data) => {
-    // Redirigir al login después del registro exitoso
+  const handleRegisterSuccess = (data) => {
     console.log('Registro exitoso:', data);
-    // Redirigir al login para que el usuario inicie sesión
-    navigate('/iniciar-sesion');
+    navigate(ROUTES.LOGIN);
   };
 
   const handleBack = () => {
-    // Regresar a la página anterior
     navigate(-1);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <div className="w-full max-w-lg mx-auto px-6">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <img 
-            src="/src/assets/images/NexoPay-Logo.png" 
-            alt="NexoPay Logo" 
+          <img
+            src="/src/assets/images/NexoPay-Logo.png"
+            alt="NexoPay Logo"
             className="h-12 mx-auto mb-6"
           />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -36,18 +33,16 @@ const Registro = () => {
           </p>
         </div>
 
-        {/* Form */}
-        <RegistroForm 
-          onRegistroSuccess={handleRegistroSuccess}
+        <RegisterForm
+          onRegisterSuccess={handleRegisterSuccess}
           onBack={handleBack}
         />
 
-        {/* Login Link */}
         <div className="text-center mt-8">
           <p className="text-gray-600">
             ¿Ya tienes una cuenta?{' '}
-            <Link 
-              to="/iniciar-sesion" 
+            <Link
+              to={ROUTES.LOGIN}
               className="text-primary-600 hover:text-primary-700 font-medium"
             >
               Inicia sesión
@@ -59,4 +54,4 @@ const Registro = () => {
   );
 };
 
-export default Registro;
+export default Register;

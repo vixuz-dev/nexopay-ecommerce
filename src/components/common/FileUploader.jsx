@@ -7,7 +7,8 @@ const FileUploader = ({
   accept = 'image/*',
   maxSizeMB = 5,
   label = 'Subir archivo',
-  description = 'Arrastra y suelta o haz clic para seleccionar'
+  description = 'Arrastra y suelta o haz clic para seleccionar',
+  disabled = false
 }) => {
   const [preview, setPreview] = useState(currentFile);
   const [error, setError] = useState('');
@@ -18,6 +19,20 @@ const FileUploader = ({
   const validateFile = (file) => {
     if (!file.type.startsWith('image/')) {
       setError('Por favor, selecciona un archivo de imagen válido');
+      return false;
+    }
+
+    // Validar formatos permitidos: PNG, JPG, JPEG, WEBP
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
+    
+    const isValidType = allowedTypes.includes(file.type.toLowerCase());
+    const isValidExtension = allowedExtensions.some(ext => 
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!isValidType && !isValidExtension) {
+      setError('Formato no soportado. Solo se permiten PNG, JPG, JPEG y WEBP');
       return false;
     }
 
@@ -89,25 +104,26 @@ const FileUploader = ({
 
   const getFileTypes = () => {
     if (accept === 'image/*') {
-      return 'JPG, JPEG, PNG';
+      return 'PNG, JPG, JPEG, WEBP';
     }
-    return accept.split(',').join(', ').toUpperCase();
+    return accept.split(',').map((t) => t.trim().replace('image/', '').toUpperCase()).join(', ');
   };
 
   return (
     <div className="space-y-3">
       {!preview ? (
         <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onDragOver={disabled ? undefined : handleDragOver}
+          onDragLeave={disabled ? undefined : handleDragLeave}
+          onDrop={disabled ? undefined : handleDrop}
+          onClick={disabled ? undefined : () => fileInputRef.current?.click()}
           className={`
-            relative border-2 border-dashed rounded-xl p-8 cursor-pointer
-            transition-all duration-200
-            ${isDragging 
-              ? 'border-primary-500 bg-primary-50 scale-[1.02]' 
-              : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+            relative border-2 border-dashed rounded-xl p-8 transition-all duration-200
+            ${disabled 
+              ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' 
+              : isDragging 
+              ? 'border-primary-500 bg-primary-50 scale-[1.02] cursor-pointer' 
+              : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50 cursor-pointer'
             }
           `}
         >

@@ -4,6 +4,7 @@ import { HiOutlineCalendarDays, HiOutlineBanknotes, HiOutlineCheckCircle } from 
 import { useCredit } from '../../hooks/useCredit';
 import { useCreditTransactions } from '../../hooks/useCreditTransactions';
 import { formatPrice } from '../../utils/creditUtils';
+import { ROUTES } from '../../utils/routes';
 import CreditCard from './CreditCard';
 import CreditInfoCard from './CreditInfoCard';
 import CreditTransactionsList from './CreditTransactionsList';
@@ -27,11 +28,11 @@ const CreditSection = () => {
   }
 
   const handlePay = () => {
-    navigate('/pagar-credito');
+    navigate(ROUTES.PAY_CREDIT);
   };
 
   const handleViewAllTransactions = () => {
-    navigate('/movimientos-credito');
+    navigate(ROUTES.CREDIT_TRANSACTIONS);
   };
 
   return (

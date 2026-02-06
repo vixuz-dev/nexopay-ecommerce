@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineArrowRight, HiOutlinePhone, HiOutlineUser, HiOutlineShoppingBag, HiOutlineCreditCard, HiOutlineEnvelope, HiOutlineMapPin, HiOutlineShieldCheck, HiOutlineLockClosed, HiOutlineEye, HiOutlineHome } from 'react-icons/hi2';
+import { HiOutlineArrowRight } from 'react-icons/hi2';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
+import { ROUTES } from '../utils/routes';
+import { getProductsByCategoryUrl } from '../utils/routes';
 import ProductCarousel from '../components/ecommerce/ProductCarousel';
 import BannerCarousel from '../components/common/BannerCarousel';
 import CategoryCarousel from '../components/common/CategoryCarousel';
 import BrandSection from '../components/sections/BrandSection';
 import FeaturedProductsSection from '../components/sections/FeaturedProductsSection';
 import CreditInfoBanner from '../components/common/CreditInfoBanner';
+import { useCategories } from '../hooks/useCategories';
 import bannerGorilla from '../assets/images/banners/BannerInformativoGorilla.png';
 import bannerSerena from '../assets/images/banners/BannerInformativoSerena.png';
 
@@ -25,86 +28,6 @@ const mockBanners = [
   }
 ];
 
-const mockCategories = [
-  {
-    id: 1,
-    name: 'Smartphones',
-    icon: HiOutlinePhone,
-    path: '/categorias/smartphones',
-    color: 'primary'
-  },
-  {
-    id: 2,
-    name: 'Laptops',
-    icon: HiOutlineHome,
-    path: '/categorias/laptops',
-    color: 'blue'
-  },
-  {
-    id: 3,
-    name: 'TV & Audio',
-    icon: HiOutlineEnvelope,
-    path: '/categorias/tv-audio',
-    color: 'purple'
-  },
-  {
-    id: 4,
-    name: 'Cámaras',
-    icon: HiOutlineEye,
-    path: '/categorias/camaras',
-    color: 'teal'
-  },
-  {
-    id: 5,
-    name: 'Audio',
-    icon: HiOutlineLockClosed,
-    path: '/categorias/audio',
-    color: 'pink'
-  },
-  {
-    id: 6,
-    name: 'Tablets',
-    icon: HiOutlinePhone,
-    path: '/categorias/tablets',
-    color: 'orange'
-  },
-  {
-    id: 7,
-    name: 'Auriculares',
-    icon: HiOutlinePhone,
-    path: '/categorias/auriculares',
-    color: 'indigo'
-  },
-  {
-    id: 8,
-    name: 'Smartwatches',
-    icon: HiOutlineUser,
-    path: '/categorias/smartwatches',
-    color: 'green'
-  },
-  {
-    id: 9,
-    name: 'Gaming',
-    icon: HiOutlineShieldCheck,
-    path: '/categorias/gaming',
-    color: 'red'
-  },
-  {
-    id: 10,
-    name: 'Herramientas',
-    icon: HiOutlineShoppingBag,
-    path: '/categorias/herramientas',
-    color: 'highlight'
-  },
-  {
-    id: 11,
-    name: 'Accesorios',
-    icon: HiOutlineCreditCard,
-    path: '/categorias/accesorios',
-    color: 'purple'
-  }
-];
-
 const mockBrands = [
   { name: 'Samsung', logo: null },
   { name: 'Apple', logo: null },
@@ -117,6 +40,32 @@ const mockBrands = [
 ];
 
 const Home = () => {
+  const { categories, isLoading: categoriesLoading } = useCategories();
+
+  const categoriesForCarousel = useMemo(() => {
+    if (!categories) {
+      return [];
+    }
+
+    const categoriesArray = Array.isArray(categories) ? categories : [];
+
+    if (categoriesArray.length === 0) {
+      return [];
+    }
+
+    return categoriesArray.map((category) => {
+      const label = category.name || category.category_name || category.title || category.categoryName || 'Sin nombre';
+      const categoryId = category.id || category.category_id || category.categoryId;
+      
+      return {
+        id: categoryId,
+        name: label,
+        label: label,
+        path: getProductsByCategoryUrl(categoryId),
+      };
+    });
+  }, [categories]);
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -125,7 +74,9 @@ const Home = () => {
         <CreditInfoBanner />
         <BannerCarousel banners={mockBanners} />
         
-        <CategoryCarousel categories={mockCategories} />
+        {!categoriesLoading && categoriesForCarousel.length > 0 && (
+          <CategoryCarousel categories={categoriesForCarousel} viewAllPath={ROUTES.PRODUCTS} />
+        )}
         
         <section className="bg-white py-16 lg:py-24">
           <div className="container mx-auto px-6">
@@ -139,7 +90,7 @@ const Home = () => {
                 </p>
               </div>
               <Link
-                to="/productos"
+                to={ROUTES.PRODUCTS}
                 className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold transition-colors duration-200 whitespace-nowrap ml-4"
               >
                 Ver todos
@@ -162,7 +113,7 @@ const Home = () => {
                 </p>
               </div>
               <Link
-                to="/ofertas"
+                to={ROUTES.OFFERS}
                 className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold transition-colors duration-200 whitespace-nowrap ml-4"
               >
                 Ver todas

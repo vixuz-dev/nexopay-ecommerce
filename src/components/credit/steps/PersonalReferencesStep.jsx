@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { HiOutlineUser, HiOutlinePhone, HiOutlineMapPin, HiOutlineCheckCircle, HiOutlineArrowRight } from 'react-icons/hi2';
 import Dropdown from '../../common/Dropdown';
 import { useCreditForm } from '../../../stores/creditFormStore';
-import { referenceSchema } from '../../../schemas/creditFormSchemas';
+import { referenceSchema } from '../../../schemas/credit';
 
 const PersonalReferencesStep = ({ setCustomNextHandler }) => {
-  const { formData, updateFormData, goToNextStep, referenceValidationErrors } = useCreditForm();
+  const { formData, updateFormData, goToNextStep, setIsCurrentStepValid, referenceValidationErrors } = useCreditForm();
   const [currentReference, setCurrentReference] = useState(1);
   
   const reference1Data = formData.personalReferences?.reference1 || {};
@@ -53,6 +53,59 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
 
   const currentForm = currentReference === 1 ? form1 : form2;
   const { register, handleSubmit, formState: { errors, isValid }, watch, setValue, trigger } = currentForm;
+  const form1Valid = form1.formState.isValid;
+  const form2Valid = form2.formState.isValid;
+
+  const isStepValid = currentReference === 1 ? form1Valid : (form1Valid && form2Valid);
+  useEffect(() => {
+    setIsCurrentStepValid(isStepValid);
+  }, [isStepValid, setIsCurrentStepValid]);
+
+  useEffect(() => {
+    const hasPersistedRef1 = reference1Data.nombres != null && reference1Data.nombres !== '';
+    const hasPersistedRef2 = reference2Data.nombres != null && reference2Data.nombres !== '';
+    if (hasPersistedRef1) {
+      form1.reset({
+        nombres: reference1Data.nombres ?? '',
+        apellidoPaterno: reference1Data.apellidoPaterno ?? '',
+        apellidoMaterno: reference1Data.apellidoMaterno ?? '',
+        telefono: reference1Data.telefono ?? '',
+        calle: reference1Data.calle ?? '',
+        numeroExterior: reference1Data.numeroExterior ?? '',
+        numeroInterior: reference1Data.numeroInterior ?? '',
+        colonia: reference1Data.colonia ?? '',
+        ciudad: reference1Data.ciudad ?? '',
+        estado: reference1Data.estado ?? '',
+        codigoPostal: reference1Data.codigoPostal ?? '',
+        referenciaUbicacion: reference1Data.referenciaUbicacion ?? ''
+      });
+    }
+    if (hasPersistedRef2) {
+      form2.reset({
+        nombres: reference2Data.nombres ?? '',
+        apellidoPaterno: reference2Data.apellidoPaterno ?? '',
+        apellidoMaterno: reference2Data.apellidoMaterno ?? '',
+        telefono: reference2Data.telefono ?? '',
+        calle: reference2Data.calle ?? '',
+        numeroExterior: reference2Data.numeroExterior ?? '',
+        numeroInterior: reference2Data.numeroInterior ?? '',
+        colonia: reference2Data.colonia ?? '',
+        ciudad: reference2Data.ciudad ?? '',
+        estado: reference2Data.estado ?? '',
+        codigoPostal: reference2Data.codigoPostal ?? '',
+        referenciaUbicacion: reference2Data.referenciaUbicacion ?? ''
+      });
+    }
+    let cancelled = false;
+    if (hasPersistedRef1 || hasPersistedRef2) {
+      Promise.all([form1.trigger(), form2.trigger()]).then(([r1, r2]) => {
+        if (!cancelled && setIsCurrentStepValid) {
+          setIsCurrentStepValid(currentReference === 1 ? r1 : (r1 && r2));
+        }
+      });
+    }
+    return () => { cancelled = true; };
+  }, [formData.personalReferences]);
 
   const saveCurrentReference = useCallback((referenceNum) => {
     const form = referenceNum === 1 ? form1 : form2;
@@ -209,7 +262,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
             <HiOutlineUser className="w-6 h-6 text-primary-600" />
           </div>
           <h3 className="font-bold text-gray-900 text-lg">
-              Referencia {formNumber}
+              {formNumber === 1 ? 'Primera referencia' : 'Segunda referencia'}
           </h3>
         </div>
 
@@ -472,7 +525,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-5" className="text-2xl font-bold text-gray-900 mb-2">
           Referencias personales
         </h2>
         <p className="text-gray-600">
@@ -499,7 +552,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
             <span className={`font-semibold text-sm ${
               currentReference === 1 ? 'text-primary-600' : 'text-gray-500'
             }`}>
-              Referencia 1
+              Primera referencia
             </span>
           </div>
 
@@ -522,7 +575,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
             <span className={`font-semibold text-sm ${
               currentReference === 2 ? 'text-primary-600' : 'text-gray-500'
             }`}>
-              Referencia 2
+              Segunda referencia
             </span>
           </div>
         </div>
@@ -543,7 +596,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
                 onClick={handlePreviousReference}
                 className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1"
               >
-                ← Volver a Referencia 1
+                ← Volver a primera referencia
               </button>
             </div>
             {renderForm(2)}

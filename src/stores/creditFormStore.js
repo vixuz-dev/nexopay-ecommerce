@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { referenceSchema } from '../schemas/creditFormSchemas';
+import { referenceSchema } from '../schemas/credit';
 
 const useCreditFormStore = create(
   persist(
@@ -11,6 +11,7 @@ const useCreditFormStore = create(
       completedSteps: [],
       customNextHandler: null,
       referenceValidationErrors: null,
+      isCurrentStepValid: false,
 
       // Actions
       updateFormData: (stepData) => {
@@ -37,8 +38,12 @@ const useCreditFormStore = create(
       },
 
       goToNextStep: () => {
-        const { currentStep, completedSteps, formData } = get();
+        const { currentStep, completedSteps, formData, isCurrentStepValid } = get();
         const totalSteps = 7;
+
+        if (!isCurrentStepValid) {
+          return;
+        }
 
         if (currentStep === 5) {
           const referencesData = formData.personalReferences || {};
@@ -81,18 +86,30 @@ const useCreditFormStore = create(
           const newCompleted = completedSteps.includes(currentStep) 
             ? completedSteps 
             : [...completedSteps, currentStep];
+          const nextStep = currentStep + 1;
           set({
-            currentStep: currentStep + 1,
+            currentStep: nextStep,
             completedSteps: newCompleted
           });
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          setTimeout(() => {
+            const titleElement = document.getElementById(`step-title-${nextStep}`);
+            if (titleElement) {
+              titleElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }, 100);
         }
       },
 
       goToPreviousStep: () => {
         const { currentStep } = get();
         if (currentStep > 1) {
-          set({ currentStep: currentStep - 1 });
+          set({ 
+            currentStep: currentStep - 1,
+            isCurrentStepValid: false
+          });
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       },
@@ -100,7 +117,10 @@ const useCreditFormStore = create(
       goToStep: (stepId) => {
         const { completedSteps, currentStep } = get();
         if (completedSteps.includes(stepId - 1) || stepId <= currentStep) {
-          set({ currentStep: stepId });
+          set({ 
+            currentStep: stepId,
+            isCurrentStepValid: false
+          });
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       },
@@ -109,13 +129,18 @@ const useCreditFormStore = create(
         set({ customNextHandler: handler });
       },
 
+      setIsCurrentStepValid: (isValid) => {
+        set({ isCurrentStepValid: isValid });
+      },
+
       resetForm: () => {
         set({
           formData: {},
           currentStep: 1,
           completedSteps: [],
           customNextHandler: null,
-          referenceValidationErrors: null
+          referenceValidationErrors: null,
+          isCurrentStepValid: false
         });
       }
     }),
@@ -124,13 +149,20 @@ const useCreditFormStore = create(
       partialize: (state) => {
         const sanitizedFormData = { ...state.formData };
 
-        delete sanitizedFormData.identityVerification;
-        delete sanitizedFormData.officialId;
+        if (sanitizedFormData.identityVerification) {
+          const { selfieFile, ...identityData } = sanitizedFormData.identityVerification;
+          sanitizedFormData.identityVerification = identityData;
+        }
+
+        if (sanitizedFormData.officialId) {
+          const { frontFile, backFile, passportFile, ...officialIdData } = sanitizedFormData.officialId;
+          sanitizedFormData.officialId = officialIdData;
+        }
 
         return {
           formData: sanitizedFormData,
-        currentStep: state.currentStep,
-        completedSteps: state.completedSteps
+          currentStep: state.currentStep,
+          completedSteps: state.completedSteps
         };
       }
     }

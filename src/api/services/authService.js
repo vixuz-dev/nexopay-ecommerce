@@ -5,6 +5,13 @@ import { ENDPOINTS } from '../endpoints';
  */
 class AuthService {
   /**
+   * Get app version from environment or default
+   * @returns {string} - App version
+   */
+  getAppVersion() {
+    return import.meta.env.VITE_APP_VERSION || '1.0.0';
+  }
+  /**
    * Login user
    * @param {string} email - User email
    * @param {string} password - User password
@@ -113,6 +120,95 @@ class AuthService {
     }
 
     return await response.json();
+  }
+
+  async loginClient(phoneNumber, password) {
+    const response = await fetch(ENDPOINTS.ECOMMERCE_AUTH.LOGIN_CLIENT_WEB, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phoneNumber,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.status === 400) {
+      const error = new Error(data.message || 'Ocurrió un error, no se encontraron todos los parámetros o tienen un formato inválido');
+      error.statusCode = 400;
+      error.errors = data.error || [];
+      throw error;
+    }
+
+    if (response.status === 500) {
+      const error = new Error(data.message || 'Se produjo un error con el servidor');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    if (response.status === 200 && data.success === false) {
+      const error = new Error(data.statusMessage || 'El usuario o la contraseña son incorrectos');
+      error.statusCode = 200;
+      error.success = false;
+      throw error;
+    }
+
+    if (response.status === 200 && data.success === true && data.body) {
+      if (data.body.token) {
+        localStorage.setItem('authToken', data.body.token);
+      }
+
+      return data;
+    }
+
+    throw new Error('Unexpected response format');
+  }
+
+  async registerClient(phoneNumber, password, name, paternalLastname, maternalLastname) {
+    const response = await fetch(ENDPOINTS.ECOMMERCE_AUTH.REGISTER_CLIENT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phoneNumber,
+        password,
+        name,
+        paternalLastname,
+        maternalLastname,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.status === 400) {
+      const error = new Error(data.message || 'Ocurrió un error, no se encontraron todos los parámetros o tienen un formato inválido');
+      error.statusCode = 400;
+      error.errors = data.error || [];
+      throw error;
+    }
+
+    if (response.status === 500) {
+      const error = new Error(data.message || 'Se produjo un error con el servidor');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    if (response.status === 200 && data.success === false) {
+      const error = new Error(data.statusMessage || 'El cliente con este número de teléfono ya existe');
+      error.statusCode = 200;
+      error.success = false;
+      throw error;
+    }
+
+    if (response.status === 201 && data.success === true) {
+      return data;
+    }
+
+    throw new Error('Unexpected response format');
   }
 }
 

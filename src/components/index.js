@@ -13,7 +13,7 @@ export { default as BannerCarousel } from './common/BannerCarousel';
 
 // Form components
 export { LoginForm } from './forms/LoginForm';
-export { RegistroForm } from './forms/RegistroForm';
+export { RegisterForm } from './forms/RegisterForm';
 
 // Section components
 export * from './sections';

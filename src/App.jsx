@@ -1,14 +1,22 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { SWRConfig } from 'swr';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { swrConfig } from './api/config/swrConfig';
 import CartSidebar from './components/ecommerce/CartSidebar';
 import ScrollToTop from './components/common/ScrollToTop';
+import ToastContainer from './components/common/ToastContainer';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import PublicRoute from './components/common/PublicRoute';
 import useUIStore from './stores/uiStore';
+import { ROUTES } from './utils/routes';
 import Home from './pages/Home';
-import Registro from './pages/Registro';
+import Register from './pages/Register';
 import Login from './pages/Login';
-import SolicitarCredito from './pages/SolicitarCredito';
+import ValidateOtp from './pages/ValidateOtp';
+import RequestCredit from './pages/RequestCredit';
+import MyCredit from './pages/MyCredit';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import MyAccount from './pages/MyAccount';
@@ -26,32 +34,160 @@ function App() {
   const { isCartSidebarOpen, closeCartSidebar } = useUIStore();
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <div className="min-h-screen">
+    <SWRConfig value={swrConfig}>
+      <AuthProvider>
+        <ThemeProvider>
+          <div className="min-h-screen">
           <ScrollToTop />
           <CartSidebar isOpen={isCartSidebarOpen} onClose={closeCartSidebar} />
+          <ToastContainer />
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/iniciar-sesion" element={<Login />} />
-            <Route path="/registro" element={<Registro />} />
-            <Route path="/solicitar-credito" element={<SolicitarCredito />} />
-            <Route path="/productos" element={<Products />} />
-            <Route path="/producto" element={<ProductDetail />} />
-            <Route path="/mi-cuenta" element={<MyAccount />} />
-            <Route path="/mis-compras" element={<MyOrders />} />
-            <Route path="/mi-perfil" element={<MyProfile />} />
-            <Route path="/movimientos-credito" element={<CreditTransactions />} />
-            <Route path="/mis-facturas" element={<MyInvoices />} />
-            <Route path="/factura" element={<InvoiceDetailPage />} />
-            <Route path="/carrito" element={<Cart />} />
-            <Route path="/pago" element={<Checkout />} />
-            <Route path="/confirmacion" element={<OrderConfirmation />} />
-            <Route path="*" element={<NotFound />} />
+            <Route
+              path={ROUTES.HOME}
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.LOGIN}
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path={ROUTES.REGISTER}
+              element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path={ROUTES.VALIDATE_OTP}
+              element={
+                <PublicRoute>
+                  <ValidateOtp />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path={ROUTES.REQUEST_CREDIT}
+              element={
+                <ProtectedRoute>
+                  <RequestCredit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MY_CREDIT}
+              element={
+                <ProtectedRoute>
+                  <MyCredit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.CREDIT_REQUEST}
+              element={<Navigate to={ROUTES.MY_CREDIT} replace />}
+            />
+            <Route
+              path={ROUTES.PRODUCTS}
+              element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.PRODUCT_DETAIL}
+              element={
+                <ProtectedRoute>
+                  <ProductDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MY_ACCOUNT}
+              element={
+                <ProtectedRoute>
+                  <MyAccount />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MY_ORDERS}
+              element={
+                <ProtectedRoute>
+                  <MyOrders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MY_PROFILE}
+              element={
+                <ProtectedRoute>
+                  <MyProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.CREDIT_TRANSACTIONS}
+              element={
+                <ProtectedRoute>
+                  <CreditTransactions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.MY_INVOICES}
+              element={
+                <ProtectedRoute>
+                  <MyInvoices />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.INVOICE_DETAIL}
+              element={
+                <ProtectedRoute>
+                  <InvoiceDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.CART}
+              element={
+                <ProtectedRoute>
+                  <Cart />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.CHECKOUT}
+              element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.ORDER_CONFIRMATION}
+              element={
+                <ProtectedRoute>
+                  <OrderConfirmation />
+                </ProtectedRoute>
+              }
+            />
+            <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
           </Routes>
         </div>
       </ThemeProvider>
     </AuthProvider>
+    </SWRConfig>
   );
 }
 

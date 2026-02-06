@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreditForm } from '../../../stores/creditFormStore';
-import { personalAddressSchema } from '../../../schemas/creditFormSchemas';
+import { personalAddressSchema } from '../../../schemas/credit';
 import Dropdown from '../../common/Dropdown';
 
 const PersonalAddressStep = ({ setCustomNextHandler }) => {
-  const { formData, updateFormData, goToNextStep } = useCreditForm();
+  const { formData, updateFormData, goToNextStep, setIsCurrentStepValid } = useCreditForm();
   const addressData = formData.personalAddress || {};
 
   const {
@@ -30,6 +30,10 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
       referencias: addressData.referencias || ''
     }
   });
+
+  useEffect(() => {
+    setIsCurrentStepValid(isValid);
+  }, [isValid, setIsCurrentStepValid]);
 
   useEffect(() => {
     const subscription = watch((value) => {
@@ -125,7 +129,7 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-1" className="text-2xl font-bold text-gray-900 mb-2">
           Dirección personal
         </h2>
         <p className="text-gray-600">
@@ -269,11 +273,15 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
             id="referencias"
             {...register('referencias')}
             rows="3"
+            maxLength={250}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 resize-none ${
               errors.referencias ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="Ej: Cerca del parque, entre calles X y Y, edificio de color..."
           />
+          <div className="mt-1 text-xs text-gray-500 text-right">
+            {watch('referencias')?.length || 0}/250 caracteres
+          </div>
           {errors.referencias && (
             <p className="mt-1 text-sm text-red-600">{errors.referencias.message}</p>
           )}

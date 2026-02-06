@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../api/services/authService';
+import { useCreditFormStore } from '../stores/creditFormStore';
 
 // Initial state
 const initialState = {
@@ -125,6 +126,10 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Reset credit form store
+      const { resetForm } = useCreditFormStore.getState();
+      resetForm();
+      
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     }
   };

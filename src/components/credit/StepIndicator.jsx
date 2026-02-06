@@ -93,7 +93,7 @@ const StepIndicator = ({ steps, currentStep, completedSteps, onStepClick }) => {
             );
           })}
         </div>
-        <style jsx>{`
+        <style>{`
           div::-webkit-scrollbar {
             display: none;
           }

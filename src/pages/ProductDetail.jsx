@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-import { useProduct } from '../hooks';
+import { useProductDetail } from '../hooks/useProductDetail';
+import { mapApiProductDetailToComponent } from '../utils/productDetailMapper';
 import useCartStore from '../stores/cartStore';
 import useUIStore from '../stores/uiStore';
-import { ROUTES } from '../utils/routes';
+import { ROUTES, getProductsByCategoryUrl } from '../utils/routes';
 import { 
   HiOutlineShoppingCart, 
   HiOutlineHeart, 
   HiOutlineArrowLeft,
+  HiOutlineArrowLeftCircle,
+  HiOutlineArrowRightCircle,
   HiOutlineCheckCircle,
   HiOutlineStar,
   HiOutlineTruck,
@@ -22,63 +25,38 @@ import {
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import { SimilarProducts, SellerProducts } from '../components/ecommerce';
 
-const getColorValue = (colorName) => {
-  const colorMap = {
-    'negro': '#000000',
-    'black': '#000000',
-    'blanco': '#FFFFFF',
-    'white': '#FFFFFF',
-    'azul': '#2563EB',
-    'blue': '#2563EB',
-    'rojo': '#DC2626',
-    'red': '#DC2626',
-    'verde': '#16A34A',
-    'green': '#16A34A',
-    'amarillo': '#EAB308',
-    'yellow': '#EAB308',
-    'rosa': '#EC4899',
-    'pink': '#EC4899',
-    'violeta': '#9333EA',
-    'purple': '#9333EA',
-    'morado': '#9333EA',
-    'gris': '#6B7280',
-    'gray': '#6B7280',
-    'gris espacial': '#1F2937',
-    'space gray': '#1F2937',
-    'starlight': '#F5F5F7',
-    'plateado': '#C0C0C0',
-    'silver': '#C0C0C0',
-    'dorado': '#FFD700',
-    'gold': '#FFD700',
-    'naranja': '#F97316',
-    'orange': '#F97316',
-    'turquesa': '#06B6D4',
-    'turquoise': '#06B6D4',
-    'beige': '#F5F5DC',
-    'marron': '#8B4513',
-    'brown': '#8B4513',
-  };
-  
-  const normalizedName = colorName.toLowerCase().trim();
-  return colorMap[normalizedName] || '#9CA3AF';
-};
+import { getColorValue } from '../utils/colorUtils';
+
+const MAX_VISIBLE_THUMBNAILS = 4;
 
 const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const addItem = useCartStore((state) => state.addItem);
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
-  const productId = searchParams.get('id');
-  const category = searchParams.get('category');
-  const { product, loading, error } = useProduct(productId);
+  
+  const productName = searchParams.get('name') || searchParams.get('productName');
+  const categoryId = searchParams.get('categoryId');
+  const subcategoryId = searchParams.get('subcategoryId');
+  
+  const { product: apiProduct, loading, error } = useProductDetail(productName, categoryId, subcategoryId);
+  
+  const product = useMemo(() => {
+    if (!apiProduct) return null;
+    return mapApiProductDetailToComponent(apiProduct);
+  }, [apiProduct]);
+  
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState({
     color: null,
     size: null,
   });
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [modalImageIndex, setModalImageIndex] = useState(0);
   const imageRef = React.useRef(null);
 
   const formatPrice = (amount) => {
@@ -89,12 +67,35 @@ const ProductDetail = () => {
   };
 
   const calculateMonthlyPayment = (totalPrice) => {
-    return totalPrice / 6;
+    return totalPrice / 12;
   };
 
-  const calculateInitialPayment = (totalPrice) => {
+  const calculateInitialPayment = (totalPrice, initialPaymentCost) => {
+    if (initialPaymentCost) {
+      return initialPaymentCost;
+    }
     return totalPrice * 0.30;
   };
+
+  const getCurrentProductData = () => {
+    if (selectedVariantId && product && product.productVariants) {
+      const variant = product.productVariants.find(v => v.productVariantId === selectedVariantId);
+      if (variant) {
+        return {
+          ...product,
+          price: variant.finalPrice || variant.price || product.price,
+          initialPaymentCost: variant.initialPaymentCost || product.initialPaymentCost,
+          remainingBalance: variant.remainingBalance || product.remainingBalance,
+          stock: variant.stock || product.stock,
+          variantImageUrl: variant.variantImageUrl || product.variantImageUrl,
+          productVariantId: variant.productVariantId,
+        };
+      }
+    }
+    return product;
+  };
+
+  const currentProduct = getCurrentProductData();
 
   const handleAddToCart = () => {
     if (product && product.inStock) {
@@ -112,12 +113,6 @@ const ProductDetail = () => {
     }
   };
 
-  const handleVariantChange = (variantType, value) => {
-    setSelectedVariants(prev => ({
-      ...prev,
-      [variantType]: value
-    }));
-  };
 
   const handleMouseMove = (e) => {
     if (!imageRef.current) return;
@@ -137,6 +132,20 @@ const ProductDetail = () => {
     setIsZooming(false);
   };
 
+  useEffect(() => {
+    if (!isImageModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setIsImageModalOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isImageModalOpen]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -151,7 +160,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!productId) {
+  if (!productName || !categoryId || !subcategoryId) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -160,7 +169,7 @@ const ProductDetail = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Producto no especificado</h2>
             <p className="text-gray-600 mb-6">Por favor, selecciona un producto desde el catálogo</p>
             <Link
-              to="/productos"
+              to={ROUTES.PRODUCTS}
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <HiOutlineArrowLeft className="w-5 h-5" />
@@ -182,7 +191,7 @@ const ProductDetail = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Producto no encontrado</h2>
             <p className="text-gray-600 mb-6">{error || 'El producto que buscas no existe'}</p>
             <Link
-              to="/productos"
+              to={ROUTES.PRODUCTS}
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <HiOutlineArrowLeft className="w-5 h-5" />
@@ -195,13 +204,82 @@ const ProductDetail = () => {
     );
   }
 
-  const images = product.images 
-    ? (Array.isArray(product.images) ? product.images : [product.images])
+  if (!product) {
+    return null;
+  }
+
+  const images = product.images && product.images.length > 0
+    ? product.images
     : (product.image ? [product.image] : [null]);
   
   const variants = product.variants || {};
   const colors = variants.colors || [];
   const sizes = variants.sizes || [];
+
+  const handleVariantSelection = (variantType, value) => {
+    setSelectedVariants(prev => ({
+      ...prev,
+      [variantType]: value
+    }));
+
+    if (product.productVariants && product.productVariants.length > 0) {
+      const matchingVariant = product.productVariants.find(variant => {
+        if (!variant.attributes || !Array.isArray(variant.attributes)) return false;
+        
+        const variantAttrs = {};
+        variant.attributes.forEach(attr => {
+          variantAttrs[attr.name] = attr.value;
+        });
+
+        let matches = true;
+        if (variantType === 'color') {
+          const colorAttr = product.allAttributes.find(a => 
+            a.toLowerCase() === 'color' || a.toLowerCase() === 'colores'
+          );
+          if (colorAttr) {
+            matches = variantAttrs[colorAttr] === value;
+          }
+          if (matches && selectedVariants.size) {
+            const sizeAttr = product.allAttributes.find(a => 
+              a.toLowerCase() === 'talla' || a.toLowerCase() === 'almacenamiento' || a.toLowerCase() === 'size'
+            );
+            if (sizeAttr) {
+              matches = variantAttrs[sizeAttr] === selectedVariants.size;
+            }
+          }
+        } else if (variantType === 'size') {
+          const sizeAttr = product.allAttributes.find(a => 
+            a.toLowerCase() === 'talla' || a.toLowerCase() === 'almacenamiento' || a.toLowerCase() === 'size'
+          );
+          if (sizeAttr) {
+            matches = variantAttrs[sizeAttr] === value;
+          }
+          if (matches && selectedVariants.color) {
+            const colorAttr = product.allAttributes.find(a => 
+              a.toLowerCase() === 'color' || a.toLowerCase() === 'colores'
+            );
+            if (colorAttr) {
+              matches = variantAttrs[colorAttr] === selectedVariants.color;
+            }
+          }
+        }
+        
+        return matches;
+      });
+
+      if (matchingVariant) {
+        setSelectedVariantId(matchingVariant.productVariantId);
+        if (matchingVariant.variantImageUrl && matchingVariant.variantImageUrl.image) {
+          const imageIndex = images.findIndex(img => img === matchingVariant.variantImageUrl.image);
+          if (imageIndex >= 0) {
+            setSelectedImage(imageIndex);
+          } else {
+            setSelectedImage(0);
+          }
+        }
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -215,14 +293,16 @@ const ProductDetail = () => {
             </li>
             <li>/</li>
             <li>
-              <Link to="/productos" className="hover:text-primary-600 transition-colors">Productos</Link>
+              <Link to={ROUTES.PRODUCTS} className="hover:text-primary-600 transition-colors">Productos</Link>
             </li>
             <li>/</li>
-            <li>
-              <Link to={`/productos?categories=${encodeURIComponent(product.category)}`} className="hover:text-primary-600 transition-colors">
-                {product.category}
-              </Link>
-            </li>
+            {product.categoryId && (
+              <li>
+                <Link to={getProductsByCategoryUrl(product.categoryId)} className="hover:text-primary-600 transition-colors">
+                  {product.category}
+                </Link>
+              </li>
+            )}
             <li>/</li>
             <li className="text-gray-900 font-medium">{product.name}</li>
           </ol>
@@ -235,27 +315,43 @@ const ProductDetail = () => {
                 <div className="flex gap-4 items-start">
                   {images.length > 1 && (
                     <div className="hidden md:flex flex-col gap-3 flex-shrink-0">
-                      {images.map((img, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedImage(index)}
-                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all bg-white ${
-                            selectedImage === index
-                              ? 'border-primary-600 ring-2 ring-primary-200 shadow-md'
-                              : 'border-gray-200 hover:border-gray-400'
-                          }`}
-                        >
-                          {img && !img.includes('via.placeholder.com') ? (
-                            <img 
-                              src={img} 
-                              alt={`${product.name} ${index + 1}`} 
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : (
-                            <ProductPlaceholder name={product.name} className="w-full h-full" />
-                          )}
-                        </button>
-                      ))}
+                      {(images.length > MAX_VISIBLE_THUMBNAILS ? images.slice(0, MAX_VISIBLE_THUMBNAILS) : images).map((img, index) => {
+                        const isFourthWithMore = images.length > MAX_VISIBLE_THUMBNAILS && index === MAX_VISIBLE_THUMBNAILS - 1;
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => {
+                              if (isFourthWithMore) {
+                                setModalImageIndex(MAX_VISIBLE_THUMBNAILS);
+                                setIsImageModalOpen(true);
+                              } else {
+                                setSelectedImage(index);
+                              }
+                            }}
+                            className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all bg-white ${
+                              !isFourthWithMore && selectedImage === index
+                                ? 'border-primary-600 ring-2 ring-primary-200 shadow-md'
+                                : 'border-gray-200 hover:border-gray-400'
+                            }`}
+                          >
+                            {img && !img.includes('via.placeholder.com') ? (
+                              <img 
+                                src={img} 
+                                alt={`${product.name} ${index + 1}`} 
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <ProductPlaceholder name={product.name} className="w-full h-full" />
+                            )}
+                            {isFourthWithMore && (
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-white font-semibold text-sm rounded-lg">
+                                +{images.length - MAX_VISIBLE_THUMBNAILS}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -316,27 +412,43 @@ const ProductDetail = () => {
                       msOverflowStyle: 'none'
                     }}
                   >
-                    {images.map((img, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 bg-white ${
-                          selectedImage === index
-                            ? 'border-primary-600 ring-2 ring-primary-200 shadow-md'
-                            : 'border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        {img && !img.includes('via.placeholder.com') ? (
-                          <img 
-                            src={img} 
-                            alt={`${product.name} ${index + 1}`} 
-                            className="w-full h-full object-cover" 
-                          />
-                        ) : (
-                          <ProductPlaceholder name={product.name} className="w-full h-full" />
-                        )}
-                      </button>
-                    ))}
+                    {(images.length > MAX_VISIBLE_THUMBNAILS ? images.slice(0, MAX_VISIBLE_THUMBNAILS) : images).map((img, index) => {
+                      const isFourthWithMore = images.length > MAX_VISIBLE_THUMBNAILS && index === MAX_VISIBLE_THUMBNAILS - 1;
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            if (isFourthWithMore) {
+                              setModalImageIndex(MAX_VISIBLE_THUMBNAILS);
+                              setIsImageModalOpen(true);
+                            } else {
+                              setSelectedImage(index);
+                            }
+                          }}
+                          className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 bg-white ${
+                            !isFourthWithMore && selectedImage === index
+                              ? 'border-primary-600 ring-2 ring-primary-200 shadow-md'
+                              : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                        >
+                          {img && !img.includes('via.placeholder.com') ? (
+                            <img 
+                              src={img} 
+                              alt={`${product.name} ${index + 1}`} 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <ProductPlaceholder name={product.name} className="w-full h-full" />
+                          )}
+                          {isFourthWithMore && (
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-white font-semibold text-sm rounded-lg">
+                              +{images.length - MAX_VISIBLE_THUMBNAILS}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -344,16 +456,22 @@ const ProductDetail = () => {
 
             <div className={`lg:col-span-1 space-y-4 relative z-10 transition-opacity duration-300 ${isZooming ? 'lg:opacity-0 lg:pointer-events-none' : 'opacity-100'}`}>
               <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                <Link
-                  to={`/productos?categories=${encodeURIComponent(product.category)}`}
-                  className="text-primary-600 hover:text-primary-700 transition-colors"
-                >
-                  {product.category}
-                </Link>
+                {product.categoryId && (
+                  <Link
+                    to={getProductsByCategoryUrl(product.categoryId)}
+                    className="text-primary-600 hover:text-primary-700 transition-colors"
+                  >
+                    {product.category}
+                  </Link>
+                )}
                 <span>•</span>
-                <span>Nuevo</span>
-                <span>•</span>
-                <span>+50 vendidos</span>
+                <span className="capitalize">{product.productCondition || 'Nuevo'}</span>
+                {product.affiliate && (
+                  <>
+                    <span>•</span>
+                    <span>Vendido por {product.affiliate}</span>
+                  </>
+                )}
               </div>
 
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
@@ -380,12 +498,12 @@ const ProductDetail = () => {
               <div className="mb-4">
                 <div className="flex items-baseline gap-3 mb-1">
                   <span className="text-3xl font-bold text-gray-900">
-                    {formatPrice(product.price)}
+                    {formatPrice(currentProduct.price)}
                   </span>
-                  {product.originalPrice && product.originalPrice > product.price && (
+                  {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                     <>
                       <span className="text-lg text-gray-500 line-through">
-                        {formatPrice(product.originalPrice)}
+                        {formatPrice(currentProduct.originalPrice)}
                       </span>
                       {product.discount && (
                         <span className="text-sm font-semibold text-primary-600">
@@ -396,8 +514,13 @@ const ProductDetail = () => {
                   )}
                 </div>
                 <p className="text-sm text-gray-600">
-                  24 meses de {formatPrice(calculateMonthlyPayment(product.price))} <span className="text-xs">IVA incluido</span>
+                  Hasta 12 meses de {formatPrice(calculateMonthlyPayment(currentProduct.price))} <span className="text-xs">IVA incluido</span>
                 </p>
+                {currentProduct.initialPaymentCost > 0 && (
+                  <p className="text-xs text-primary-600 font-medium mt-1">
+                    Pago inicial: {formatPrice(currentProduct.initialPaymentCost)} ({Math.round((currentProduct.initialPaymentCost / currentProduct.price) * 100)}%)
+                  </p>
+                )}
               </div>
 
               <div className="mb-4">
@@ -410,14 +533,18 @@ const ProductDetail = () => {
               </div>
 
               <div className="mb-4">
-                <p className="text-sm font-semibold text-primary-600 mb-1">Stock disponible</p>
-                <p className="text-xs text-gray-600">Almacenado y enviado por NexoPay</p>
-                <p className="text-xs text-gray-600 mt-1">
-                  Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} (+5 disponibles)
+                <p className={`text-sm font-semibold mb-1 ${currentProduct.inStock ? 'text-primary-600' : 'text-red-600'}`}>
+                  {currentProduct.inStock ? 'Stock disponible' : 'Sin stock'}
                 </p>
+                <p className="text-xs text-gray-600">Almacenado y enviado por {product.affiliate || 'NexoPay'}</p>
+                {currentProduct.inStock && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} ({currentProduct.stock} disponibles)
+                  </p>
+                )}
               </div>
 
-              {product.inStock && (colors.length > 0 || sizes.length > 0) && (
+              {currentProduct.inStock && (colors.length > 0 || sizes.length > 0) && (
                 <div className="space-y-3 mb-4">
                   {colors.length > 0 && (
                     <div>
@@ -436,7 +563,7 @@ const ProductDetail = () => {
                           return (
                             <button
                               key={index}
-                              onClick={() => handleVariantChange('color', colorName)}
+                              onClick={() => handleVariantSelection('color', colorName)}
                               className={`relative w-8 h-8 rounded-full border-2 transition-all ${
                                 isSelected
                                   ? 'border-primary-600 ring-1 ring-primary-200 ring-offset-1'
@@ -459,24 +586,19 @@ const ProductDetail = () => {
                   {sizes.length > 0 && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Talla: {selectedVariants.size ? <span className="text-primary-600">{selectedVariants.size}</span> : ''}
+                        {product.allAttributes && product.allAttributes.find(a => a.toLowerCase() === 'almacenamiento') ? 'Almacenamiento' : 'Talla'}: {selectedVariants.size ? <span className="text-primary-600">{selectedVariants.size}</span> : ''}
                       </label>
                       <div className="flex flex-wrap gap-2">
                         {sizes.map((size, index) => {
-                          const isSizeObject = typeof size === 'object';
-                          const sizeName = isSizeObject ? size.name : size;
-                          const isAvailable = isSizeObject ? size.available !== false : true;
+                          const sizeName = typeof size === 'object' ? size.name : size;
                           const isSelected = selectedVariants.size === sizeName;
                           
                           return (
                             <button
                               key={index}
-                              onClick={() => isAvailable && handleVariantChange('size', sizeName)}
-                              disabled={!isAvailable}
+                              onClick={() => handleVariantSelection('size', sizeName)}
                               className={`px-3 py-1.5 rounded-lg border-2 transition-all font-medium text-xs ${
-                                !isAvailable
-                                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed line-through'
-                                  : isSelected
+                                isSelected
                                   ? 'border-primary-600 bg-primary-50 text-primary-700'
                                   : 'border-gray-300 hover:border-gray-400 text-gray-700'
                               }`}
@@ -491,17 +613,10 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {product.specifications && Object.keys(product.specifications).length > 0 && (
+              {product.description && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Lo que tienes que saber de este producto</h3>
-                  <ul className="space-y-1 text-xs text-gray-600">
-                    {Object.entries(product.specifications).slice(0, 6).map(([key, value]) => (
-                      <li key={key} className="flex items-start gap-2">
-                        <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                        <span>{value}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Descripción del producto</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">{product.description}</p>
                 </div>
               )}
             </div>
@@ -518,7 +633,7 @@ const ProductDetail = () => {
 
                 <div className="mb-4 pb-4 border-b border-gray-200">
                   <p className="text-sm font-semibold text-primary-600 mb-1">Stock disponible</p>
-                  <p className="text-xs text-gray-600 mb-2">Almacenado y enviado por NexoPay</p>
+                  <p className="text-xs text-gray-600 mb-2">Almacenado y enviado por {product.affiliate || 'NexoPay'}</p>
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-semibold text-gray-700">Cantidad:</label>
                     <div className="flex items-center border border-gray-300 rounded-lg">
@@ -531,17 +646,18 @@ const ProductDetail = () => {
                       </button>
                       <span className="px-4 py-1.5 border-x border-gray-300 font-medium text-sm">{quantity}</span>
                       <button
-                        onClick={() => setQuantity(quantity + 1)}
+                        onClick={() => setQuantity(Math.min(currentProduct.stock, quantity + 1))}
                         className="px-3 py-1.5 hover:bg-gray-100 transition-colors text-sm"
+                        disabled={quantity >= currentProduct.stock}
                       >
                         +
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-2">(+5 disponibles)</p>
+                  <p className="text-xs text-gray-600 mt-2">({currentProduct.stock} disponibles)</p>
                 </div>
 
-                {product.inStock && (
+                {currentProduct.inStock && (
                   <div className="space-y-3 mb-4">
                     <button
                       onClick={handleBuyNow}
@@ -560,15 +676,16 @@ const ProductDetail = () => {
                   </div>
                 )}
 
-                <div className="mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <HiOutlineBuildingStorefront className="w-4 h-4 text-gray-600" />
-                    <p className="text-sm text-gray-700">
-                      Vendido por <span className="font-semibold">NexoPay Store</span>
-                    </p>
+                {product.affiliate && (
+                  <div className="mb-4 pb-4 border-b border-gray-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <HiOutlineBuildingStorefront className="w-4 h-4 text-gray-600" />
+                      <p className="text-sm text-gray-700">
+                        Vendido por <span className="font-semibold">{product.affiliate}</span>
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600">+1000 ventas</p>
-                </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="flex items-start gap-2">
@@ -605,7 +722,77 @@ const ProductDetail = () => {
           />
         </div>
       </main>
-      
+
+      {isImageModalOpen && images.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setIsImageModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galería de imágenes del producto"
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsImageModalOpen(false)}
+              className="absolute -top-12 right-0 p-2 text-white hover:bg-white/20 rounded-full transition-colors z-10"
+              aria-label="Cerrar"
+            >
+              <HiOutlineXMark className="w-8 h-8" />
+            </button>
+
+            {modalImageIndex > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalImageIndex((i) => Math.max(0, i - 1));
+                }}
+                className="absolute left-0 md:-left-14 p-2 text-white hover:bg-white/20 rounded-full transition-colors z-10"
+                aria-label="Imagen anterior"
+              >
+                <HiOutlineArrowLeftCircle className="w-10 h-10" />
+              </button>
+            )}
+
+            <div className="flex-1 flex justify-center items-center overflow-hidden">
+              {images[modalImageIndex] && !images[modalImageIndex].includes('via.placeholder.com') ? (
+                <img
+                  src={images[modalImageIndex]}
+                  alt={`${product.name} - imagen ${modalImageIndex + 1}`}
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              ) : (
+                <div className="w-full max-w-md aspect-square bg-gray-800 flex items-center justify-center rounded-lg">
+                  <ProductPlaceholder name={product.name} className="w-full h-full opacity-80" />
+                </div>
+              )}
+            </div>
+
+            {modalImageIndex < images.length - 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalImageIndex((i) => Math.min(images.length - 1, i + 1));
+                }}
+                className="absolute right-0 md:-right-14 p-2 text-white hover:bg-white/20 rounded-full transition-colors z-10"
+                aria-label="Siguiente imagen"
+              >
+                <HiOutlineArrowRightCircle className="w-10 h-10" />
+              </button>
+            )}
+
+            <p className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white/90 text-sm">
+              {modalImageIndex + 1} / {images.length}
+            </p>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

@@ -15,6 +15,18 @@ export const ENDPOINTS = {
     RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
   },
 
+  // Ecommerce Authentication
+  ECOMMERCE_AUTH: {
+    LOGIN_CLIENT_WEB: `${API_BASE_URL}/ecommerce/auth/login_client_web`,
+    REGISTER_CLIENT: `${API_BASE_URL}/ecommerce/auth/register_client`,
+  },
+
+  // OTP
+  OTP: {
+    INSERT: `${API_BASE_URL}/otp/insert`,
+    VALIDATE: `${API_BASE_URL}/otp/validate_otp`,
+  },
+
   // User management
   USERS: {
     BASE: `${API_BASE_URL}/users`,
@@ -51,5 +63,34 @@ export const ENDPOINTS = {
     DASHBOARD: `${API_BASE_URL}/analytics/dashboard`,
     PAYMENTS_STATS: `${API_BASE_URL}/analytics/payments`,
     USER_STATS: `${API_BASE_URL}/analytics/users`,
+  },
+
+  // Categories
+  CATEGORIES: {
+    GET_ACTIVE: `${API_BASE_URL}/categories/get_active_categories`,
+  },
+
+  // Subcategories
+  SUBCATEGORIES: {
+    GET_ACTIVE: `${API_BASE_URL}/subcategories/get_active_subcategories`,
+  },
+
+  // Products
+  PRODUCTS: {
+    GET_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_products`,
+  },
+
+  // KYC
+  KYC: {
+    EVALUATE: import.meta.env.DEV 
+      ? '/api/kyc' 
+      : 'https://w1887gqeij.execute-api.us-west-2.amazonaws.com/dev/kyc',
+  },
+
+  // Credit line request
+  CREDIT_LINE_REQUEST: {
+    CREATE: `${API_BASE_URL}/ecommerce/credit_line_request/create_credit_line_request`,
+    GET_REQUESTS: `${API_BASE_URL}/ecommerce/credit_line_request/get_credit_line_requests`,
+    HAVE_CREDIT_LINE_REQUEST: `${API_BASE_URL}/ecommerce/credit_line_request/have_credit_line_request`,
   },
 };

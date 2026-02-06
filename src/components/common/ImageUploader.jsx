@@ -27,6 +27,20 @@ const ImageUploader = ({
       return;
     }
 
+    // Validar formatos permitidos: PNG, JPG, JPEG, WEBP
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
+    
+    const isValidType = allowedTypes.includes(file.type.toLowerCase());
+    const isValidExtension = allowedExtensions.some(ext => 
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!isValidType && !isValidExtension) {
+      setError('Formato no soportado. Solo se permiten PNG, JPG, JPEG y WEBP');
+      return;
+    }
+
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > maxSizeMB) {
       setError(`La imagen debe ser menor a ${maxSizeMB}MB`);

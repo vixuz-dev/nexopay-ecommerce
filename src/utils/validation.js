@@ -67,3 +67,13 @@ export const isValidUrl = (url) => {
     return false;
   }
 };
+
+/**
+ * Validate postal code (CP) - Mexican format (5 digits)
+ * @param {string} cp - Postal code to validate
+ * @returns {boolean} - True if valid postal code
+ */
+export const isValidPostalCode = (cp) => {
+  const postalCodeRegex = /^\d{5}$/;
+  return postalCodeRegex.test(cp);
+};

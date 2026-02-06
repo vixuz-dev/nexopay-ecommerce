@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HiOutlineBars3, HiOutlineXMark, HiOutlineBell, HiOutlineShoppingCart, HiOutlineHeart } from 'react-icons/hi2';
+import { HiOutlineBars3, HiOutlineXMark, HiOutlineBell, HiOutlineShoppingCart, HiOutlineHeart, HiOutlineChevronDown } from 'react-icons/hi2';
 import NavItem from './NavItem';
+import CategoriesMegaMenu from './CategoriesMegaMenu';
+import CategoriesMobileMenu from './CategoriesMobileMenu';
 import SearchBar from './SearchBar';
 import UserAvatar from './UserAvatar';
 import useCartStore from '../../stores/cartStore';
 import useUIStore from '../../stores/uiStore';
+import { useCategories } from '../../hooks/useCategories';
 import { ROUTES, getProductsByCategoryUrl } from '../../utils/routes';
 import nexoLogo from '../../assets/images/nexo-white-logo.webp';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
@@ -17,27 +20,62 @@ const Navbar = ({
   showSearch = true
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const categoriesRef = useRef(null);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
   const totalItems = useCartStore((state) => state.getTotalItems());
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
+  const { categories, isLoading: categoriesLoading, error: categoriesError } = useCategories();
 
-  const defaultNavItems = [
+  const categoriesDropdown = useMemo(() => {
+    if (!categories) {
+      return [];
+    }
+
+    console.log('Categories from API:', categories);
+
+    const categoriesArray = Array.isArray(categories) ? categories : [];
+
+    if (categoriesArray.length === 0) {
+      console.log('Categories array is empty or not an array');
+      return [];
+    }
+
+    const mapped = categoriesArray.map((category) => {
+      const label = category.name || category.category_name || category.title || category.categoryName || 'Sin nombre';
+      const categoryId = category.id || category.category_id || category.categoryId;
+      
+      return {
+        id: categoryId,
+        label,
+        path: getProductsByCategoryUrl(categoryId),
+      };
+    });
+
+    return mapped;
+  }, [categories]);
+
+  const defaultNavItems = useMemo(() => [
     {
       label: 'Categorías',
       path: ROUTES.PRODUCTS,
-      dropdown: [
-        { label: 'Electrónica', path: getProductsByCategoryUrl('Electrónica') },
-        { label: 'Computadoras', path: getProductsByCategoryUrl('Computadoras') },
-        { label: 'Audio', path: getProductsByCategoryUrl('Audio') },
-        { label: 'Tablets', path: getProductsByCategoryUrl('Tablets') },
-        { label: 'Televisores', path: getProductsByCategoryUrl('Televisores') },
-        { label: 'Fotografía', path: getProductsByCategoryUrl('Fotografía') },
-        { label: 'Smartwatches', path: getProductsByCategoryUrl('Smartwatches') },
-        { label: 'Gaming', path: getProductsByCategoryUrl('Gaming') },
-        { label: 'Monitores', path: getProductsByCategoryUrl('Monitores') },
-        { label: 'Accesorios', path: getProductsByCategoryUrl('Accesorios') }
-      ]
+      dropdown: categoriesDropdown.length > 0 
+        ? categoriesDropdown 
+        : (categoriesLoading 
+          ? [] 
+          : [
+              { label: 'Electrónica', path: getProductsByCategoryUrl('Electrónica') },
+              { label: 'Computadoras', path: getProductsByCategoryUrl('Computadoras') },
+              { label: 'Audio', path: getProductsByCategoryUrl('Audio') },
+              { label: 'Tablets', path: getProductsByCategoryUrl('Tablets') },
+              { label: 'Televisores', path: getProductsByCategoryUrl('Televisores') },
+              { label: 'Fotografía', path: getProductsByCategoryUrl('Fotografía') },
+              { label: 'Smartwatches', path: getProductsByCategoryUrl('Smartwatches') },
+              { label: 'Gaming', path: getProductsByCategoryUrl('Gaming') },
+              { label: 'Monitores', path: getProductsByCategoryUrl('Monitores') },
+              { label: 'Accesorios', path: getProductsByCategoryUrl('Accesorios') }
+            ])
     },
     {
       label: 'Ofertas',
@@ -47,7 +85,7 @@ const Navbar = ({
       label: 'Mis compras',
       path: ROUTES.MY_ORDERS
     }
-  ];
+  ], [categoriesDropdown]);
 
   const items = navItems.length > 0 ? navItems : defaultNavItems;
 
@@ -86,7 +124,7 @@ const Navbar = ({
             </button>
 
             <Link
-              to="/favoritos"
+              to={ROUTES.FAVORITES}
               className={`p-2 rounded-full transition-colors duration-200 ${
                 isHomePage 
                   ? 'text-white hover:bg-white/20' 
@@ -164,13 +202,60 @@ const Navbar = ({
         )}
 
         <div className="hidden md:flex items-center gap-6 pb-4">
-          {items.map((item, index) => (
-            <NavItem 
-              key={index} 
-              item={item} 
-              isHomePage={isHomePage}
-            />
-          ))}
+          {items.map((item, index) => {
+            if (item.label === 'Categorías' && categoriesDropdown.length > 0) {
+              return (
+                <div
+                  key={index}
+                  ref={categoriesRef}
+                  className="relative"
+                  onMouseEnter={() => setIsCategoriesOpen(true)}
+                  onMouseLeave={(e) => {
+                    const relatedTarget = e.relatedTarget;
+                    if (!categoriesRef.current?.contains(relatedTarget)) {
+                      setIsCategoriesOpen(false);
+                    }
+                  }}
+                >
+                  <button
+                    className={`flex items-center gap-1 ${isHomePage ? 'text-white hover:text-highlight-400' : 'text-gray-700 hover:text-primary-600'} font-medium transition-colors duration-200 py-2`}
+                    aria-expanded={isCategoriesOpen}
+                    aria-haspopup="true"
+                  >
+                    <span>{item.label}</span>
+                    <HiOutlineChevronDown
+                      className={`w-4 h-4 transition-transform duration-300 ${isCategoriesOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {isCategoriesOpen && (
+                    <div
+                      className="absolute top-full left-0 z-50"
+                      onMouseEnter={() => setIsCategoriesOpen(true)}
+                      onMouseLeave={(e) => {
+                        const relatedTarget = e.relatedTarget;
+                        if (!categoriesRef.current?.contains(relatedTarget)) {
+                          setIsCategoriesOpen(false);
+                        }
+                      }}
+                    >
+                      <CategoriesMegaMenu 
+                        isHomePage={isHomePage}
+                        onClose={() => setIsCategoriesOpen(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return (
+              <NavItem 
+                key={index} 
+                item={item} 
+                isHomePage={isHomePage}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -205,7 +290,7 @@ const Navbar = ({
                   <HiOutlineBell className="w-6 h-6" />
                 </button>
                 <Link
-                  to="/favoritos"
+                  to={ROUTES.FAVORITES}
                   onClick={closeMobileMenu}
                   className="p-2 text-gray-700 hover:text-primary-600 transition-colors"
                 >
@@ -230,15 +315,25 @@ const Navbar = ({
                 </div>
               </div>
               
-              <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-                {items.map((item, index) => (
-                  <NavItem 
-                    key={index} 
-                    item={item} 
-                    isHomePage={false}
-                    onClose={closeMobileMenu}
-                  />
-                ))}
+              <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
+                {items.map((item, index) => {
+                  if (item.label === 'Categorías' && categoriesDropdown.length > 0) {
+                    return (
+                      <CategoriesMobileMenu 
+                        key={index}
+                        onClose={closeMobileMenu}
+                      />
+                    );
+                  }
+                  return (
+                    <NavItem 
+                      key={index} 
+                      item={item} 
+                      isHomePage={false}
+                      onClose={closeMobileMenu}
+                    />
+                  );
+                })}
               </nav>
             </div>
           </div>

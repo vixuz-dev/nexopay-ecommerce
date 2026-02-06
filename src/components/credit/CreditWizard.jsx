@@ -1,5 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCreditForm } from '../../stores/creditFormStore';
+import useToastStore from '../../stores/toastStore';
+import { mapCreditRequestToBackend } from '../../utils/creditRequestMapper';
+import { creditLineRequestService } from '../../api/services/creditLineRequestService';
+import { ROUTES } from '../../utils/routes';
 import StepIndicator from './StepIndicator';
 import NavigationButtons from './NavigationButtons';
 import PersonalAddressStep from './steps/PersonalAddressStep';
@@ -58,6 +63,9 @@ const steps = [
 ];
 
 const CreditWizard = () => {
+  const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     currentStep,
     formData,
@@ -68,17 +76,42 @@ const CreditWizard = () => {
     goToStep,
     totalSteps,
     customNextHandler,
-    setCustomNextHandler
+    setCustomNextHandler,
+    isCurrentStepValid,
+    setIsCurrentStepValid,
+    resetForm
   } = useCreditForm();
 
   const currentStepData = steps.find(step => step.id === currentStep);
   const CurrentStepComponent = currentStepData?.component;
+  const isLastStep = currentStep === totalSteps;
 
   useEffect(() => {
     setCustomNextHandler(null);
   }, [currentStep, setCustomNextHandler]);
 
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const payload = await mapCreditRequestToBackend(formData);
+      await creditLineRequestService.createCreditLineRequest(payload);
+      showToast('Solicitud enviada correctamente. Te contactaremos pronto.', 'success');
+      resetForm();
+      navigate(ROUTES.MY_CREDIT);
+    } catch (error) {
+      const message = error.message || error.statusMessage || 'No se pudo enviar la solicitud. Intenta de nuevo.';
+      showToast(message, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleNext = () => {
+    if (isLastStep) {
+      handleSubmit();
+      return;
+    }
     if (customNextHandler) {
       customNextHandler();
     } else {
@@ -107,6 +140,8 @@ const CreditWizard = () => {
           totalSteps={totalSteps}
           onPrevious={goToPreviousStep}
           onNext={handleNext}
+          isFormValid={isCurrentStepValid}
+          isSubmitting={isSubmitting}
         />
       </div>
     </div>

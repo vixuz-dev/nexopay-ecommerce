@@ -2,8 +2,15 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
+import { authService } from '../../api/services/authService';
+import { formatPhoneNumber } from '../../utils/format';
+import { hashPassword } from '../../utils/passwordUtils';
+import { setCookie } from '../../utils/cookieUtils';
+import useUserStore from '../../stores/userStore';
+import { ROUTES } from '../../utils/routes';
 
 const LoginForm = ({ onLoginSuccess, onBack }) => {
+  const setUser = useUserStore((state) => state.setUser);
   const [formData, setFormData] = useState({
     telefono: '',
     password: ''
@@ -18,7 +25,6 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
       ...formData,
       [name]: value
     });
-    // Limpiar error cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -30,7 +36,6 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Validar teléfono - exactamente 10 dígitos numéricos
     if (!formData.telefono) {
       newErrors.telefono = 'El número de teléfono es requerido';
     } else if (formData.telefono.length !== 10) {
@@ -39,7 +44,6 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
       newErrors.telefono = 'El teléfono solo debe contener números';
     }
 
-    // Validar contraseña - mínimo 8 caracteres
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
     } else if (formData.password.length < 8) {
@@ -58,37 +62,46 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
     }
 
     setIsLoading(true);
+    setErrors({});
 
     try {
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const phoneNumber = formData.telefono.trim();
+      const password = formData.password.trim();
+      const hashedPassword = hashPassword(password);
       
-      // Aquí iría la lógica real de login
-      console.log('Login exitoso:', {
-        telefono: formData.telefono,
-        password: formData.password
-      });
-
-      // Llamar callback de éxito
-      onLoginSuccess({
-        telefono: formData.telefono,
-        password: formData.password
-      });
+      const response = await authService.loginClient(phoneNumber, hashedPassword);
+      
+      if (response.body) {
+        const { token, ...userData } = response.body;
+        
+        if (token) {
+          setCookie('authToken', token, { expires: undefined });
+        }
+        
+        setUser(userData);
+        onLoginSuccess(response.body);
+      }
 
     } catch (error) {
       console.error('Error en el login:', error);
-      setErrors({ general: 'Credenciales incorrectas. Verifica tu teléfono y contraseña.' });
+      
+      if (error.statusCode === 400) {
+        const errorMessages = error.errors || [];
+        if (errorMessages.length > 0) {
+          setErrors({ general: errorMessages.join(', ') });
+        } else {
+          setErrors({ general: error.message || 'Ocurrió un error. Verifica los datos ingresados.' });
+        }
+      } else if (error.statusCode === 500) {
+        setErrors({ general: error.message || 'Error del servidor. Por favor, intenta más tarde.' });
+      } else if (error.statusCode === 200 && error.success === false) {
+        setErrors({ general: error.message || 'Credenciales incorrectas. Verifica tu teléfono y contraseña.' });
+      } else {
+        setErrors({ general: error.message || 'Error al iniciar sesión. Por favor, intenta nuevamente.' });
+      }
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatPhoneNumber = (value) => {
-    // Remover todos los caracteres no numéricos
-    const numbers = value.replace(/\D/g, '');
-    // Limitar exactamente a 10 dígitos
-    const limitedNumbers = numbers.slice(0, 10);
-    return limitedNumbers;
   };
 
   return (
@@ -195,11 +208,11 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Al iniciar sesión, aceptas nuestros{' '}
-            <Link to="/terminos" className="text-primary-600 hover:underline">
+            <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
               Términos y Condiciones
             </Link>{' '}
             y{' '}
-            <Link to="/privacidad" className="text-primary-600 hover:underline">
+            <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
               Aviso de Privacidad
             </Link>
           </p>

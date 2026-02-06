@@ -1,13 +1,36 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { mutate } from 'swr';
 import { HiOutlineUser, HiOutlineCreditCard, HiOutlineShoppingBag, HiOutlineArrowRightOnRectangle, HiOutlineIdentification, HiOutlineDocumentText } from 'react-icons/hi2';
-import { useAuth } from '../../context/AuthContext';
 import { ROUTES } from '../../utils/routes';
+import { removeCookie } from '../../utils/cookieUtils';
+import useUserStore from '../../stores/userStore';
+import { useCreditFormStore } from '../../stores/creditFormStore';
+import useCreditLineStatusStore from '../../stores/creditLineStatusStore';
 
 const UserAvatar = ({ isHomePage = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
+  const clearUser = useUserStore((state) => state.clearUser);
+  const resetCreditForm = useCreditFormStore((state) => state.resetForm);
+  const showButton = useCreditLineStatusStore((state) => state.showButton);
+  const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
+  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
+
+  useEffect(() => {
+    if (isOpen && !isLoaded) {
+      fetchCreditLineStatus().catch(() => {});
+    }
+  }, [isOpen, isLoaded, fetchCreditLineStatus]);
+
+  const hasApprovedCreditRequest =
+    isLoaded &&
+    showButton === 0 &&
+    requestStatus &&
+    String(requestStatus).toLowerCase() === 'aprobado';
 
   const handleMouseEnter = () => setIsOpen(true);
   const handleMouseLeave = () => setIsOpen(false);
@@ -28,9 +51,19 @@ const UserAvatar = ({ isHomePage = false }) => {
     };
   }, [isOpen]);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    removeCookie('authToken');
+    clearUser();
+    resetCreditForm();
+    
+    mutate(
+      (key) => typeof key === 'string',
+      undefined,
+      { revalidate: false }
+    );
+    
     setIsOpen(false);
+    navigate(ROUTES.LOGIN);
   };
 
   const getInitials = () => {
@@ -99,28 +132,32 @@ const UserAvatar = ({ isHomePage = false }) => {
           </Link>
 
           <Link
-            to={ROUTES.CREDIT_REQUEST}
-          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
-        >
-          <HiOutlineCreditCard className="w-5 h-5" />
-          <span>Solicitud de crédito</span>
-        </Link>
+            to={ROUTES.MY_CREDIT}
+            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+          >
+            <HiOutlineCreditCard className="w-5 h-5" />
+            <span>Mi crédito</span>
+          </Link>
 
-        <Link
-            to={ROUTES.MY_ORDERS}
-          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
-        >
-          <HiOutlineShoppingBag className="w-5 h-5" />
-          <span>Mis compras</span>
-        </Link>
+        {hasApprovedCreditRequest && (
+          <>
+            <Link
+              to={ROUTES.MY_ORDERS}
+              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+            >
+              <HiOutlineShoppingBag className="w-5 h-5" />
+              <span>Mis compras</span>
+            </Link>
 
-        <Link
-            to={ROUTES.MY_INVOICES}
-          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
-        >
-          <HiOutlineDocumentText className="w-5 h-5" />
-          <span>Mis facturas</span>
-        </Link>
+            <Link
+              to={ROUTES.MY_INVOICES}
+              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+            >
+              <HiOutlineDocumentText className="w-5 h-5" />
+              <span>Mis facturas</span>
+            </Link>
+          </>
+        )}
 
           <div className="border-t border-gray-200 my-2" />
 

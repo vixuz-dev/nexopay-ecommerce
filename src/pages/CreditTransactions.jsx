@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 import { useAllCreditTransactions } from '../hooks/useAllCreditTransactions';
+import { ROUTES } from '../utils/routes';
 import CreditTransactionsTable from '../components/credit/CreditTransactionsTable';
 import CreditTransactionsPagination from '../components/credit/CreditTransactionsPagination';
 import CreditTransactionsSearch from '../components/credit/CreditTransactionsSearch';
@@ -66,7 +67,7 @@ const CreditTransactions = () => {
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
-          onClick={() => navigate('/mi-cuenta')}
+          onClick={() => navigate(ROUTES.MY_ACCOUNT)}
           className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-6 transition-colors"
         >
           <HiOutlineArrowLeft className="w-5 h-5" />

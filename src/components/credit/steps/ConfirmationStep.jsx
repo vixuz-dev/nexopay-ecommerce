@@ -46,7 +46,7 @@ const ConfirmationStep = () => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-7" className="text-2xl font-bold text-gray-900 mb-2">
           Confirmación
         </h2>
         <p className="text-gray-600">
@@ -173,7 +173,7 @@ const ConfirmationStep = () => {
             </div>
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2 text-sm">Referencia 1</h4>
+                <h4 className="font-semibold text-gray-700 mb-2 text-sm">Primera referencia</h4>
                 {personalReferences.reference1 ? (
                   <div className="pl-4 border-l-2 border-primary-200 space-y-1 text-sm">
                     <p><span className="text-gray-500">Nombre:</span> <span className="font-medium text-gray-900">
@@ -186,7 +186,7 @@ const ConfirmationStep = () => {
                 )}
               </div>
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2 text-sm">Referencia 2</h4>
+                <h4 className="font-semibold text-gray-700 mb-2 text-sm">Segunda referencia</h4>
                 {personalReferences.reference2 ? (
                   <div className="pl-4 border-l-2 border-primary-200 space-y-1 text-sm">
                     <p><span className="text-gray-500">Nombre:</span> <span className="font-medium text-gray-900">

@@ -1,9 +1,10 @@
 import React from 'react';
 import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineCheckCircle } from 'react-icons/hi2';
 
-const NavigationButtons = ({ currentStep, totalSteps, onPrevious, onNext }) => {
+const NavigationButtons = ({ currentStep, totalSteps, onPrevious, onNext, isFormValid = true, isSubmitting = false }) => {
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
+  const isNextDisabled = !isFormValid || isSubmitting;
 
   return (
     <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
@@ -26,13 +27,21 @@ const NavigationButtons = ({ currentStep, totalSteps, onPrevious, onNext }) => {
 
       <button
         onClick={onNext}
+        disabled={isNextDisabled}
         className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
-          isLastStep
+          isNextDisabled
+            ? 'bg-gray-400 cursor-not-allowed'
+            : isLastStep
             ? 'bg-primary-600 hover:bg-primary-700'
             : 'bg-primary-600 hover:bg-primary-700'
         }`}
       >
-        {isLastStep ? (
+        {isSubmitting ? (
+          <>
+            <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Enviando solicitud...
+          </>
+        ) : isLastStep ? (
           <>
             <HiOutlineCheckCircle className="w-5 h-5" />
             Solicita tu crédito ahora

@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 import { useInvoices } from '../hooks/useInvoices';
+import useCreditLineStatusStore from '../stores/creditLineStatusStore';
+import { ROUTES } from '../utils/routes';
 import InvoiceSummary from '../components/invoices/InvoiceSummary';
 import InvoiceFilters from '../components/invoices/InvoiceFilters';
 import InvoiceCard from '../components/invoices/InvoiceCard';
@@ -13,6 +15,34 @@ const MyInvoices = () => {
   const { invoices, loading } = useInvoices();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const showButton = useCreditLineStatusStore((state) => state.showButton);
+  const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
+  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
+
+  const hasApprovedCreditRequest =
+    isLoaded &&
+    showButton === 0 &&
+    requestStatus &&
+    String(requestStatus).toLowerCase() === 'aprobado';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isLoaded) {
+      fetchCreditLineStatus().catch(() => {
+        if (!cancelled) void 0;
+      });
+    }
+    return () => { cancelled = true; };
+  }, [isLoaded, fetchCreditLineStatus]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!hasApprovedCreditRequest) {
+      navigate(ROUTES.MY_ACCOUNT, { replace: true });
+    }
+  }, [isLoaded, hasApprovedCreditRequest, navigate]);
 
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
@@ -47,7 +77,7 @@ const MyInvoices = () => {
 
   const handlePay = (invoice, payment = null) => {
     console.log('Pay invoice:', invoice, payment);
-    navigate('/pagar-credito', { 
+    navigate(ROUTES.PAY_CREDIT, { 
       state: { 
         invoiceId: invoice.id,
         paymentId: payment ? payment.type : null
@@ -61,7 +91,7 @@ const MyInvoices = () => {
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
-          onClick={() => navigate('/mi-cuenta')}
+          onClick={() => navigate(ROUTES.MY_ACCOUNT)}
           className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-6 transition-colors"
         >
           <HiOutlineArrowLeft className="w-5 h-5" />
@@ -77,7 +107,11 @@ const MyInvoices = () => {
           </p>
         </div>
 
-        {loading ? (
+        {!isLoaded ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
+          </div>
+        ) : !hasApprovedCreditRequest ? null : loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
           </div>

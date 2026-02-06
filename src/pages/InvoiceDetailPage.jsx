@@ -6,6 +6,7 @@ import { HiOutlineArrowLeft, HiOutlineDocumentText } from 'react-icons/hi2';
 import { useInvoiceByOrderId } from '../hooks/useInvoiceByOrderId';
 import InvoiceDetail from '../components/invoices/InvoiceDetail';
 import { formatPrice, formatDate } from '../utils/creditUtils';
+import { ROUTES } from '../utils/routes';
 
 const InvoiceDetailPage = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const InvoiceDetailPage = () => {
   const { invoice, loading } = useInvoiceByOrderId(orderId);
 
   const handlePay = (invoice, payment = null) => {
-    navigate('/pagar-credito', { 
+    navigate(ROUTES.PAY_CREDIT, { 
       state: { 
         invoiceId: invoice.id,
         paymentId: payment ? payment.type : null
@@ -42,7 +43,7 @@ const InvoiceDetailPage = () => {
         <Header />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <button
-            onClick={() => navigate('/mis-compras')}
+            onClick={() => navigate(ROUTES.MY_ORDERS)}
             className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-6 transition-colors"
           >
             <HiOutlineArrowLeft className="w-5 h-5" />
@@ -55,7 +56,7 @@ const InvoiceDetailPage = () => {
               No se encontró una factura asociada a este pedido.
             </p>
             <button
-              onClick={() => navigate('/mis-compras')}
+              onClick={() => navigate(ROUTES.MY_ORDERS)}
               className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
             >
               Volver a Mis Compras
@@ -73,7 +74,7 @@ const InvoiceDetailPage = () => {
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
-          onClick={() => navigate('/mis-compras')}
+          onClick={() => navigate(ROUTES.MY_ORDERS)}
           className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-6 transition-colors"
         >
           <HiOutlineArrowLeft className="w-5 h-5" />

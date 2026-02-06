@@ -1,10 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { HiOutlineShoppingCart, HiOutlineHeart } from 'react-icons/hi2';
 import ProductPlaceholder from '../common/ProductPlaceholder';
 import useCartStore from '../../stores/cartStore';
 import useUIStore from '../../stores/uiStore';
-import { ROUTES } from '../../utils/routes';
+import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 
 const ProductCard = ({ product, showAddToCart = false }) => {
   const navigate = useNavigate();
@@ -23,12 +23,18 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     inStock = true
   } = product;
 
+  const productDetailUrl = getProductDetailUrl(name, product.categoryId, product.subcategoryId);
+
+  const handleCardClick = () => {
+    navigate(productDetailUrl);
+  };
+
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (inStock) {
       addItem(product, 1);
-      openCartSidebar(); // Abrir el sidebar del carrito
+      openCartSidebar();
     }
   };
 
@@ -45,9 +51,20 @@ const ProductCard = ({ product, showAddToCart = false }) => {
   };
 
   return (
-    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-all duration-300 overflow-hidden flex flex-col h-full max-w-[280px] mx-auto">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer"
+    >
       {/* Product Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100 flex-shrink-0">
+      <div className="relative w-full aspect-square overflow-hidden bg-gray-100 flex-shrink-0">
         {image && !image.includes('via.placeholder.com') ? (
           <img
             src={image}
@@ -67,6 +84,11 @@ const ProductCard = ({ product, showAddToCart = false }) => {
 
         {/* Wishlist Button */}
         <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full transition-colors duration-200 opacity-0 group-hover:opacity-100"
           aria-label="Agregar a favoritos"
         >
@@ -84,48 +106,44 @@ const ProductCard = ({ product, showAddToCart = false }) => {
       </div>
 
       {/* Product Info */}
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex-1">
-          {/* Category */}
-          {category && (
-            <p className="text-xs text-primary-600 font-medium mb-1.5 uppercase tracking-wide">
-              {category}
-            </p>
-          )}
+      <div className="p-4 flex flex-col flex-1 min-h-0">
+        {/* Category */}
+        {category && (
+          <p className="text-xs text-primary-600 font-medium mb-1.5 uppercase tracking-wide">
+            {category}
+          </p>
+        )}
 
-          {/* Product Name */}
-          <Link to={`/producto?id=${id}${category ? `&category=${encodeURIComponent(category)}` : ''}`}>
-            <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-primary-600 transition-colors">
-              {name}
-            </h3>
-          </Link>
+        {/* Product Name */}
+        <h3 className="text-base font-semibold text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors min-h-[2.5rem] mb-2">
+          {name}
+        </h3>
 
-          {/* Rating */}
-          {false && rating && (
-            <div className="flex items-center gap-1 mb-3">
-              <span className="text-yellow-400">★</span>
-              <span className="text-sm text-gray-600">{rating}</span>
-            </div>
-          )}
-
-          {/* Price */}
-          <div className="mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-gray-900">
-                {formatPrice(price)}
-              </span>
-              {originalPrice && originalPrice > price && (
-                <span className="text-xs text-gray-500 line-through">
-                  {formatPrice(originalPrice)}
-                </span>
-              )}
-            </div>
-            
-            {/* Monthly Payment */}
-            <p className="text-xs text-primary-600 font-medium mt-1">
-              Desde {formatPrice(calculateMonthlyPayment(price))} mensual
-            </p>
+        {/* Rating */}
+        {false && rating && (
+          <div className="flex items-center gap-1 mb-3">
+            <span className="text-yellow-400">★</span>
+            <span className="text-sm text-gray-600">{rating}</span>
           </div>
+        )}
+
+        {/* Price */}
+        <div className="mt-auto">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-xl font-bold text-gray-900">
+              {formatPrice(price)}
+            </span>
+            {originalPrice && originalPrice > price && (
+              <span className="text-xs text-gray-500 line-through">
+                {formatPrice(originalPrice)}
+              </span>
+            )}
+          </div>
+          
+          {/* Monthly Payment */}
+          <p className="text-xs text-primary-600 font-medium">
+            Desde {formatPrice(calculateMonthlyPayment(price))} mensual
+          </p>
         </div>
 
         {/* Add to Cart Button */}
@@ -133,7 +151,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           <button
             onClick={handleAddToCart}
             disabled={!inStock}
-            className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-auto ${
+            className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-3 ${
               inStock
                 ? 'bg-primary-500 hover:bg-primary-600 text-white'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'

@@ -1,17 +1,25 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { mutate } from 'swr';
 import { LoginForm } from '../components/forms/LoginForm';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../utils/routes';
+import { categoryService } from '../api/services/categoryService';
 
 const Login = () => {
   const navigate = useNavigate();
 
-  const handleLoginSuccess = (data) => {
-    // Redirigir a dashboard o página principal después del login
-    console.log('Login exitoso:', data);
-    // Aquí podrías redirigir a un dashboard
-    // Por ahora redirigimos a la raíz (que también es /iniciar-sesion)
-    navigate('/iniciar-sesion');
+  const handleLoginSuccess = async (clientData) => {
+    console.log('Login exitoso:', clientData);
+    
+    try {
+      const categories = await categoryService.getActiveCategories();
+      mutate('categories', categories, false);
+    } catch (error) {
+      console.error('Error al pre-cargar categorías:', error);
+    }
+    
+    navigate(ROUTES.HOME);
   };
 
   const handleBack = () => {
@@ -48,7 +56,7 @@ const Login = () => {
           <p className="text-gray-600">
             ¿No tienes una cuenta?{' '}
             <Link 
-              to="/registro" 
+              to={ROUTES.REGISTER} 
               className="text-primary-600 hover:text-primary-700 font-medium"
             >
               Regístrate aquí

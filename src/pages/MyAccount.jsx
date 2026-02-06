@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -7,6 +7,7 @@ import RecommendedProducts from '../components/account/RecommendedProducts';
 import ShopCTABanner from '../components/account/ShopCTABanner';
 import InvoicesSummaryCard from '../components/account/InvoicesSummaryCard';
 import { useInvoices } from '../hooks/useInvoices';
+import useCreditLineStatusStore from '../stores/creditLineStatusStore';
 import {
   HiOutlineClock,
   HiOutlineCheckCircle,
@@ -18,6 +19,26 @@ import { formatPrice, formatDate } from '../utils/creditUtils';
 const MyAccount = () => {
   const navigate = useNavigate();
   const { invoices } = useInvoices();
+  const showButton = useCreditLineStatusStore((state) => state.showButton);
+  const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
+  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
+
+  const hasApprovedCreditRequest =
+    isLoaded &&
+    showButton === 0 &&
+    requestStatus &&
+    String(requestStatus).toLowerCase() === 'aprobado';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isLoaded) {
+      fetchCreditLineStatus().catch(() => {
+        if (!cancelled) void 0;
+      });
+    }
+    return () => { cancelled = true; };
+  }, [isLoaded, fetchCreditLineStatus]);
 
   const user = {
     id: '1',
@@ -52,7 +73,7 @@ const MyAccount = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 ${hasApprovedCreditRequest ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -83,18 +104,20 @@ const MyAccount = () => {
             <p className="text-sm text-gray-600">Pedidos completados</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <HiOutlineCreditCard className="w-6 h-6 text-purple-600" />
+          {hasApprovedCreditRequest && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <HiOutlineCreditCard className="w-6 h-6 text-purple-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{formatPrice(dashboardStats.creditAvailable)}</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">{formatPrice(dashboardStats.creditAvailable)}</span>
+              <p className="text-sm text-gray-600">Crédito disponible</p>
             </div>
-            <p className="text-sm text-gray-600">Crédito disponible</p>
-          </div>
+          )}
         </div>
 
-        <CreditSection />
+        {hasApprovedCreditRequest && <CreditSection />}
 
         <InvoicesSummaryCard invoices={invoices} />
 

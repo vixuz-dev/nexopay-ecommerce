@@ -75,9 +75,9 @@ const CategoryCarousel = ({ categories = [], showViewAll = true, viewAllPath = '
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             onScroll={updateScrollButtons}
           >
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <div
-                key={category.id}
+                key={category.id || category.category_id || category.categoryId || index}
                 className="flex-shrink-0 w-32 sm:w-36 md:w-40"
               >
                 <CategoryCard category={category} />

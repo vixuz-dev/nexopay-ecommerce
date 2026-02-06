@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCreditForm } from '../../../stores/creditFormStore';
-import GoogleMapPicker from '../GoogleMapPicker';
+import LeafletMapPicker from '../LeafletMapPicker';
 
 const LocationStep = () => {
-  const { formData, updateFormData } = useCreditForm();
+  const { formData, updateFormData, setIsCurrentStepValid } = useCreditForm();
   const locationData = formData.location || {};
 
   const handleLocationSelect = (location) => {
@@ -20,10 +20,15 @@ const LocationStep = () => {
     ? { lat: locationData.lat, lng: locationData.lng }
     : null;
 
+  useEffect(() => {
+    const hasLocation = locationData.lat && locationData.lng;
+    setIsCurrentStepValid(hasLocation);
+  }, [locationData.lat, locationData.lng, setIsCurrentStepValid]);
+
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-2" className="text-2xl font-bold text-gray-900 mb-2">
           Ubicación
         </h2>
         <p className="text-gray-600">
@@ -32,7 +37,7 @@ const LocationStep = () => {
       </div>
 
       <div className="space-y-6">
-        <GoogleMapPicker 
+        <LeafletMapPicker 
           onLocationSelect={handleLocationSelect}
           initialLocation={initialLocation}
         />

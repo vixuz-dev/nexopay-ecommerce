@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineEnvelope, HiOutlinePhone, HiOutlineMapPin, HiOutlineShieldCheck } from 'react-icons/hi2';
+import { ROUTES } from '../../utils/routes';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
 
 const Footer = () => {
@@ -36,8 +37,8 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-6 text-gray-800">Enlaces</h4>
             <ul className="space-y-3">
-              <li><Link to="/iniciar-sesion" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Iniciar sesión</Link></li>
-              <li><Link to="/registro" className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Registrarse</Link></li>
+              <li><Link to={ROUTES.LOGIN} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Iniciar sesión</Link></li>
+              <li><Link to={ROUTES.REGISTER} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Registrarse</Link></li>
             </ul>
           </div>
 

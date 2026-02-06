@@ -4,7 +4,7 @@ import { useCreditForm } from '../../../stores/creditFormStore';
 import ImageUploader from '../../common/ImageUploader';
 
 const IdentityVerificationStep = ({ setCustomNextHandler }) => {
-  const { formData, updateFormData, goToNextStep } = useCreditForm();
+  const { formData, updateFormData, goToNextStep, setIsCurrentStepValid } = useCreditForm();
   const identityData = formData.identityVerification || {};
   const [validationError, setValidationError] = useState('');
 
@@ -23,10 +23,15 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
   };
 
   useEffect(() => {
+    const hasSelfie = !!identityData.selfieUrl;
+    setIsCurrentStepValid(hasSelfie);
+  }, [identityData.selfieUrl, setIsCurrentStepValid]);
+
+  useEffect(() => {
     if (setCustomNextHandler) {
       setCustomNextHandler(() => {
-        // Validar que haya una foto de selfie
-        if (!identityData.selfieUrl || !identityData.selfieFile) {
+        // Validar que haya una foto de selfie (URL es suficiente, el File puede no estar si se recargó la página)
+        if (!identityData.selfieUrl) {
           setValidationError('Debes subir una foto de tu rostro (selfie) para continuar');
           // Hacer scroll al error
           setTimeout(() => {
@@ -57,7 +62,7 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-3" className="text-2xl font-bold text-gray-900 mb-2">
           Verificación de identidad
         </h2>
         <p className="text-gray-600">
@@ -98,7 +103,7 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
           <ImageUploader
             onImageSelect={handleImageSelect}
             currentImage={identityData.selfieUrl}
-            accept="image/*"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
             maxSizeMB={5}
           />
           {validationError && (
