@@ -4,6 +4,8 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import useToastStore from '../stores/toastStore';
+import { orderService } from '../api/services/orderService';
 import {
   HiOutlineChevronLeft,
   HiOutlineCreditCard,
@@ -18,6 +20,7 @@ import {
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
   const { 
     items, 
     getSubtotal, 
@@ -35,13 +38,25 @@ const Checkout = () => {
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Datos del formulario de tarjeta
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
     expiryMonth: '',
     expiryYear: '',
     cvv: '',
+  });
+
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    nameReceived: '',
+    phoneReceived: '',
+    deliveryStreet: '',
+    deliveryExternalNumber: '',
+    deliveryInternalNumber: '',
+    deliveryNeighborhood: '',
+    deliveryCity: '',
+    deliveryState: '',
+    deliveryZipCode: '',
+    deliveryReferences: '',
   });
 
   // Redirigir si el carrito está vacío
@@ -80,21 +95,76 @@ const Checkout = () => {
     setCardData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleDeliveryAddressChange = (field, value) => {
+    setDeliveryAddress(prev => ({ ...prev, [field]: value }));
+  };
+
+  const processPayment = async () => {
+    // Placeholder: implementar cuando exista endpoint de procesamiento de pago
+  };
+
   const handleCheckout = async () => {
     if (!acceptedTerms) {
       alert('Por favor acepta los términos y condiciones');
       return;
     }
 
+    const requiredAddressFields = ['nameReceived', 'phoneReceived', 'deliveryStreet', 'deliveryExternalNumber', 'deliveryNeighborhood', 'deliveryCity', 'deliveryState', 'deliveryZipCode'];
+    const missing = requiredAddressFields.filter((f) => !deliveryAddress[f]?.trim());
+    if (missing.length > 0) {
+      alert('Por favor completa todos los campos obligatorios de la dirección de entrega');
+      return;
+    }
+
     setIsProcessing(true);
 
-    // Simular procesamiento de pago
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      await processPayment();
 
-    // Navegar a confirmación
-    navigate(ROUTES.ORDER_CONFIRMATION);
-    
-    setIsProcessing(false);
+      const subtotal = getSubtotal();
+      const shippingCost = subtotal > 5000 ? 0 : 200;
+      const orderTotal = Math.round(subtotal + shippingCost);
+      const totalProductQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      const orderPayload = {
+        totalProductQuantity,
+        total: orderTotal,
+        deliveryAddress: {
+          nameReceived: deliveryAddress.nameReceived.trim(),
+          phoneReceived: deliveryAddress.phoneReceived.trim(),
+          deliveryStreet: deliveryAddress.deliveryStreet.trim(),
+          deliveryExternalNumber: deliveryAddress.deliveryExternalNumber.trim(),
+          deliveryInternalNumber: deliveryAddress.deliveryInternalNumber?.trim() ?? '',
+          deliveryNeighborhood: deliveryAddress.deliveryNeighborhood.trim(),
+          deliveryCity: deliveryAddress.deliveryCity.trim(),
+          deliveryState: deliveryAddress.deliveryState.trim(),
+          deliveryZipCode: deliveryAddress.deliveryZipCode.trim(),
+          deliveryReferences: deliveryAddress.deliveryReferences?.trim() ?? '',
+        },
+        detailOrder: items.map((item) => ({
+          productId: item.id,
+          productVariantId: 7, //item.productVariantId ?? item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          numberPayments: deferralMonths,
+          attributes: [{ name: 'size', value: item.size || 'Estándar' }],
+        })),
+      };
+
+      const response = await orderService.createOrder(orderPayload);
+
+      if (response.success === true) {
+        showToast(response.statusMessage || 'Pedido creado correctamente', 'success', 4000);
+        clearCart();
+        navigate(ROUTES.ORDER_CONFIRMATION);
+      } else {
+        showToast(response.statusMessage || 'No se pudo crear el pedido', 'error', 5000);
+      }
+    } catch (error) {
+      showToast(error?.message || 'No se pudo completar la orden. Intenta de nuevo.', 'error', 5000);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isEmpty()) {
@@ -137,8 +207,123 @@ const Checkout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna Izquierda - Resumen y Calendario */}
+          {/* Columna Izquierda - Dirección, Resumen y Calendario */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Dirección de entrega */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="font-semibold text-gray-900">Dirección de entrega</h2>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de quien recibe *</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.nameReceived}
+                      onChange={(e) => handleDeliveryAddressChange('nameReceived', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Luis Espinoza"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                    <input
+                      type="tel"
+                      value={deliveryAddress.phoneReceived}
+                      onChange={(e) => handleDeliveryAddressChange('phoneReceived', e.target.value.replace(/\D/g, '').slice(0, 15))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="3511680101"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Calle *</label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.deliveryStreet}
+                    onChange={(e) => handleDeliveryAddressChange('deliveryStreet', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Prueba"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Número exterior *</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.deliveryExternalNumber}
+                      onChange={(e) => handleDeliveryAddressChange('deliveryExternalNumber', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Número interior</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.deliveryInternalNumber}
+                      onChange={(e) => handleDeliveryAddressChange('deliveryInternalNumber', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder=""
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Colonia *</label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.deliveryNeighborhood}
+                    onChange={(e) => handleDeliveryAddressChange('deliveryNeighborhood', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Vecindario"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.deliveryCity}
+                      onChange={(e) => handleDeliveryAddressChange('deliveryCity', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Zapopan"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.deliveryState}
+                      onChange={(e) => handleDeliveryAddressChange('deliveryState', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Jalisco"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">C.P. *</label>
+                    <input
+                      type="text"
+                      value={deliveryAddress.deliveryZipCode}
+                      onChange={(e) => handleDeliveryAddressChange('deliveryZipCode', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="45019"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Referencias</label>
+                  <input
+                    type="text"
+                    value={deliveryAddress.deliveryReferences}
+                    onChange={(e) => handleDeliveryAddressChange('deliveryReferences', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Entre calle X y Y"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Resumen del Pedido (Solo lectura) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">

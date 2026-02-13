@@ -113,7 +113,6 @@ const ProductDetail = () => {
     }
   };
 
-
   const handleMouseMove = (e) => {
     if (!imageRef.current) return;
     

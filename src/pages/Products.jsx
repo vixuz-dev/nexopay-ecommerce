@@ -7,6 +7,7 @@ import SidebarFilter from '../components/ecommerce/SidebarFilter';
 import { useProductsApi } from '../hooks/useProductsApi';
 import { useCategories } from '../hooks/useCategories';
 import { useDebounce } from '../hooks/useDebounce';
+import { productsService } from '../api/services/productsService';
 import { mapApiProductToComponent } from '../utils/productMapper';
 import { HiOutlineFunnel, HiOutlineXMark } from 'react-icons/hi2';
 import Dropdown from '../components/common/Dropdown';
@@ -49,8 +50,9 @@ const Products = () => {
   const { products: apiProducts, isLoading: productsLoading, isError, error } = useProductsApi(apiParams);
 
   const products = useMemo(() => {
-    if (!apiProducts || apiProducts.length === 0) return [];
-    return apiProducts.map(mapApiProductToComponent);
+    const list = Array.isArray(apiProducts) ? apiProducts : [];
+    if (list.length === 0) return [];
+    return list.map(mapApiProductToComponent);
   }, [apiProducts]);
 
   const maxProductPrice = useMemo(() => {

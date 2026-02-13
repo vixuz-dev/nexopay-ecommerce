@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { productService } from '../api/services/productService';
+import { productsService } from '../api/services/productsService';
 
 /**
  * Custom hook to fetch products with SWR caching
@@ -28,7 +28,7 @@ export const useProductsApi = (params) => {
 
   const { data, error, isLoading, mutate } = useSWR(
     cacheKey,
-    () => productService.getProducts({
+    () => productsService.getProducts({
       page: Number(page),
       totalItems: Number(totalItems),
       categoryId: Number(categoryId || 0),
@@ -42,8 +42,17 @@ export const useProductsApi = (params) => {
     }
   );
 
+  const products = (() => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.body?.products)) return data.body.products;
+    if (Array.isArray(data?.body)) return data.body;
+    if (Array.isArray(data?.products)) return data.products;
+    return [];
+  })();
+
   return {
-    products: data || [],
+    products,
     isLoading,
     isError: !!error,
     error,

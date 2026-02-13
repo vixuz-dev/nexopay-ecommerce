@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { productService } from '../api/services/productService';
+import { productsService } from '../api/services/productsService';
 import { useCategories } from './useCategories';
 
 /**
@@ -26,7 +26,7 @@ export const useProductDetail = (productName, categoryId, subcategoryId) => {
           return;
         }
 
-        const products = await productService.getProducts({
+        const data = await productsService.getProducts({
           page: 1,
           totalItems: 20,
           categoryId: Number(categoryId),
@@ -34,8 +34,17 @@ export const useProductDetail = (productName, categoryId, subcategoryId) => {
           productName: productName,
         });
 
-        if (products && products.length > 0) {
-          setProduct(products[0]);
+        const productsList = (() => {
+          if (!data) return [];
+          if (Array.isArray(data)) return data;
+          if (Array.isArray(data?.body?.products)) return data.body.products;
+          if (Array.isArray(data?.body)) return data.body;
+          if (Array.isArray(data?.products)) return data.products;
+          return [];
+        })();
+
+        if (productsList.length > 0) {
+          setProduct(productsList[0]);
         } else {
           setError('Producto no encontrado');
         }

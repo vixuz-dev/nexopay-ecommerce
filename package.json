@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@react-google-maps/api": "^2.20.7",
+    "axios": "^1.13.5",
     "colornames": "^1.1.1",
     "crypto-js": "^4.2.0",
     "framer-motion": "^12.23.24",

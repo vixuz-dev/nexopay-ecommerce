@@ -80,6 +80,11 @@ export const ENDPOINTS = {
     GET_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_products`,
   },
 
+  // Ecommerce Orders
+  ECOMMERCE_ORDERS: {
+    CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,
+  },
+
   // KYC
   KYC: {
     EVALUATE: import.meta.env.DEV 
