@@ -6,25 +6,26 @@ import { ROUTES } from './routes';
 
 /**
  * Checks if an error indicates an expired token
+ * Handles format: { statusCode: 401, success: false, statusMessage: "El token ha expiradó" }
  * @param {Error|object} error - The error object or response
  * @returns {boolean} - True if token is expired
  */
 export const isTokenExpired = (error) => {
   if (!error) return false;
-  
-  const status = error.status || error.statusCode;
+
+  const status = error.status || error.statusCode || error?.details?.statusCode;
   const message = (error.message || '').toLowerCase();
-  const statusMessage = (error.statusMessage || '').toLowerCase();
-  
-  // Check for 401 status
+  const statusMessage = (error.statusMessage || error?.details?.statusMessage || '').toLowerCase();
+
   if (status === 401) {
     return true;
   }
-  
-  // Check for specific token expiration messages
+
   const expiredMessages = [
     'token expirado',
     'token expired',
+    'expiradó',
+    'el token ha expiradó',
     'token inválido',
     'token invalido',
     'invalid token',
@@ -34,8 +35,8 @@ export const isTokenExpired = (error) => {
     'session expired',
     'unauthorized',
   ];
-  
-  return expiredMessages.some(msg => 
+
+  return expiredMessages.some(msg =>
     message.includes(msg) || statusMessage.includes(msg)
   );
 };
@@ -45,15 +46,13 @@ export const isTokenExpired = (error) => {
  * Then redirects to login page
  */
 export const performLogout = () => {
-  // Clear user store
   const { clearUser } = useUserStore.getState();
   clearUser();
-  
-  // Reset credit form store
-  const { resetForm } = useCreditFormStore.getState();
-  resetForm();
-  
-  // Remove auth token cookie
+
+  const creditStore = useCreditFormStore.getState();
+  creditStore.resetForm();
+  creditStore.clearCreditData?.();
+
   removeCookie('authToken');
   
   // Clear all SWR cache
@@ -71,21 +70,20 @@ export const performLogout = () => {
  * @param {Response} response - The fetch response (optional)
  * @returns {boolean} - True if logout was performed
  */
-export const handleAuthError = (error, response = null) => {
-  const status = error?.status || error?.statusCode || response?.status;
-  const data = error?.details || error;
-  
+export const handleAuthError = (error, response = null, responseBody = null) => {
+  const data = responseBody || error?.details || error;
+  const status = error?.status || error?.statusCode || data?.statusCode || response?.status;
   const errorInfo = {
-    status: status,
+    status,
     statusCode: status,
-    message: error?.message || data?.message || '',
-    statusMessage: data?.statusMessage || error?.statusMessage || '',
+    message: (error?.message || data?.message || '').toLowerCase(),
+    statusMessage: (data?.statusMessage || error?.statusMessage || '').toLowerCase(),
   };
-  
+
   if (isTokenExpired(errorInfo)) {
     performLogout();
     return true;
   }
-  
+
   return false;
 };

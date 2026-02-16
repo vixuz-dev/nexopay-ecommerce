@@ -17,7 +17,7 @@ const mensajeErrorEspanol = (message, campo) => {
 };
 
 const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
-  const { formData, updateFormData, goToNextStep } = useCreditForm();
+  const { formData, updateFormData, goToNextStep, setIsCurrentStepValid } = useCreditForm();
   const eligibilityData = formData.eligibility || {};
 
   const {
@@ -47,6 +47,19 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
 
   const solicitudAprobada = watch('solicitud_aprobada');
   const solicitudRechazada = watch('solicitud_rechazada');
+
+  useEffect(() => {
+    setIsCurrentStepValid(isValid);
+  }, [isValid, setIsCurrentStepValid]);
+
+  useEffect(() => {
+    const hasPersistedData = Object.keys(eligibilityData).length > 0;
+    if (hasPersistedData) {
+      trigger().then((result) => {
+        setIsCurrentStepValid(result);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (setCustomNextHandler) {

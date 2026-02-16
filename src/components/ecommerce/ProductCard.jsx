@@ -5,6 +5,7 @@ import ProductPlaceholder from '../common/ProductPlaceholder';
 import useCartStore from '../../stores/cartStore';
 import useUIStore from '../../stores/uiStore';
 import { ROUTES, getProductDetailUrl } from '../../utils/routes';
+import { CHECKOUT_CONFIG } from '../../constants/checkoutConfig';
 
 const ProductCard = ({ product, showAddToCart = false }) => {
   const navigate = useNavigate();
@@ -33,7 +34,9 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     e.preventDefault();
     e.stopPropagation();
     if (inStock) {
-      addItem(product, 1);
+      addItem(product, 1, null, {
+        productVariantId: product.productVariantId,
+      });
       openCartSidebar();
     }
   };
@@ -45,9 +48,9 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     }).format(amount);
   };
 
-  const calculateMonthlyPayment = (totalPrice) => {
-    // Dividir en 6 mensualidades
-    return totalPrice / 6;
+  const getMonthlyFromApi = (p) => {
+    const amountToDefer = p.remainingBalance ?? p.price;
+    return amountToDefer / CHECKOUT_CONFIG.PRODUCT_CARD_MONTHLY_INSTALLMENTS;
   };
 
   return (
@@ -142,7 +145,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           
           {/* Monthly Payment */}
           <p className="text-xs text-primary-600 font-medium">
-            Desde {formatPrice(calculateMonthlyPayment(price))} mensual
+            Desde {formatPrice(getMonthlyFromApi(product))} mensual
           </p>
         </div>
 

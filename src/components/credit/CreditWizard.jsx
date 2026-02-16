@@ -79,7 +79,9 @@ const CreditWizard = () => {
     setCustomNextHandler,
     isCurrentStepValid,
     setIsCurrentStepValid,
-    resetForm
+    resetForm,
+    fetchCreditLineStatus,
+    fetchCreditLineRequests,
   } = useCreditForm();
 
   const currentStepData = steps.find(step => step.id === currentStep);
@@ -98,6 +100,7 @@ const CreditWizard = () => {
       await creditLineRequestService.createCreditLineRequest(payload);
       showToast('Solicitud enviada correctamente. Te contactaremos pronto.', 'success');
       resetForm();
+      await Promise.all([fetchCreditLineStatus(), fetchCreditLineRequests()]);
       navigate(ROUTES.MY_CREDIT);
     } catch (error) {
       const message = error.message || error.statusMessage || 'No se pudo enviar la solicitud. Intenta de nuevo.';

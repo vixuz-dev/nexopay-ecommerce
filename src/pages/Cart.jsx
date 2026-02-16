@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import useToastStore from '../stores/toastStore';
+import usePreOrderStore from '../stores/preOrderStore';
+import { CHECKOUT_CONFIG, getShippingCost } from '../constants/checkoutConfig';
+import { orderService } from '../api/services/orderService';
+import { buildOrderPayload, doesPreOrderMatchCart } from '../utils/orderPayloadBuilder';
 import {
   HiOutlineXMark,
   HiOutlineChevronLeft,
@@ -13,16 +18,36 @@ import {
   HiOutlineCalendarDays,
   HiOutlineBanknotes,
   HiOutlineInformationCircle,
+  HiOutlineMapPin,
+  HiOutlinePlus,
 } from 'react-icons/hi2';
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
+import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
+import AddAddressModal from '../components/common/AddAddressModal';
+import { addressService } from '../api/services/addressService';
+
+const formatAddressLine = (addr) => {
+  const parts = [
+    `${addr.street || ''} ${addr.external_number || ''}`.trim(),
+    addr.internal_number ? `Int. ${addr.internal_number}` : null,
+  ].filter(Boolean);
+  return parts.join(', ') || '—';
+};
 
 const Cart = () => {
+  const [addresses, setAddresses] = useState([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
+  const showToast = useToastStore((s) => s.showToast);
+  const preOrder = usePreOrderStore((s) => s.preOrder);
+  const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
   const { 
     items, 
     removeItem, 
     updateQuantity, 
-    updateSize, 
     clearCart, 
     getSubtotal, 
     isEmpty,
@@ -43,36 +68,102 @@ const Cart = () => {
   };
 
   const subtotal = getSubtotal();
-  const shipping = subtotal > 5000 ? 0 : 200;
+  const shipping = getShippingCost(subtotal);
   const total = subtotal + shipping;
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
   const initialPayment = getInitialPayment();
   const deferredAmount = getDeferredAmount();
   const monthlyPayment = getMonthlyPayment();
 
-  const handleQuantityChange = (itemId, size, newQuantity) => {
-    updateQuantity(itemId, newQuantity, size);
+  const fetchAddresses = async () => {
+    setAddressesLoading(true);
+    try {
+      const data = await addressService.getAddresses();
+      const list = Array.isArray(data) ? data : [];
+      setAddresses(list);
+      setSelectedAddressId((prev) => {
+        if (list.length === 0) return null;
+        const exists = list.some((a) => a.client_address_id === prev);
+        if (exists) return prev;
+        const principal = list.find((a) => a.is_principal === 1) || list[0];
+        return principal.client_address_id;
+      });
+    } catch (err) {
+      setAddresses([]);
+    } finally {
+      setAddressesLoading(false);
+    }
   };
 
-  const handleSizeChange = (itemId, oldSize, newSize) => {
-    updateSize(itemId, oldSize, newSize);
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
+
+  const handleQuantityChange = (itemId, size, newQuantity) => {
+    const item = items.find(i => i.id === itemId && i.size === size);
+    const maxQty = item?.stock ?? 999;
+    updateQuantity(itemId, Math.min(newQuantity, maxQty), size);
   };
 
   const handleRemoveItem = (itemId, size) => {
     removeItem(itemId, size);
   };
 
-  const handleCheckout = () => {
-    if (!isEmpty()) {
-      navigate(ROUTES.CHECKOUT);
+  const handleCheckout = async () => {
+    if (isEmpty()) return;
+    if (addresses.length === 0) {
+      setIsAddAddressModalOpen(true);
+      return;
+    }
+
+    if (!selectedAddress) {
+      showToast('Selecciona una dirección de entrega', 'error');
+      return;
+    }
+
+    if (preOrder && doesPreOrderMatchCart(preOrder, items)) {
+      navigate(ROUTES.CHECKOUT, { state: { selectedAddressId } });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const payload = buildOrderPayload({
+        items,
+        totalDeferredAmount: deferredAmount,
+        deferralMonths,
+        deliveryAddress: selectedAddress,
+      });
+
+      const response = await orderService.createOrder(payload);
+
+      setPreOrder({
+        orderId: response.orderId,
+        orderNumber: response.orderId,
+        creditAmount: response.creditAmount,
+        total: response.total,
+        totalInitialPayment: response.totalInitialPayment,
+        payload,
+        createdAt: new Date().toISOString(),
+      });
+
+      navigate(ROUTES.CHECKOUT, { state: { selectedAddressId } });
+    } catch (err) {
+      showToast(err?.message || 'Error al crear la orden. Intenta de nuevo.', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  // Calcular pago inicial (30%) por producto
-  const calculateProductPaymentInfo = (itemTotal) => {
-    const initial = itemTotal * 0.30;
-    const deferred = itemTotal * 0.70;
+  const getItemPaymentInfo = (item) => {
+    const unitInit = item.unitInitialPayment ?? (item.price ?? 0) * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+    const unitDeferred = item.unitDeferredAmount ?? (item.price ?? 0) * (1 - CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT);
+    const initial = unitInit * item.quantity;
+    const deferred = unitDeferred * item.quantity;
     const monthly = deferralMonths > 0 ? deferred / deferralMonths : 0;
-    
     return { initial, deferred, monthly };
   };
 
@@ -81,6 +172,7 @@ const Cart = () => {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <PurchaseFlowBreadcrumb currentStep="cart" />
           <div className="text-center py-20">
             <HiOutlineShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Tu carrito está vacío</h2>
@@ -106,6 +198,7 @@ const Cart = () => {
       <Header />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PurchaseFlowBreadcrumb currentStep="cart" />
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Carrito de Compras
@@ -115,11 +208,11 @@ const Cart = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Lista de Productos */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-8">
             {items.map((item) => {
-              const paymentInfo = calculateProductPaymentInfo(item.total);
+              const paymentInfo = getItemPaymentInfo(item);
               
               return (
                 <div
@@ -153,33 +246,20 @@ const Cart = () => {
                           <p className="text-sm text-gray-600 mt-1">{item.category}</p>
                         </div>
                         <button
-                          onClick={() => handleRemoveItem(item.id, item.size)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRemoveItem(item.id, item.size);
+                          }}
                           className="text-gray-400 hover:text-red-600 transition-colors p-2"
-                          aria-label="Eliminar producto"
+                          aria-label="Remover producto"
                         >
                           <HiOutlineXMark className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {/* Tamaño */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-2">
-                            Tamaño
-                          </label>
-                          <select
-                            value={item.size}
-                            onChange={(e) => handleSizeChange(item.id, item.size, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                          >
-                            <option value="Estándar">Estándar</option>
-                            <option value="Pequeño">Pequeño</option>
-                            <option value="Mediano">Mediano</option>
-                            <option value="Grande">Grande</option>
-                          </select>
-                        </div>
-
-                        {/* Cantidad */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-semibold text-gray-700 mb-2">
                             Cantidad
@@ -187,7 +267,8 @@ const Cart = () => {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                              disabled={item.quantity <= 1}
+                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
                               -
                             </button>
@@ -196,11 +277,17 @@ const Cart = () => {
                             </span>
                             <button
                               onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                              disabled={item.quantity >= (item.stock ?? 999)}
+                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
                               +
                             </button>
                           </div>
+                          {(item.stock != null && item.stock < 999) && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Máximo: {item.stock} disponible{item.stock !== 1 ? 's' : ''}
+                            </p>
+                          )}
                         </div>
 
                         {/* Precio */}
@@ -232,8 +319,8 @@ const Cart = () => {
                             <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.initial)}</span>
                           </div>
                           <div className="flex items-center gap-1 text-gray-600">
-                            <span>Mensualidad:</span>
-                            <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.monthly)}</span>
+                            <span>Total a diferir:</span>
+                            <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.deferred)}</span>
                           </div>
                         </div>
                       </div>
@@ -257,6 +344,102 @@ const Cart = () => {
 
           {/* Resumen del Pedido */}
           <div className="lg:col-span-1 space-y-6">
+            {!addressesLoading && addresses.length === 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">No tienes direcciones de entrega</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Debes agregar al menos una dirección antes de continuar con el pago.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddAddressModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors text-sm"
+                    >
+                      <HiOutlinePlus className="w-5 h-5" />
+                      Agregar dirección
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!addressesLoading && addresses.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                      <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Dirección de entrega</h3>
+                      <p className="text-xs text-gray-600">Aquí se enviarán tus productos</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAddressModalOpen(true)}
+                    className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
+                    aria-label="Agregar otra dirección"
+                  >
+                    <HiOutlinePlus className="w-5 h-5" />
+                  </button>
+                </div>
+                {addresses.length > 1 ? (
+                  <div className="space-y-2 mb-4">
+                    {addresses.map((addr) => (
+                      <label
+                        key={addr.client_address_id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                          selectedAddressId === addr.client_address_id
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="deliveryAddress"
+                          checked={selectedAddressId === addr.client_address_id}
+                          onChange={() => setSelectedAddressId(addr.client_address_id)}
+                          className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
+                          <p className="text-xs text-gray-600">
+                            {addr.name_received} · {addr.street} {addr.external_number}
+                            {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ) : selectedAddress && (
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
+                    <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      {selectedAddress.name_received}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {formatAddressLine(selectedAddress)}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
+                    </p>
+                    {selectedAddress.address_references && (
+                      <p className="text-xs text-gray-500 mt-2">{selectedAddress.address_references}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Selector de Meses Global */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -270,7 +453,7 @@ const Cart = () => {
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                {[3, 6, 9, 12].map((months) => (
+                {CHECKOUT_CONFIG.DEFERRAL_MONTHS_OPTIONS.map((months) => (
                   <button
                     key={months}
                     onClick={() => setDeferralMonths(months)}
@@ -284,9 +467,6 @@ const Cart = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                meses sin intereses
-              </p>
             </div>
 
             {/* Desglose de Pago */}
@@ -295,24 +475,9 @@ const Cart = () => {
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-gray-700">
-                  <span>Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} items):</span>
+                  <span>Subtotal ({totalQuantity} {totalQuantity === 1 ? 'producto' : 'productos'}):</span>
                   <span className="font-medium">{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Envío:</span>
-                  <span className="font-medium">
-                    {shipping === 0 ? (
-                      <span className="text-green-600">Gratis</span>
-                    ) : (
-                      formatPrice(shipping)
-                    )}
-                  </span>
-                </div>
-                {subtotal < 5000 && (
-                  <p className="text-xs text-gray-500">
-                    Agrega {formatPrice(5000 - subtotal)} más para envío gratis
-                  </p>
-                )}
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between text-lg font-bold text-gray-900">
                     <span>Total:</span>
@@ -332,7 +497,7 @@ const Cart = () => {
                   {/* Pago Inicial */}
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-700">Pago inicial (30%):</span>
+                      <span className="text-sm text-gray-700">Pago inicial:</span>
                       <div className="group relative">
                         <HiOutlineInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-10">
@@ -370,10 +535,24 @@ const Cart = () => {
 
               <button
                 onClick={handleCheckout}
-                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                disabled={addressesLoading || isProcessing}
+                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
               >
-                <HiOutlineCreditCard className="w-5 h-5" />
-                Proceder al Pago
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creando orden...
+                  </>
+                ) : (
+                  <>
+                    <HiOutlineCreditCard className="w-5 h-5" />
+                    {addressesLoading
+                      ? 'Cargando...'
+                      : addresses.length === 0
+                        ? 'Agregar dirección para continuar'
+                        : 'Proceder al Pago'}
+                  </>
+                )}
               </button>
 
               <p className="text-xs text-gray-500 text-center mt-3">
@@ -391,7 +570,13 @@ const Cart = () => {
           </div>
         </div>
       </main>
-      
+
+      <AddAddressModal
+        isOpen={isAddAddressModalOpen}
+        onClose={() => setIsAddAddressModalOpen(false)}
+        onSuccess={fetchAddresses}
+      />
+
       <Footer />
     </div>
   );

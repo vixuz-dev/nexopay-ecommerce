@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import {
   HiOutlineCheckCircle,
   HiOutlineCalendarDays,
@@ -17,6 +18,7 @@ import {
 
 const OrderConfirmation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { 
     items,
     getSubtotal,
@@ -29,12 +31,11 @@ const OrderConfirmation = () => {
     clearCart,
   } = useCartStore();
 
-  // Estado local para guardar los datos del pedido antes de limpiar el carrito
-  const [orderData, setOrderData] = useState(null);
-  const [orderNumber] = useState(`NXP-${Date.now().toString().slice(-8)}`);
+  const [orderData, setOrderData] = useState(location.state?.order ?? null);
 
   useEffect(() => {
-    // Si hay items, guardar los datos y luego limpiar
+    if (orderData) return;
+
     if (!isEmpty()) {
       const subtotal = getSubtotal();
       const shipping = subtotal > 5000 ? 0 : 200;
@@ -50,12 +51,11 @@ const OrderConfirmation = () => {
         deferralMonths,
         paymentSchedule: getPaymentSchedule(),
         orderDate: new Date(),
+        orderNumber: `NXP-${Date.now().toString().slice(-8)}`,
       });
       
-      // Limpiar el carrito después de guardar los datos
       clearCart();
-    } else if (!orderData) {
-      // Si no hay items y no hay datos guardados, redirigir
+    } else {
       navigate(ROUTES.HOME);
     }
   }, []);
@@ -77,10 +77,9 @@ const OrderConfirmation = () => {
     }).format(date);
   };
 
-  const formatShortDate = (date) => {
+  const formatMonthYear = (date) => {
     return new Intl.DateTimeFormat('es-MX', {
-      day: '2-digit',
-      month: 'short',
+      month: 'long',
       year: 'numeric',
     }).format(date);
   };
@@ -98,6 +97,7 @@ const OrderConfirmation = () => {
       <Header />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PurchaseFlowBreadcrumb currentStep="confirmation" />
         {/* Mensaje de Éxito */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
@@ -111,7 +111,7 @@ const OrderConfirmation = () => {
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
             <span className="text-sm text-gray-600">Número de orden:</span>
-            <span className="font-mono font-bold text-gray-900">{orderNumber}</span>
+            <span className="font-mono font-bold text-gray-900">{orderData.orderNumber ?? `NXP-${Date.now().toString().slice(-8)}`}</span>
           </div>
         </div>
 
@@ -201,7 +201,7 @@ const OrderConfirmation = () => {
                     <thead>
                       <tr className="text-left text-sm text-gray-600">
                         <th className="pb-3 font-medium">Pago</th>
-                        <th className="pb-3 font-medium">Fecha</th>
+                        <th className="pb-3 font-medium">Mes de corte</th>
                         <th className="pb-3 font-medium text-right">Monto</th>
                         <th className="pb-3 font-medium text-center">Estado</th>
                       </tr>
@@ -215,7 +215,7 @@ const OrderConfirmation = () => {
                             </span>
                           </td>
                           <td className="py-3 text-sm text-gray-900">
-                            {formatShortDate(payment.date)}
+                            {formatMonthYear(payment.date)}
                           </td>
                           <td className="py-3 text-right font-medium text-gray-900">
                             {formatPrice(payment.amount)}

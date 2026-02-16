@@ -24,7 +24,7 @@ import {
 } from 'react-icons/hi2';
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import { SimilarProducts, SellerProducts } from '../components/ecommerce';
-
+import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
 import { getColorValue } from '../utils/colorUtils';
 
 const MAX_VISIBLE_THUMBNAILS = 4;
@@ -66,15 +66,9 @@ const ProductDetail = () => {
     }).format(amount);
   };
 
-  const calculateMonthlyPayment = (totalPrice) => {
-    return totalPrice / 12;
-  };
-
-  const calculateInitialPayment = (totalPrice, initialPaymentCost) => {
-    if (initialPaymentCost) {
-      return initialPaymentCost;
-    }
-    return totalPrice * 0.30;
+  const getMonthlyFromApi = (p) => {
+    const amountToDefer = p?.remainingBalance ?? p?.price ?? 0;
+    return amountToDefer / CHECKOUT_CONFIG.PRODUCT_DETAIL_MONTHLY_INSTALLMENTS;
   };
 
   const getCurrentProductData = () => {
@@ -97,10 +91,21 @@ const ProductDetail = () => {
 
   const currentProduct = getCurrentProductData();
 
+  const buildAttributes = () => {
+    const attrs = [];
+    if (selectedVariants.color) attrs.push({ name: 'color', value: selectedVariants.color });
+    if (selectedVariants.size) attrs.push({ name: 'talla', value: selectedVariants.size });
+    return attrs;
+  };
+
   const handleAddToCart = () => {
     if (product && product.inStock) {
       const variantSize = selectedVariants.size || null;
-      addItem(product, quantity, variantSize);
+      const attrs = buildAttributes();
+      addItem(currentProduct, quantity, variantSize, {
+        productVariantId: currentProduct?.productVariantId,
+        attributes: attrs,
+      });
       openCartSidebar();
     }
   };
@@ -108,7 +113,11 @@ const ProductDetail = () => {
   const handleBuyNow = () => {
     if (product && product.inStock) {
       const variantSize = selectedVariants.size || null;
-      addItem(product, quantity, variantSize);
+      const attrs = buildAttributes();
+      addItem(currentProduct, quantity, variantSize, {
+        productVariantId: currentProduct?.productVariantId,
+        attributes: attrs,
+      });
       navigate(ROUTES.CHECKOUT);
     }
   };
@@ -465,12 +474,6 @@ const ProductDetail = () => {
                 )}
                 <span>•</span>
                 <span className="capitalize">{product.productCondition || 'Nuevo'}</span>
-                {product.affiliate && (
-                  <>
-                    <span>•</span>
-                    <span>Vendido por {product.affiliate}</span>
-                  </>
-                )}
               </div>
 
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
@@ -513,7 +516,7 @@ const ProductDetail = () => {
                   )}
                 </div>
                 <p className="text-sm text-gray-600">
-                  Hasta 12 meses de {formatPrice(calculateMonthlyPayment(currentProduct.price))} <span className="text-xs">IVA incluido</span>
+                  Hasta {CHECKOUT_CONFIG.PRODUCT_DETAIL_MONTHLY_INSTALLMENTS} meses de {formatPrice(getMonthlyFromApi(currentProduct))} <span className="text-xs">IVA incluido</span>
                 </p>
                 {currentProduct.initialPaymentCost > 0 && (
                   <p className="text-xs text-primary-600 font-medium mt-1">
@@ -535,7 +538,6 @@ const ProductDetail = () => {
                 <p className={`text-sm font-semibold mb-1 ${currentProduct.inStock ? 'text-primary-600' : 'text-red-600'}`}>
                   {currentProduct.inStock ? 'Stock disponible' : 'Sin stock'}
                 </p>
-                <p className="text-xs text-gray-600">Almacenado y enviado por {product.affiliate || 'NexoPay'}</p>
                 {currentProduct.inStock && (
                   <p className="text-xs text-gray-600 mt-1">
                     Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} ({currentProduct.stock} disponibles)
@@ -632,7 +634,6 @@ const ProductDetail = () => {
 
                 <div className="mb-4 pb-4 border-b border-gray-200">
                   <p className="text-sm font-semibold text-primary-600 mb-1">Stock disponible</p>
-                  <p className="text-xs text-gray-600 mb-2">Almacenado y enviado por {product.affiliate || 'NexoPay'}</p>
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-semibold text-gray-700">Cantidad:</label>
                     <div className="flex items-center border border-gray-300 rounded-lg">

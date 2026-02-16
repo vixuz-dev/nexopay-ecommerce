@@ -23,6 +23,16 @@ export const isValidPhone = (phone) => {
 };
 
 /**
+ * Validate Mexican phone number (10 digits, cannot be 0000000000)
+ * @param {string} phone - Phone number to validate
+ * @returns {boolean} - True if valid
+ */
+export const isValidMexicanPhone = (phone) => {
+  const digits = (phone || '').replace(/\D/g, '');
+  return digits.length === 10 && digits !== '0000000000';
+};
+
+/**
  * Validate password strength
  * @param {string} password - Password to validate
  * @returns {object} - Validation result with score and message
@@ -76,4 +86,14 @@ export const isValidUrl = (url) => {
 export const isValidPostalCode = (cp) => {
   const postalCodeRegex = /^\d{5}$/;
   return postalCodeRegex.test(cp);
+};
+
+/**
+ * Validate Mexican postal code (5 digits, cannot be 00000)
+ * @param {string} cp - Postal code to validate
+ * @returns {boolean} - True if valid
+ */
+export const isValidMexicanPostalCode = (cp) => {
+  const digits = (cp || '').replace(/\D/g, '');
+  return digits.length === 5 && digits !== '00000';
 };

@@ -66,10 +66,15 @@ export const mapApiProductDetailToComponent = (apiProduct) => {
     apiProduct.attributes.forEach(attr => {
       if (attr.name && attr.value) {
         if (attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colores') {
-          const colorHex = getColorValue(attr.value);
-          colors.push({ name: attr.value, value: colorHex });
+          const colorExists = colors.some((c) => c.name === attr.value);
+          if (!colorExists) {
+            const colorHex = getColorValue(attr.value);
+            colors.push({ name: attr.value, value: colorHex });
+          }
         } else if (attr.name.toLowerCase() === 'talla' || attr.name.toLowerCase() === 'almacenamiento' || attr.name.toLowerCase() === 'size') {
-          sizes.push(attr.value);
+          if (!sizes.includes(attr.value)) {
+            sizes.push(attr.value);
+          }
         }
         if (allAttributesMap[attr.name]) {
           if (!allAttributesMap[attr.name].includes(attr.value)) {

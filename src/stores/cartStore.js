@@ -1,45 +1,76 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
+
+const resolvePaymentPerUnit = (product) => {
+  const unitTotalPrice = product.finalPrice ?? product.price ?? 0;
+  const hasApiValues = product.initialPaymentCost != null && product.remainingBalance != null;
+  const unitInitialPayment = hasApiValues
+    ? product.initialPaymentCost
+    : unitTotalPrice * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+  const unitDeferredAmount = hasApiValues
+    ? product.remainingBalance
+    : unitTotalPrice - unitInitialPayment;
+  return { unitTotalPrice, unitInitialPayment, unitDeferredAmount };
+};
 
 const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
-      deferralMonths: 6, // Meses globales de diferimiento (3, 6, 9, 12)
-      
-      // Actualizar meses de diferimiento global
+      deferralMonths: CHECKOUT_CONFIG.DEFAULT_DEFERRAL_MONTHS,
+
       setDeferralMonths: (months) => {
         set({ deferralMonths: months });
       },
 
-      // Agregar producto al carrito
-      addItem: (product, quantity = 1, size = null) => {
+      addItem: (product, quantity = 1, size = null, options = {}) => {
+        const { productVariantId, attributes = [] } = options;
         const items = get().items;
+        const normalizedSize = size || 'Estándar';
         const existingItemIndex = items.findIndex(
-          item => item.id === product.id && item.size === size
+          item => item.id === product.id && item.size === normalizedSize
         );
 
+        const { unitTotalPrice, unitInitialPayment, unitDeferredAmount } = resolvePaymentPerUnit(product);
+
         if (existingItemIndex >= 0) {
-          // Si el producto ya existe, actualizar cantidad
+          const existingItem = items[existingItemIndex];
+          const maxStock = product.stock ?? existingItem.stock ?? 999;
+          const newQuantity = Math.min(existingItem.quantity + quantity, maxStock);
           const updatedItems = items.map((item, index) =>
             index === existingItemIndex
-              ? { ...item, quantity: item.quantity + quantity, total: item.price * (item.quantity + quantity) }
+              ? {
+                  ...item,
+                  stock: maxStock,
+                  quantity: newQuantity,
+                  price: unitTotalPrice,
+                  unitInitialPayment,
+                  unitDeferredAmount,
+                  total: unitTotalPrice * newQuantity,
+                  productVariantId: productVariantId ?? item.productVariantId,
+                  attributes: attributes.length > 0 ? attributes : item.attributes,
+                }
               : item
           );
           set({ items: updatedItems });
         } else {
-          // Si es un nuevo producto, agregarlo
           const newItem = {
             id: product.id,
             name: product.name,
             image: product.image,
-            price: product.price,
+            price: unitTotalPrice,
             originalPrice: product.originalPrice,
             discount: product.discount,
             category: product.category,
-            size: size || 'Estándar',
-            quantity: quantity,
-            total: product.price * quantity,
+            size: normalizedSize,
+            stock: product.stock ?? 999,
+            quantity,
+            total: unitTotalPrice * quantity,
+            unitInitialPayment,
+            unitDeferredAmount,
+            productVariantId: productVariantId ?? product.productVariantId ?? null,
+            attributes: attributes.length > 0 ? attributes : [],
           };
           set({ items: [...items, newItem] });
         }
@@ -48,13 +79,13 @@ const useCartStore = create(
       // Remover producto del carrito
       removeItem: (itemId, size = null) => {
         const items = get().items;
+        const normalizedSize = size || 'Estándar';
         const filteredItems = items.filter(
-          item => !(item.id === itemId && item.size === (size || 'Estándar'))
+          (item) => !(String(item.id) === String(itemId) && item.size === normalizedSize)
         );
         set({ items: filteredItems });
       },
 
-      // Actualizar cantidad de un producto
       updateQuantity: (itemId, quantity, size = null) => {
         if (quantity < 1) {
           get().removeItem(itemId, size);
@@ -62,15 +93,26 @@ const useCartStore = create(
         }
 
         const items = get().items;
-        const updatedItems = items.map(item =>
-          item.id === itemId && item.size === (size || 'Estándar')
-            ? { ...item, quantity, total: item.price * quantity }
-            : item
-        );
+        const maxStock = 999;
+        const updatedItems = items.map(item => {
+          if (item.id === itemId && item.size === (size || 'Estándar')) {
+            const cappedQuantity = Math.min(quantity, item.stock ?? maxStock);
+            const unitTotal = item.price ?? 0;
+            const unitInit = item.unitInitialPayment ?? unitTotal * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+            const unitDeferred = item.unitDeferredAmount ?? unitTotal - unitInit;
+            return {
+              ...item,
+              quantity: cappedQuantity,
+              total: unitTotal * cappedQuantity,
+              unitInitialPayment: unitInit,
+              unitDeferredAmount: unitDeferred,
+            };
+          }
+          return item;
+        });
         set({ items: updatedItems });
       },
 
-      // Actualizar tamaño de un producto
       updateSize: (itemId, oldSize, newSize) => {
         const items = get().items;
         const item = items.find(
@@ -78,53 +120,58 @@ const useCartStore = create(
         );
 
         if (item) {
-          // Verificar si ya existe con el nuevo tamaño
           const existingItem = items.find(
             i => i.id === itemId && i.size === newSize
           );
 
           if (existingItem) {
-            // Si existe, combinar cantidades
+            const mergedQty = existingItem.quantity + item.quantity;
+            const unitTotal = existingItem.price ?? 0;
+            const unitInit = existingItem.unitInitialPayment ?? unitTotal * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+            const unitDeferred = existingItem.unitDeferredAmount ?? unitTotal - unitInit;
             const updatedItems = items
               .filter(i => !(i.id === itemId && i.size === oldSize))
               .map(i =>
                 i.id === itemId && i.size === newSize
-                  ? { ...i, quantity: i.quantity + item.quantity, total: i.price * (i.quantity + item.quantity) }
+                  ? {
+                      ...i,
+                      quantity: mergedQty,
+                      total: unitTotal * mergedQty,
+                      unitInitialPayment: unitInit,
+                      unitDeferredAmount: unitDeferred,
+                    }
                   : i
               );
             set({ items: updatedItems });
           } else {
-            // Si no existe, actualizar el tamaño
-            const updatedItems = items.map(i =>
-              i.id === itemId && i.size === oldSize
-                ? { ...i, size: newSize }
-                : i
-            );
-            set({ items: updatedItems });
+            set({ items: items.map(i =>
+              i.id === itemId && i.size === oldSize ? { ...i, size: newSize } : i
+            ) });
           }
         }
       },
 
       // Limpiar el carrito
       clearCart: () => {
-        set({ items: [], deferralMonths: 6 });
+        set({ items: [], deferralMonths: CHECKOUT_CONFIG.DEFAULT_DEFERRAL_MONTHS });
       },
 
-      // Calcular subtotal
       getSubtotal: () => {
         return get().items.reduce((sum, item) => sum + item.total, 0);
       },
 
-      // Calcular pago inicial (30%)
       getInitialPayment: () => {
-        const subtotal = get().getSubtotal();
-        return subtotal * 0.30;
+        return get().items.reduce((sum, item) => {
+          const unitInit = item.unitInitialPayment ?? (item.price ?? 0) * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+          return sum + unitInit * item.quantity;
+        }, 0);
       },
 
-      // Calcular total a diferir (70%)
       getDeferredAmount: () => {
-        const subtotal = get().getSubtotal();
-        return subtotal * 0.70;
+        return get().items.reduce((sum, item) => {
+          const unitDeferred = item.unitDeferredAmount ?? (item.price ?? 0) * (1 - CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT);
+          return sum + unitDeferred * item.quantity;
+        }, 0);
       },
 
       // Calcular pago mensual

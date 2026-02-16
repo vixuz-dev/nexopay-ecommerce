@@ -90,6 +90,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/mi-credito" element={<Navigate to={ROUTES.MY_CREDIT} replace />} />
             <Route
               path={ROUTES.CREDIT_REQUEST}
               element={<Navigate to={ROUTES.MY_CREDIT} replace />}
@@ -158,6 +159,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/carrito" element={<Navigate to={ROUTES.CART} replace />} />
+            <Route path="/pago" element={<Navigate to={ROUTES.CHECKOUT} replace />} />
+            <Route path="/confirmacion" element={<Navigate to={ROUTES.ORDER_CONFIRMATION} replace />} />
             <Route
               path={ROUTES.CART}
               element={

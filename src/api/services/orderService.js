@@ -1,55 +1,43 @@
-import axios from 'axios';
 import { ENDPOINTS } from '../endpoints';
-import { ROUTES } from '../../utils/routes';
-import { authService } from './authService';
+import { getInternalApiHeaders } from '../utils/apiHeaders';
+import { handleAuthError } from '../../utils/authInterceptor';
 
-class OrderService {
+/**
+ * Service for order-related API calls
+ * Services only handle API communication, no business logic or validation
+ */
+export const orderService = {
+  /**
+   * Create an order
+   * @param {Object} payload - Order data
+   * @returns {Promise<object>} - API response
+   */
   async createOrder(payload) {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('No se encontró una sesión activa. Por favor, inicia sesión.');
+    const response = await fetch(ENDPOINTS.ORDERS.CREATE_ORDER, {
+      method: 'POST',
+      headers: getInternalApiHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.message || data.statusMessage || 'Error al crear la orden');
+      error.statusCode = response.status;
+      error.status = response.status;
+      error.statusMessage = data.statusMessage;
+      error.details = data.error || data.details;
+      handleAuthError(error, response);
+      throw error;
     }
-    
-    try {
-      const response = await axios.post(
-        ENDPOINTS.ECOMMERCE_ORDERS.CREATE_ORDER,
-        payload,
-        { headers: { 'token': token } }
-      );
 
-      if (response.data && response.data.success === false) {
-        throw response;
-      }
-
-      return response.data;
-    } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        authService.logout();
-        window.location.href = ROUTES.HOME;
-      }
-
-      const errorMessage = this._parseErrorMessage(error);
-      console.error(`Order Creation Error: ${errorMessage}`, error);
-      throw new Error(errorMessage);
+    if (data.success === false) {
+      const error = new Error(data.statusMessage || 'No se pudo crear el pedido');
+      error.statusCode = data.statusCode ?? 200;
+      error.success = false;
+      throw error;
     }
-  }
 
-  _parseErrorMessage(error) {
-    if (error.response) {
-      // El servidor respondió con un status fuera del rango 2xx
-      const data = error.response.data;
-      return data?.statusMessage || data?.message || `Error del servidor (${error.response.status})`;
-    } else if (error.data) {
-      // Manejo para el caso de éxito falso (response.data.success === false)
-      return error.data.statusMessage || error.data.message || 'La operación no fue exitosa';
-    } else if (error.request) {
-      // La petición se hizo pero no hubo respuesta (Error de red)
-      return 'No se pudo conectar con el servidor. Revisa tu conexión a internet.';
-    } else {
-      // Error al configurar la petición o error de código
-      return error.message || 'Ocurrió un error inesperado al procesar la orden';
-    }
-  }
-}
-
-export const orderService = new OrderService();
+    return data.body ?? data.data ?? data;
+  },
+};

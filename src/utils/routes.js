@@ -16,7 +16,7 @@ export const ROUTES = {
   // Crédito
   REQUEST_CREDIT: '/solicitar-credito',
   CREDIT_REQUEST: '/solicitud-credito',
-  MY_CREDIT: '/mi-credito',
+  MY_CREDIT: '/mis-solicitudes',
   PAY_CREDIT: '/pagar-credito',
 
   // Productos
@@ -24,10 +24,10 @@ export const ROUTES = {
   PRODUCT_DETAIL: '/producto',
   OFFERS: '/ofertas',
 
-  // Carrito y compras
-  CART: '/carrito',
-  CHECKOUT: '/pago',
-  ORDER_CONFIRMATION: '/confirmacion',
+  // Proceso de compra (hierarquía: /comprar/*)
+  CART: '/comprar/carrito',
+  CHECKOUT: '/comprar/pago',
+  ORDER_CONFIRMATION: '/comprar/confirmacion',
   MY_ORDERS: '/mis-compras',
 
   // Cuenta
@@ -99,6 +99,12 @@ export const getProductsUrl = (filters = {}) => {
   const queryString = params.toString();
   return queryString ? `${ROUTES.PRODUCTS}?${queryString}` : ROUTES.PRODUCTS;
 };
+
+export const PURCHASE_FLOW_STEPS = [
+  { key: 'cart', label: 'Carrito', path: ROUTES.CART },
+  { key: 'checkout', label: 'Pago', path: ROUTES.CHECKOUT },
+  { key: 'confirmation', label: 'Confirmación', path: ROUTES.ORDER_CONFIRMATION },
+];
 
 /**
  * Genera la URL de búsqueda de productos

@@ -7,7 +7,7 @@ import RecommendedProducts from '../components/account/RecommendedProducts';
 import ShopCTABanner from '../components/account/ShopCTABanner';
 import InvoicesSummaryCard from '../components/account/InvoicesSummaryCard';
 import { useInvoices } from '../hooks/useInvoices';
-import useCreditLineStatusStore from '../stores/creditLineStatusStore';
+import useCreditStore from '../stores/creditStore';
 import {
   HiOutlineClock,
   HiOutlineCheckCircle,
@@ -19,10 +19,11 @@ import { formatPrice, formatDate } from '../utils/creditUtils';
 const MyAccount = () => {
   const navigate = useNavigate();
   const { invoices } = useInvoices();
-  const showButton = useCreditLineStatusStore((state) => state.showButton);
-  const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
-  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
-  const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
+  const showButton = useCreditStore((state) => state.showButton);
+  const requestStatus = useCreditStore((state) => state.requestStatus);
+  const isLoaded = useCreditStore((state) => state.isLoaded);
+  const fetchCreditLineStatus = useCreditStore((state) => state.fetchCreditLineStatus);
+  const fetchCreditLineProfile = useCreditStore((state) => state.fetchCreditLineProfile);
 
   const hasApprovedCreditRequest =
     isLoaded &&
@@ -39,6 +40,10 @@ const MyAccount = () => {
     }
     return () => { cancelled = true; };
   }, [isLoaded, fetchCreditLineStatus]);
+
+  useEffect(() => {
+    fetchCreditLineProfile().catch(() => {});
+  }, [fetchCreditLineProfile]);
 
   const user = {
     id: '1',

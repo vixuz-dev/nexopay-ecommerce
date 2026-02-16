@@ -16,6 +16,15 @@ export const formatCurrency = (amount, currency = 'USD', locale = 'en-US') => {
   }).format(amount);
 };
 
+export const formatPriceMXN = (amount) => {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 /**
  * Format date
  * @param {Date|string} date - Date to format

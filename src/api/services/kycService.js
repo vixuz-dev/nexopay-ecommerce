@@ -10,10 +10,11 @@ class KYCService {
   /**
    * Evaluate document using KYC service
    * @param {string} base64ImageFile - Base64 encoded image (without data URI prefix)
+   * @param {string} typeImageFile - Type of document: 'passport' | 'ine_front' | 'ine_back'
    * @param {number} timeoutMs - Timeout in milliseconds (default: 120000 = 2 minutes)
    * @returns {Promise<object>} - Extracted document data
    */
-  async evaluateDocument(base64ImageFile, timeoutMs = 120000) {
+  async evaluateDocument(base64ImageFile, typeImageFile, timeoutMs = 120000) {
     // Validate image format before processing
     const formatValidation = validateImageFormat(base64ImageFile);
     if (!formatValidation.valid) {
@@ -35,6 +36,7 @@ class KYCService {
         },
         body: JSON.stringify({
           base64ImageFile,
+          typeImageFile,
         }),
         signal: controller.signal,
       });

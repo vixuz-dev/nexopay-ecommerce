@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
@@ -7,32 +7,37 @@ import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
 import { orderService } from '../api/services/orderService';
 import {
-  HiOutlineChevronLeft,
-  HiOutlineCreditCard,
-  HiOutlineLockClosed,
-  HiOutlineCalendarDays,
-  HiOutlineBanknotes,
-  HiOutlineBuildingStorefront,
-  HiOutlineCheckCircle,
-  HiOutlineShieldCheck,
-  HiOutlineDocumentText,
+  HiOutlineMapPin,
+  HiOutlinePlus,
 } from 'react-icons/hi2';
+import AddAddressModal from '../components/common/AddAddressModal';
+import {
+  CheckoutOrderSummary,
+  CheckoutPaymentSummary,
+  CheckoutPaymentMethods,
+} from '../components/checkout';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const showToast = useToastStore((state) => state.showToast);
-  const { 
-    items, 
-    getSubtotal, 
+  const location = useLocation();
+  const showToast = useToastStore((s) => s.showToast);
+  const preOrder = usePreOrderStore((s) => s.preOrder);
+  const {
+    items,
+    getSubtotal,
     isEmpty,
     deferralMonths,
     getInitialPayment,
     getDeferredAmount,
-    getMonthlyPayment,
     getPaymentSchedule,
     clearCart,
   } = useCartStore();
-  
+
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
@@ -46,66 +51,95 @@ const Checkout = () => {
     cvv: '',
   });
 
-  const [deliveryAddress, setDeliveryAddress] = useState({
-    nameReceived: '',
-    phoneReceived: '',
-    deliveryStreet: '',
-    deliveryExternalNumber: '',
-    deliveryInternalNumber: '',
-    deliveryNeighborhood: '',
-    deliveryCity: '',
-    deliveryState: '',
-    deliveryZipCode: '',
-    deliveryReferences: '',
-  });
+  useEffect(() => {
+    if (preOrder) {
+      console.log('[DEBUG] PreOrder en store:', preOrder);
+    }
+  }, [preOrder]);
 
-  // Redirigir si el carrito está vacío
+  useEffect(() => {
+    mercadoPagoService.getPaymentMethods()
+      .then((methods) => {
+        const filtered = (methods || [])
+          .filter((pm) => {
+            if (!MERCADO_PAGO_PAYMENT_METHOD_IDS.includes(pm.id)) return false;
+            if (pm.id === 'visa' || pm.id === 'master') {
+              return pm.payment_type_id === 'credit_card';
+            }
+            return true;
+          })
+          .sort((a, b) => MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(a.id) - MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(b.id));
+        setPaymentMethods(filtered);
+      })
+      .catch(() => setPaymentMethods([]));
+  }, []);
+
+  useEffect(() => {
+    addressService.getAddresses()
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        setAddresses(arr);
+        const fromState = location.state?.selectedAddressId;
+        if (arr.length > 0) {
+          const exists = fromState && arr.some((a) => a.client_address_id === fromState);
+          setSelectedAddressId(exists ? fromState : (arr.find((a) => a.is_principal === 1) || arr[0]).client_address_id);
+        } else {
+          setSelectedAddressId(null);
+        }
+      })
+      .catch(() => setAddresses([]))
+      .finally(() => setAddressesLoading(false));
+  }, [location.state?.selectedAddressId]);
+
+  const fetchAddresses = () => {
+    addressService.getAddresses()
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        setAddresses(arr);
+        if (arr.length > 0) {
+          setSelectedAddressId((prev) => {
+            const exists = prev && arr.some((a) => a.client_address_id === prev);
+            return exists ? prev : (arr.find((a) => a.is_principal === 1) || arr[0]).client_address_id;
+          });
+        } else {
+          setSelectedAddressId(null);
+        }
+      })
+      .catch(() => setAddresses([]));
+  };
+
   useEffect(() => {
     if (isEmpty()) {
       navigate(ROUTES.CART);
     }
   }, [isEmpty, navigate]);
 
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDate = (date) => {
-    return new Intl.DateTimeFormat('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(date);
-  };
-
   const subtotal = getSubtotal();
-  const shipping = subtotal > 5000 ? 0 : 200;
+  const shipping = getShippingCost(subtotal);
   const total = subtotal + shipping;
   const initialPayment = getInitialPayment();
   const deferredAmount = getDeferredAmount();
-  const monthlyPayment = getMonthlyPayment();
   const paymentSchedule = getPaymentSchedule();
 
   const handleCardDataChange = (field, value) => {
-    setCardData(prev => ({ ...prev, [field]: value }));
+    setCardData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleDeliveryAddressChange = (field, value) => {
-    setDeliveryAddress(prev => ({ ...prev, [field]: value }));
-  };
+  const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
-  const processPayment = async () => {
-    // Placeholder: implementar cuando exista endpoint de procesamiento de pago
-  };
-
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!acceptedTerms) {
-      alert('Por favor acepta los términos y condiciones');
+      showToast('Por favor acepta los términos y condiciones', 'error');
+      return;
+    }
+
+    if (!selectedAddress) {
+      showToast('Selecciona una dirección de entrega', 'error');
+      return;
+    }
+
+    if (!preOrder) {
+      showToast('No hay orden creada. Regresa al carrito para proceder.', 'error');
       return;
     }
 
@@ -118,84 +152,49 @@ const Checkout = () => {
 
     setIsProcessing(true);
 
-    try {
-      await processPayment();
+    clearCart();
 
-      const subtotal = getSubtotal();
-      const shippingCost = subtotal > 5000 ? 0 : 200;
-      const orderTotal = Math.round(subtotal + shippingCost);
-      const totalProductQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-
-      const orderPayload = {
-        totalProductQuantity,
-        total: orderTotal,
-        deliveryAddress: {
-          nameReceived: deliveryAddress.nameReceived.trim(),
-          phoneReceived: deliveryAddress.phoneReceived.trim(),
-          deliveryStreet: deliveryAddress.deliveryStreet.trim(),
-          deliveryExternalNumber: deliveryAddress.deliveryExternalNumber.trim(),
-          deliveryInternalNumber: deliveryAddress.deliveryInternalNumber?.trim() ?? '',
-          deliveryNeighborhood: deliveryAddress.deliveryNeighborhood.trim(),
-          deliveryCity: deliveryAddress.deliveryCity.trim(),
-          deliveryState: deliveryAddress.deliveryState.trim(),
-          deliveryZipCode: deliveryAddress.deliveryZipCode.trim(),
-          deliveryReferences: deliveryAddress.deliveryReferences?.trim() ?? '',
+    navigate(ROUTES.ORDER_CONFIRMATION, {
+      state: {
+        order: {
+          items: [...items],
+          subtotal,
+          shipping,
+          total,
+          initialPayment,
+          deferredAmount,
+          monthlyPayment: deferredAmount / deferralMonths,
+          deferralMonths,
+          paymentSchedule: getPaymentSchedule(),
+          orderDate: new Date(),
+          orderId: preOrder.orderId ?? preOrder.id,
+          orderNumber: preOrder.orderNumber ?? preOrder.order_id ?? `NXP-${Date.now().toString().slice(-8)}`,
         },
-        detailOrder: items.map((item) => ({
-          productId: item.id,
-          productVariantId: 7, //item.productVariantId ?? item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          numberPayments: deferralMonths,
-          attributes: [{ name: 'size', value: item.size || 'Estándar' }],
-        })),
-      };
+      },
+    });
 
-      const response = await orderService.createOrder(orderPayload);
-
-      if (response.success === true) {
-        showToast(response.statusMessage || 'Pedido creado correctamente', 'success', 4000);
-        clearCart();
-        navigate(ROUTES.ORDER_CONFIRMATION);
-      } else {
-        showToast(response.statusMessage || 'No se pudo crear el pedido', 'error', 5000);
-      }
-    } catch (error) {
-      showToast(error?.message || 'No se pudo completar la orden. Intenta de nuevo.', 'error', 5000);
-    } finally {
-      setIsProcessing(false);
-    }
+    setIsProcessing(false);
   };
 
   if (isEmpty()) {
     return null;
   }
 
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1).padStart(2, '0'),
-    label: String(i + 1).padStart(2, '0'),
-  }));
-
-  const years = Array.from({ length: 10 }, (_, i) => ({
-    value: String(new Date().getFullYear() + i),
-    label: String(new Date().getFullYear() + i),
-  }));
+  const visaPm = paymentMethods.find((pm) => pm.id === 'visa' || pm.id === 'debvisa');
+  const masterPm = paymentMethods.find((pm) => pm.id === 'master' || pm.id === 'debmaster');
+  const oxxoPm = paymentMethods.find((pm) => pm.id === 'oxxo');
+  const visaLogo = visaPm?.secure_thumbnail || visaPm?.thumbnail;
+  const masterLogo = masterPm?.secure_thumbnail || masterPm?.thumbnail;
+  const oxxoLogo = oxxoPm?.secure_thumbnail || oxxoPm?.thumbnail;
+  const showCardForm = paymentMethod === 'card';
+  const showOxxoMessage = paymentMethod === 'oxxo';
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <div className="mb-6">
-          <Link
-            to={ROUTES.CART}
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-primary-600 transition-colors text-sm"
-          >
-            <HiOutlineChevronLeft className="w-4 h-4" />
-            Volver al carrito
-          </Link>
-        </div>
+        <PurchaseFlowBreadcrumb currentStep="checkout" />
 
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
@@ -207,470 +206,144 @@ const Checkout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna Izquierda - Dirección, Resumen y Calendario */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Dirección de entrega */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="font-semibold text-gray-900">Dirección de entrega</h2>
-              </div>
-              <div className="px-6 py-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de quien recibe *</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.nameReceived}
-                      onChange={(e) => handleDeliveryAddressChange('nameReceived', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Luis Espinoza"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
-                    <input
-                      type="tel"
-                      value={deliveryAddress.phoneReceived}
-                      onChange={(e) => handleDeliveryAddressChange('phoneReceived', e.target.value.replace(/\D/g, '').slice(0, 15))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="3511680101"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Calle *</label>
-                  <input
-                    type="text"
-                    value={deliveryAddress.deliveryStreet}
-                    onChange={(e) => handleDeliveryAddressChange('deliveryStreet', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Prueba"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número exterior *</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.deliveryExternalNumber}
-                      onChange={(e) => handleDeliveryAddressChange('deliveryExternalNumber', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="15"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número interior</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.deliveryInternalNumber}
-                      onChange={(e) => handleDeliveryAddressChange('deliveryInternalNumber', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder=""
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Colonia *</label>
-                  <input
-                    type="text"
-                    value={deliveryAddress.deliveryNeighborhood}
-                    onChange={(e) => handleDeliveryAddressChange('deliveryNeighborhood', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Vecindario"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.deliveryCity}
-                      onChange={(e) => handleDeliveryAddressChange('deliveryCity', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Zapopan"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.deliveryState}
-                      onChange={(e) => handleDeliveryAddressChange('deliveryState', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Jalisco"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">C.P. *</label>
-                    <input
-                      type="text"
-                      value={deliveryAddress.deliveryZipCode}
-                      onChange={(e) => handleDeliveryAddressChange('deliveryZipCode', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="45019"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Referencias</label>
-                  <input
-                    type="text"
-                    value={deliveryAddress.deliveryReferences}
-                    onChange={(e) => handleDeliveryAddressChange('deliveryReferences', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Entre calle X y Y"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Resumen del Pedido (Solo lectura) */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="font-semibold text-gray-900">Resumen del Pedido</h2>
-              </div>
-              
-              <div className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="px-6 py-4 flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          Imagen
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{item.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {item.size} · Cantidad: {item.quantity}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">{formatPrice(item.total)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600 mb-3">
-                  <span>Envío</span>
-                  <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200">
-                  <span>Total</span>
-                  <span>{formatPrice(total)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Calendario de Pagos */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-primary-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
-                    <HiOutlineCalendarDays className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-gray-900">Calendario de Pagos</h2>
-                    <p className="text-sm text-gray-600">Tu plan a {deferralMonths} meses sin intereses</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Pago Inicial Destacado */}
-              <div className="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      ✓
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">Pago Inicial (30%)</p>
-                      <p className="text-sm text-gray-600">Hoy, {formatDate(new Date())}</p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-bold text-primary-600">
-                    {formatPrice(initialPayment)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Lista de Pagos Mensuales */}
-              <div className="px-6 py-4">
-                <p className="text-sm font-medium text-gray-700 mb-4">
-                  Pagos mensuales restantes ({formatPrice(deferredAmount)} en {deferralMonths} meses):
-                </p>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {paymentSchedule.map((payment) => (
-                    <div
-                      key={payment.number}
-                      className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-medium text-sm">
-                          {payment.number}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Pago {payment.number}</p>
-                          <p className="text-sm text-gray-600">{formatDate(payment.date)}</p>
-                        </div>
-                      </div>
-                      <span className="font-semibold text-gray-900">
-                        {formatPrice(payment.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resumen del Total */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total de pagos mensuales:</span>
-                  <span className="font-semibold text-gray-900">{formatPrice(deferredAmount)}</span>
-                </div>
-              </div>
-            </div>
+          <div className="lg:col-span-2">
+            <CheckoutOrderSummary
+              items={items}
+              subtotal={subtotal}
+              shipping={shipping}
+              total={total}
+              deferralMonths={deferralMonths}
+              initialPayment={initialPayment}
+              deferredAmount={deferredAmount}
+              paymentSchedule={paymentSchedule}
+            />
           </div>
 
-          {/* Columna Derecha - Método de Pago */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Monto a Pagar Hoy */}
-            <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl p-6 text-white shadow-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <HiOutlineBanknotes className="w-6 h-6" />
-                <span className="font-medium">Pago de hoy</span>
-              </div>
-              <div className="text-4xl font-bold mb-2">
-                {formatPrice(initialPayment)}
-              </div>
-              <p className="text-primary-100 text-sm">
-                30% del total para apartar tus productos
-              </p>
-            </div>
+            <CheckoutPaymentSummary initialPayment={initialPayment} />
 
-            {/* Método de Pago */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Método de Pago</h3>
-              
-              <div className="space-y-3 mb-6">
-                {/* Tarjeta */}
-                <label 
-                  className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    paymentMethod === 'card' 
-                      ? 'border-primary-500 bg-primary-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={paymentMethod === 'card'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-primary-600 focus:ring-primary-500"
-                  />
-                  <HiOutlineCreditCard className={`w-6 h-6 ${paymentMethod === 'card' ? 'text-primary-600' : 'text-gray-400'}`} />
-                  <div className="flex-1">
-                    <span className="font-medium text-gray-900">Tarjeta de Débito/Crédito</span>
-                    <p className="text-xs text-gray-500">Visa, Mastercard, American Express</p>
+            {!addressesLoading && addresses.length === 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
                   </div>
-                </label>
-
-                {/* Oxxo Pay */}
-                <label 
-                  className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    paymentMethod === 'oxxo' 
-                      ? 'border-primary-500 bg-primary-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="oxxo"
-                    checked={paymentMethod === 'oxxo'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-primary-600 focus:ring-primary-500"
-                  />
-                  <HiOutlineBuildingStorefront className={`w-6 h-6 ${paymentMethod === 'oxxo' ? 'text-primary-600' : 'text-gray-400'}`} />
-                  <div className="flex-1">
-                    <span className="font-medium text-gray-900">Efectivo en OXXO</span>
-                    <p className="text-xs text-gray-500">Paga con efectivo en cualquier OXXO</p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Formulario de Tarjeta */}
-              {paymentMethod === 'card' && (
-                <div className="space-y-4 mb-6 pt-4 border-t border-gray-200">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número de tarjeta
-                    </label>
-                    <input
-                      type="text"
-                      value={cardData.cardNumber}
-                      onChange={(e) => handleCardDataChange('cardNumber', e.target.value.replace(/\D/g, '').slice(0, 16))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="1234 5678 9012 3456"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre en la tarjeta
-                    </label>
-                    <input
-                      type="text"
-                      value={cardData.cardHolder}
-                      onChange={(e) => handleCardDataChange('cardHolder', e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="JUAN PÉREZ"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Vencimiento
-                      </label>
-                      <div className="flex gap-2">
-                        <select
-                          value={cardData.expiryMonth}
-                          onChange={(e) => handleCardDataChange('expiryMonth', e.target.value)}
-                          className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                        >
-                          <option value="">MM</option>
-                          {months.map(m => (
-                            <option key={m.value} value={m.value}>{m.label}</option>
-                          ))}
-                        </select>
-                        <select
-                          value={cardData.expiryYear}
-                          onChange={(e) => handleCardDataChange('expiryYear', e.target.value)}
-                          className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                        >
-                          <option value="">AA</option>
-                          {years.map(y => (
-                            <option key={y.value} value={y.value}>{y.label.slice(-2)}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVV
-                      </label>
-                      <input
-                        type="text"
-                        value={cardData.cvv}
-                        onChange={(e) => handleCardDataChange('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="123"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Guardar tarjeta para pagos recurrentes */}
-                  <label className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={saveCard}
-                      onChange={(e) => setSaveCard(e.target.checked)}
-                      className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded mt-0.5"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900 text-sm">
-                        Guardar tarjeta para pagos automáticos
-                      </span>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Tus pagos mensuales se cargarán automáticamente a esta tarjeta
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              )}
-
-              {/* Mensaje de OXXO */}
-              {paymentMethod === 'oxxo' && (
-                <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <div className="flex items-start gap-3">
-                    <HiOutlineDocumentText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-900">
-                        Recibirás una ficha de pago
-                      </p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        Presenta el código de barras en cualquier OXXO para realizar tu pago inicial. 
-                        Tienes 3 días para completar el pago.
-                      </p>
-                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Dirección de entrega requerida</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Agrega una dirección para continuar con el pago.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddAddressModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors text-sm"
+                    >
+                      <HiOutlinePlus className="w-5 h-5" />
+                      Agregar dirección
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Términos y Condiciones */}
-              <label className="flex items-start gap-3 mb-6 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded mt-0.5"
-                />
-                <span className="text-sm text-gray-600">
-                  Acepto los{' '}
-                  <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
-                    términos y condiciones
-                  </Link>{' '}
-                  y el{' '}
-                  <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
-                    aviso de privacidad
-                  </Link>
-                </span>
-              </label>
-
-              {/* Botón de Pago */}
-              <button
-                onClick={handleCheckout}
-                disabled={!acceptedTerms || isProcessing}
-                className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  acceptedTerms && !isProcessing
-                    ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-md hover:shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <HiOutlineLockClosed className="w-5 h-5" />
-                    Pagar {formatPrice(initialPayment)}
-                  </>
+            {!addressesLoading && addresses.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                      <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Dirección de entrega</h3>
+                      <p className="text-xs text-gray-600">Aquí se enviarán tus productos</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAddressModalOpen(true)}
+                    className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
+                    aria-label="Agregar otra dirección"
+                  >
+                    <HiOutlinePlus className="w-5 h-5" />
+                  </button>
+                </div>
+                {addresses.length > 1 ? (
+                  <div className="space-y-2">
+                    {addresses.map((addr) => (
+                      <label
+                        key={addr.client_address_id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                          selectedAddressId === addr.client_address_id
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="deliveryAddress"
+                          checked={selectedAddressId === addr.client_address_id}
+                          onChange={() => setSelectedAddressId(addr.client_address_id)}
+                          className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
+                          <p className="text-xs text-gray-600">
+                            {addr.name_received} · {addr.street} {addr.external_number}
+                            {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ) : selectedAddress && (
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
+                    <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
+                    <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
+                    <p className="text-sm text-gray-600">
+                      {selectedAddress.street} {selectedAddress.external_number}
+                      {selectedAddress.internal_number ? ` Int. ${selectedAddress.internal_number}` : ''}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
+                    </p>
+                  </div>
                 )}
-              </button>
-
-              {/* Seguridad */}
-              <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500">
-                <HiOutlineShieldCheck className="w-4 h-4" />
-                <span>Pago seguro con encriptación SSL</span>
               </div>
-            </div>
+            )}
+
+            <CheckoutPaymentMethods
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+              paymentMethods={paymentMethods}
+              visaLogo={visaLogo}
+              masterLogo={masterLogo}
+              oxxoLogo={oxxoLogo}
+              oxxoPm={oxxoPm}
+              showCardForm={showCardForm}
+              showOxxoMessage={showOxxoMessage}
+              cardData={cardData}
+              onCardDataChange={handleCardDataChange}
+              saveCard={saveCard}
+              onSaveCardChange={setSaveCard}
+              acceptedTerms={acceptedTerms}
+              onAcceptedTermsChange={setAcceptedTerms}
+              isProcessing={isProcessing}
+              onCheckout={handleCheckout}
+              initialPayment={initialPayment}
+            />
           </div>
         </div>
       </main>
-      
+
+      <AddAddressModal
+        isOpen={isAddAddressModalOpen}
+        onClose={() => setIsAddAddressModalOpen(false)}
+        onSuccess={fetchAddresses}
+      />
+
       <Footer />
     </div>
   );

@@ -3,6 +3,7 @@
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL_AWS = import.meta.env.VITE_API_BASE_URL_AWS || 'https://w1887gqeij.execute-api.us-west-2.amazonaws.com/dev';
 
 export const ENDPOINTS = {
   // Authentication
@@ -85,11 +86,33 @@ export const ENDPOINTS = {
     CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,
   },
 
+  // Orders
+  ORDERS: {
+    CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,
+  },
+
+  // Addresses
+  ADDRESSES: {
+    GET_ADDRESSES: `${API_BASE_URL}/ecommerce/addresses/get_addresses`,
+    CREATE_DELIVERY_ADDRESS: `${API_BASE_URL}/ecommerce/addresses/create_delivery_address`,
+  },
+
+  // Mercado Pago (AWS)
+  MERCADO_PAGO: {
+    GET_PAYMENT_METHODS: `${API_BASE_URL_AWS}/mercado-pago/get-payment-methods-mp`,
+    GENERATE_PAYMENT: `${API_BASE_URL_AWS}/mercado-pago/mp-generate-payment`,
+  },
+
   // KYC
   KYC: {
     EVALUATE: import.meta.env.DEV 
       ? '/api/kyc' 
       : 'https://w1887gqeij.execute-api.us-west-2.amazonaws.com/dev/kyc',
+  },
+
+  // Ecommerce profile
+  ECOMMERCE_PROFILE: {
+    GET_CREDIT_LINE: `${API_BASE_URL}/ecommerce/profile/get_credit_line`,
   },
 
   // Credit line request

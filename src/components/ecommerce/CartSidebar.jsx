@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useCartStore from '../../stores/cartStore';
 import { ROUTES } from '../../utils/routes';
+import { CHECKOUT_CONFIG, getShippingCost } from '../../constants/checkoutConfig';
 import {
   HiOutlineXMark,
   HiOutlineShoppingCart,
@@ -20,9 +21,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
     getTotalItems,
     clearCart,
     isEmpty,
-    deferralMonths,
     getInitialPayment,
-    getMonthlyPayment,
   } = useCartStore();
 
   const formatPrice = (amount) => {
@@ -35,14 +34,13 @@ const CartSidebar = ({ isOpen, onClose }) => {
   };
 
   const subtotal = getSubtotal();
-  const shipping = subtotal > 5000 ? 0 : 200;
+  const shipping = getShippingCost(subtotal);
   const total = subtotal + shipping;
   const totalItems = getTotalItems();
   const initialPayment = getInitialPayment();
-  const monthlyPayment = getMonthlyPayment();
 
-  const handleQuantityChange = (itemId, size, newQuantity) => {
-    updateQuantity(itemId, newQuantity, size);
+  const handleQuantityChange = (itemId, size, newQuantity, maxStock = 999) => {
+    updateQuantity(itemId, Math.min(newQuantity, maxStock), size);
   };
 
   const handleRemoveItem = (itemId, size) => {
@@ -134,14 +132,13 @@ const CartSidebar = ({ isOpen, onClose }) => {
                         {item.name}
                       </h3>
                     </Link>
-                    <p className="text-xs text-gray-600 mb-2">Tamaño: {item.size}</p>
-
                     {/* Cantidad y Precio */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm"
+                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.stock ?? 999)}
+                          disabled={item.quantity <= 1}
+                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
                           -
                         </button>
@@ -149,8 +146,9 @@ const CartSidebar = ({ isOpen, onClose }) => {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm"
+                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.stock ?? 999)}
+                          disabled={item.quantity >= (item.stock ?? 999)}
+                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
                           +
                         </button>
@@ -167,13 +165,18 @@ const CartSidebar = ({ isOpen, onClose }) => {
                       </div>
                     </div>
 
-                    {/* Eliminar */}
+                    {/* Remover */}
                     <button
-                      onClick={() => handleRemoveItem(item.id, item.size)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRemoveItem(item.id, item.size);
+                      }}
                       className="mt-2 text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
                     >
                       <HiOutlineTrash className="w-4 h-4" />
-                      Eliminar
+                      Remover
                     </button>
                   </div>
                 </div>
@@ -188,7 +191,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
             {/* Resumen */}
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm text-gray-700">
-                <span>Subtotal ({totalItems} items):</span>
+                <span>Subtotal ({totalItems} {totalItems === 1 ? 'producto' : 'productos'}):</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-700">
@@ -201,9 +204,9 @@ const CartSidebar = ({ isOpen, onClose }) => {
                   )}
                 </span>
               </div>
-              {subtotal < 5000 && (
+              {CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD != null && subtotal < CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD && (
                 <p className="text-xs text-gray-500">
-                  Agrega {formatPrice(5000 - subtotal)} más para envío gratis
+                  Agrega {formatPrice(CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD - subtotal)} más para envío gratis
                 </p>
               )}
               <div className="border-t border-gray-200 pt-3">
@@ -216,12 +219,8 @@ const CartSidebar = ({ isOpen, onClose }) => {
               {/* Info de Financiamiento */}
               <div className="bg-primary-50 rounded-lg p-3 mt-3 border border-primary-100">
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">Pago inicial (30%):</span>
+                  <span className="text-gray-700">Pago inicial:</span>
                   <span className="font-semibold text-primary-600">{formatPrice(initialPayment)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-gray-600">
-                  <span>{deferralMonths} mensualidades de:</span>
-                  <span className="font-medium">{formatPrice(monthlyPayment)}</span>
                 </div>
               </div>
             </div>
@@ -231,7 +230,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
               onClick={handleViewCart}
               className="w-full py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
             >
-              Ver Carrito y Configurar Pago
+              Continuar al pago
               <HiOutlineArrowRight className="w-5 h-5" />
             </button>
 

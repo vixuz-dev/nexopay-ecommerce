@@ -52,6 +52,14 @@ export const PAYMENT_STATUS = {
   REFUNDED: 'refunded',
 };
 
+export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
+  'visa',
+  'master',
+  'debvisa',
+  'debmaster',
+  'oxxo',
+];
+
 export const CURRENCIES = {
   USD: 'USD',
   EUR: 'EUR',

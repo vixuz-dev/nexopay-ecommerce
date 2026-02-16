@@ -1,0 +1,254 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { referenceSchema } from '../schemas/credit';
+import { creditLineRequestService } from '../api/services/creditLineRequestService';
+import { profileService } from '../api/services/profileService';
+
+/**
+ * Unified store for all credit request / credit line data.
+ * - Wizard form (solicitud de crédito)
+ * - Request status (can request? approved?)
+ * - Credit line profile (orders, creditLine, lastMovements)
+ * - Credit line requests list (mis solicitudes)
+ */
+const useCreditStore = create(
+  persist(
+    (set, get) => ({
+      // ─── Wizard form (solicitud de crédito) ─────────────────────────────
+      formData: {},
+      currentStep: 1,
+      completedSteps: [],
+      customNextHandler: null,
+      referenceValidationErrors: null,
+      isCurrentStepValid: false,
+
+      // ─── Request status (have_credit_line_request) ─────────────────────
+      showButton: 1,
+      requestStatus: '',
+      isStatusLoaded: false,
+      isLoaded: false,
+
+      // ─── Credit line profile (get_credit_line) ─────────────────────────
+      creditLineProfile: null,
+      isProfileLoaded: false,
+
+      // ─── Credit line requests (get_credit_line_requests) ───────────────
+      creditLineRequests: [],
+      isRequestsLoaded: false,
+
+      // ─── Wizard actions ───────────────────────────────────────────────
+      updateFormData: (stepData) => {
+        set((state) => {
+          const newData = { ...state.formData, ...stepData };
+          return { formData: newData };
+        });
+      },
+
+      markStepAsCompleted: (stepId) => {
+        set((state) => {
+          if (!state.completedSteps.includes(stepId)) {
+            return { completedSteps: [...state.completedSteps, stepId] };
+          }
+          return state;
+        });
+      },
+
+      setCurrentStep: (step) => {
+        set({ currentStep: step });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      goToNextStep: () => {
+        const { currentStep, completedSteps, formData, isCurrentStepValid } = get();
+        const totalSteps = 7;
+
+        if (!isCurrentStepValid) return;
+
+        if (currentStep === 5) {
+          const referencesData = formData.personalReferences || {};
+          const reference1 = referencesData.reference1 || {};
+          const reference2 = referencesData.reference2 || {};
+          const normalizeReference = (ref) => ({
+            nombres: ref.nombres ?? '',
+            apellidoPaterno: ref.apellidoPaterno ?? '',
+            apellidoMaterno: ref.apellidoMaterno ?? '',
+            telefono: ref.telefono ?? '',
+            calle: ref.calle ?? '',
+            numeroExterior: ref.numeroExterior ?? '',
+            numeroInterior: ref.numeroInterior ?? '',
+            colonia: ref.colonia ?? '',
+            ciudad: ref.ciudad ?? '',
+            estado: ref.estado ?? '',
+            codigoPostal: ref.codigoPostal ?? '',
+            referenciaUbicacion: ref.referenciaUbicacion ?? '',
+          });
+          const result1 = referenceSchema.safeParse(normalizeReference(reference1));
+          const result2 = referenceSchema.safeParse(normalizeReference(reference2));
+          if (!result1.success || !result2.success) {
+            set({
+              referenceValidationErrors: {
+                reference1: result1.success ? null : result1.error.flatten().fieldErrors,
+                reference2: result2.success ? null : result2.error.flatten().fieldErrors,
+              },
+            });
+            return;
+          }
+          set({ referenceValidationErrors: null });
+        }
+
+        if (currentStep < totalSteps) {
+          const newCompleted = completedSteps.includes(currentStep) ? completedSteps : [...completedSteps, currentStep];
+          const nextStep = currentStep + 1;
+          set({ currentStep: nextStep, completedSteps: newCompleted });
+          setTimeout(() => {
+            const el = document.getElementById(`step-title-${nextStep}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            else window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 100);
+        }
+      },
+
+      goToPreviousStep: () => {
+        const { currentStep } = get();
+        if (currentStep > 1) {
+          set({ currentStep: currentStep - 1, isCurrentStepValid: false });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+
+      goToStep: (stepId) => {
+        const { completedSteps, currentStep } = get();
+        if (completedSteps.includes(stepId - 1) || stepId <= currentStep) {
+          set({ currentStep: stepId, isCurrentStepValid: false });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+
+      setCustomNextHandler: (handler) => set({ customNextHandler: handler }),
+      setIsCurrentStepValid: (isValid) => set({ isCurrentStepValid: isValid }),
+
+      resetForm: () => {
+        set({
+          formData: {},
+          currentStep: 1,
+          completedSteps: [],
+          customNextHandler: null,
+          referenceValidationErrors: null,
+          isCurrentStepValid: false,
+        });
+      },
+
+      clearCreditData: () => {
+        set({
+          creditLineProfile: null,
+          creditLineRequests: [],
+          isProfileLoaded: false,
+          isRequestsLoaded: false,
+        });
+      },
+
+      // ─── Request status actions ────────────────────────────────────────
+      fetchCreditLineStatus: async () => {
+        try {
+          const result = await creditLineRequestService.haveCreditLineRequest();
+          set({
+            showButton: result.showButton !== undefined ? Number(result.showButton) : 1,
+            requestStatus: result.requestStatus != null ? String(result.requestStatus) : '',
+            isStatusLoaded: true,
+            isLoaded: true,
+          });
+          return result;
+        } catch (err) {
+          set({ isStatusLoaded: true, isLoaded: true });
+          throw err;
+        }
+      },
+
+      canRequestCredit: () => get().showButton === 1,
+
+      setCreditLineStatus: (showButton, requestStatus) => {
+        set({
+          showButton: showButton !== undefined ? Number(showButton) : get().showButton,
+          requestStatus: requestStatus != null ? String(requestStatus) : get().requestStatus,
+          isStatusLoaded: true,
+          isLoaded: true,
+        });
+      },
+
+      resetStatus: () => set({ showButton: 1, requestStatus: '', isStatusLoaded: false, isLoaded: false }),
+
+      // ─── Credit line profile actions (get_credit_line) ───────────────────
+      fetchCreditLineProfile: async () => {
+        set({ isProfileLoaded: false });
+        try {
+          const data = await profileService.getCreditLine();
+          set({
+            creditLineProfile: data,
+            isProfileLoaded: true,
+          });
+          return data;
+        } catch (err) {
+          set({ creditLineProfile: null, isProfileLoaded: true });
+          throw err;
+        }
+      },
+
+      setCreditLineProfile: (profile) => set({ creditLineProfile: profile, isProfileLoaded: true }),
+
+      // ─── Credit line requests actions (get_credit_line_requests) ─────────
+      fetchCreditLineRequests: async () => {
+        set({ isRequestsLoaded: false });
+        try {
+          const data = await creditLineRequestService.getCreditLineRequests();
+          const list = Array.isArray(data) ? data : [];
+          set({ creditLineRequests: list, isRequestsLoaded: true });
+          return list;
+        } catch (err) {
+          set({ creditLineRequests: [], isRequestsLoaded: true });
+          throw err;
+        }
+      },
+
+      setCreditLineRequests: (requests) => set({ creditLineRequests: requests ?? [], isRequestsLoaded: true }),
+    }),
+    {
+      name: 'credit-storage',
+      partialize: (state) => {
+        const sanitizedFormData = { ...state.formData };
+        if (sanitizedFormData.identityVerification) {
+          const { selfieFile, ...rest } = sanitizedFormData.identityVerification;
+          sanitizedFormData.identityVerification = rest;
+        }
+        if (sanitizedFormData.officialId) {
+          const { frontFile, backFile, passportFile, ...rest } = sanitizedFormData.officialId;
+          sanitizedFormData.officialId = rest;
+        }
+        return {
+          formData: sanitizedFormData,
+          currentStep: state.currentStep,
+          completedSteps: state.completedSteps,
+          showButton: state.showButton,
+          requestStatus: state.requestStatus,
+          isStatusLoaded: state.isStatusLoaded,
+          isLoaded: state.isLoaded,
+          creditLineProfile: state.creditLineProfile,
+          isProfileLoaded: state.isProfileLoaded,
+          creditLineRequests: state.creditLineRequests,
+          isRequestsLoaded: state.isRequestsLoaded,
+        };
+      },
+    }
+  )
+);
+
+export const useCreditForm = () => {
+  const store = useCreditStore();
+  return {
+    ...store,
+    totalSteps: 7,
+  };
+};
+
+export const useCreditFormStore = () => useCreditStore();
+
+export default useCreditStore;

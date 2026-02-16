@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-import { creditLineRequestService } from '../api/services/creditLineRequestService';
 import useUserStore from '../stores/userStore';
+import useCreditStore from '../stores/creditStore';
 import { ROUTES } from '../utils/routes';
 import {
   HiOutlineCheckCircle,
@@ -30,36 +30,25 @@ const formatDate = (dateStr) => {
 const MyCredit = () => {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const creditLineRequests = useCreditStore((state) => state.creditLineRequests);
+  const isRequestsLoaded = useCreditStore((state) => state.isRequestsLoaded);
+  const fetchCreditLineRequests = useCreditStore((state) => state.fetchCreditLineRequests);
   const [error, setError] = useState(null);
   const userName = user?.name?.trim() || '';
 
   useEffect(() => {
     let cancelled = false;
-    const fetchRequests = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await creditLineRequestService.getCreditLineRequests();
-        if (!cancelled) {
-          setRequests(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || 'No se pudieron cargar las solicitudes de crédito');
-          setRequests([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+    setError(null);
+    fetchCreditLineRequests().catch((err) => {
+      if (!cancelled) {
+        setError(err.message || 'No se pudieron cargar las solicitudes de crédito');
       }
-    };
-    fetchRequests();
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchCreditLineRequests]);
 
+  const loading = !isRequestsLoaded;
+  const requests = creditLineRequests;
   const hasApproved = requests.some(
     (r) => r.request_status && String(r.request_status).toLowerCase() === 'aprobado'
   );
@@ -69,10 +58,10 @@ const MyCredit = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[3rem] md:pt-[5rem] pb-[10rem] md:pb-[15rem]">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Mi Crédito
+            Mis solicitudes
           </h1>
           <p className="text-gray-600">
             Estado de tus solicitudes de línea de crédito NexoPay

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { HiOutlineExclamationCircle, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineLockClosed, HiOutlineArrowPath, HiOutlineIdentification } from 'react-icons/hi2';
 import FileUploader from '../../common/FileUploader';
+import DocumentVerificationLoader from '../../common/DocumentVerificationLoader';
 import { useCreditForm } from '../../../stores/creditFormStore';
 import { kycService } from '../../../api/services/kycService';
 import { fileToBase64 } from '../../../utils/imageUtils';
@@ -16,9 +17,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
   const [processingErrorFront, setProcessingErrorFront] = useState('');
   const [processingErrorBack, setProcessingErrorBack] = useState('');
   const [processingErrorPassport, setProcessingErrorPassport] = useState('');
-  const [showSuccessFront, setShowSuccessFront] = useState(false);
-  const [showSuccessBack, setShowSuccessBack] = useState(false);
-  const [showSuccessPassport, setShowSuccessPassport] = useState(false);
   const [retryCountFront, setRetryCountFront] = useState(0);
   const [retryCountBack, setRetryCountBack] = useState(0);
   const [retryCountPassport, setRetryCountPassport] = useState(0);
@@ -138,9 +136,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
     setRetryCountFront(0);
     setRetryCountBack(0);
     setRetryCountPassport(0);
-    setShowSuccessFront(false);
-    setShowSuccessBack(false);
-    setShowSuccessPassport(false);
   };
 
   const processPassportImage = async (file, imageUrl, isRetry = false) => {
@@ -151,7 +146,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64);
+      const kycData = await kycService.evaluateDocument(base64, 'passport');
       
       const validation = validatePassportKycData(kycData);
       
@@ -197,10 +192,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
           }
         });
         setRetryCountPassport(0);
-        setShowSuccessPassport(true);
-        setTimeout(() => {
-          setShowSuccessPassport(false);
-        }, 3000);
       }
     } catch (error) {
       console.error('Error procesando pasaporte:', error);
@@ -272,7 +263,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64);
+      const kycData = await kycService.evaluateDocument(base64, 'ine_front');
       
       const validation = validateFrontKycData(kycData);
       
@@ -292,7 +283,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
             }
           });
         } else {
-          setProcessingErrorFront('No se pudo analizar correctamente la imagen. Intenta nuevamente.');
+          setProcessingErrorFront('¡Ups! no pudimos analizar correctamente tu imagen, asegúrate de que sea visible');
           setRetryCountFront(currentRetries);
           updateFormData({
             officialId: {
@@ -318,10 +309,8 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
           }
         });
         setRetryCountFront(0);
-        setShowSuccessFront(true);
         setShowUnlockAnimation(true);
         setTimeout(() => {
-          setShowSuccessFront(false);
           setShowUnlockAnimation(false);
         }, 3000);
       }
@@ -359,7 +348,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
         setProcessingErrorFront(errorMessage);
         setRetryCountFront(MAX_RETRIES);
       } else {
-        let errorMessage = 'Error al procesar el documento. Por favor, verifica que la imagen sea clara y legible.';
+        let errorMessage = '¡Ups! no pudimos analizar correctamente tu imagen, asegúrate de que sea visible';
         
         if (error.isTimeout) {
           errorMessage = 'El procesamiento está tomando más tiempo del esperado. Intenta nuevamente.';
@@ -395,7 +384,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64);
+      const kycData = await kycService.evaluateDocument(base64, 'ine_back');
       
       const validation = validateBackKycData(kycData);
       
@@ -415,7 +404,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
             }
           });
         } else {
-          setProcessingErrorBack('No se pudo analizar correctamente la imagen. Intenta nuevamente.');
+          setProcessingErrorBack('¡Ups! no pudimos analizar correctamente tu imagen, asegúrate de que sea visible');
           setRetryCountBack(currentRetries);
           updateFormData({
             officialId: {
@@ -441,10 +430,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
           }
         });
         setRetryCountBack(0);
-        setShowSuccessBack(true);
-        setTimeout(() => {
-          setShowSuccessBack(false);
-        }, 3000);
       }
     } catch (error) {
       console.error('Error procesando documento trasero:', error);
@@ -480,7 +465,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
         setProcessingErrorBack(errorMessage);
         setRetryCountBack(MAX_RETRIES);
       } else {
-        let errorMessage = 'Error al procesar el documento. Por favor, verifica que la imagen sea clara y legible.';
+        let errorMessage = '¡Ups! no pudimos analizar correctamente tu imagen, asegúrate de que sea visible';
         
         if (error.isTimeout) {
           errorMessage = 'El procesamiento está tomando más tiempo del esperado. Intenta nuevamente.';
@@ -520,7 +505,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
         }
       });
       setProcessingErrorPassport('');
-      setShowSuccessPassport(false);
       setRetryCountPassport(0);
       return;
     }
@@ -549,7 +533,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
         }
       });
       setProcessingErrorFront('');
-      setShowSuccessFront(false);
       setRetryCountFront(0);
       return;
     }
@@ -578,7 +561,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
         }
       });
       setProcessingErrorBack('');
-      setShowSuccessBack(false);
       setRetryCountBack(0);
       return;
     }
@@ -817,40 +799,28 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
               )}
             </div>
 
-            <FileUploader
-              onFileSelect={handlePassportImageSelect}
-              currentFile={officialIdData.passportUrl}
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              maxSizeMB={5}
-              label="Sube la foto de tu pasaporte"
-              description="Arrastra y suelta o haz clic para seleccionar"
-              disabled={isPassportValidated}
-            />
+            <div className="relative">
+              <FileUploader
+                onFileSelect={handlePassportImageSelect}
+                currentFile={officialIdData.passportUrl}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                maxSizeMB={5}
+                label="Sube la foto de tu pasaporte"
+                description="Arrastra y suelta o haz clic para seleccionar"
+                disabled={isPassportValidated}
+              />
+              {isProcessingPassport && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-xl z-10">
+                  <DocumentVerificationLoader />
+                </div>
+              )}
+            </div>
 
             {isPassportValidated && !isProcessingPassport && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <HiOutlineCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                   <p className="text-sm font-medium text-green-800">Verificada con éxito</p>
-                </div>
-              </div>
-            )}
-
-            {isProcessingPassport && (
-              <div className="mt-4 flex items-center gap-2 text-primary-600">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                <span className="text-sm">Procesando documento...</span>
-              </div>
-            )}
-
-            {showSuccessPassport && (
-              <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-lg p-4 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <HiOutlineCheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 animate-bounce" />
-                  <div>
-                    <p className="text-sm font-semibold text-green-900">Validación exitosa</p>
-                    <p className="text-xs text-green-700 mt-1">Todos los campos fueron extraídos correctamente</p>
-                  </div>
                 </div>
               </div>
             )}
@@ -988,40 +958,28 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
               )}
             </div>
 
-            <FileUploader
-              onFileSelect={handleFrontImageSelect}
-              currentFile={officialIdData.frontUrl}
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              maxSizeMB={5}
-              label="Sube la foto frontal"
-              description="Arrastra y suelta o haz clic para seleccionar"
-              disabled={isFrontValidated}
-            />
+            <div className="relative">
+              <FileUploader
+                onFileSelect={handleFrontImageSelect}
+                currentFile={officialIdData.frontUrl}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                maxSizeMB={5}
+                label="Sube la foto frontal"
+                description="Arrastra y suelta o haz clic para seleccionar"
+                disabled={isFrontValidated}
+              />
+              {isProcessingFront && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-xl z-10">
+                  <DocumentVerificationLoader />
+                </div>
+              )}
+            </div>
 
             {isFrontValidated && !isProcessingFront && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <HiOutlineCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                   <p className="text-sm font-medium text-green-800">Verificada con éxito</p>
-                </div>
-              </div>
-            )}
-
-            {isProcessingFront && (
-              <div className="mt-4 flex items-center gap-2 text-primary-600">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                <span className="text-sm">Procesando documento...</span>
-              </div>
-            )}
-
-            {showSuccessFront && (
-              <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <HiOutlineCheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-green-900">Validación exitosa</p>
-                    <p className="text-xs text-green-700 mt-1">Todos los campos fueron extraídos correctamente</p>
-                  </div>
                 </div>
               </div>
             )}
@@ -1037,10 +995,10 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
                         type="button"
                         onClick={handleRetryFront}
                         disabled={isProcessingFront}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <HiOutlineArrowPath className={`w-4 h-4 ${isProcessingFront ? 'animate-spin' : ''}`} />
-                        Reintentar ({retryCountFront}/{MAX_RETRIES})
+                        <HiOutlineArrowPath className={`w-3.5 h-3.5 ${isProcessingFront ? 'animate-spin' : ''}`} />
+                        Reintentar
                       </button>
                     )}
                     {maxRetriesReachedFront && (
@@ -1113,40 +1071,28 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
               )}
             </div>
 
-            <FileUploader
-              onFileSelect={handleBackImageSelect}
-              currentFile={officialIdData.backUrl}
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              maxSizeMB={5}
-              label="Sube la foto trasera"
-              description="Arrastra y suelta o haz clic para seleccionar"
-              disabled={!canUploadBack || isBackValidated}
-            />
+            <div className="relative">
+              <FileUploader
+                onFileSelect={handleBackImageSelect}
+                currentFile={officialIdData.backUrl}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                maxSizeMB={5}
+                label="Sube la foto trasera"
+                description="Arrastra y suelta o haz clic para seleccionar"
+                disabled={!canUploadBack || isBackValidated}
+              />
+              {isProcessingBack && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-xl z-10">
+                  <DocumentVerificationLoader />
+                </div>
+              )}
+            </div>
 
             {isBackValidated && !isProcessingBack && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <HiOutlineCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                   <p className="text-sm font-medium text-green-800">Verificada con éxito</p>
-                </div>
-              </div>
-            )}
-
-            {isProcessingBack && (
-              <div className="mt-4 flex items-center gap-2 text-primary-600">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                <span className="text-sm">Procesando documento...</span>
-              </div>
-            )}
-
-            {showSuccessBack && (
-              <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <HiOutlineCheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-green-900">Validación exitosa</p>
-                    <p className="text-xs text-green-700 mt-1">Todos los campos fueron extraídos correctamente</p>
-                  </div>
                 </div>
               </div>
             )}
@@ -1162,10 +1108,10 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
                         type="button"
                         onClick={handleRetryBack}
                         disabled={isProcessingBack}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <HiOutlineArrowPath className={`w-4 h-4 ${isProcessingBack ? 'animate-spin' : ''}`} />
-                        Reintentar ({retryCountBack}/{MAX_RETRIES})
+                        <HiOutlineArrowPath className={`w-3.5 h-3.5 ${isProcessingBack ? 'animate-spin' : ''}`} />
+                        Reintentar
                       </button>
                     )}
                     {maxRetriesReachedBack && (
