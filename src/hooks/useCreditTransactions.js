@@ -1,60 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import useProfileStore from '../stores/profileStore';
+
+const mapMovementToTransaction = (movement) => {
+  const isAbono = movement.type_movement === 'Abono';
+  return {
+    id: movement.credit_line_history_id ?? movement.id,
+    date: movement.created_at ? new Date(movement.created_at.replace(' ', 'T')) : new Date(),
+    description: movement.description ?? '',
+    amount: isAbono ? -Math.abs(movement.amount ?? 0) : Math.abs(movement.amount ?? 0),
+    type: isAbono ? 'payment' : 'purchase',
+    status: 'completed',
+  };
+};
 
 export const useCreditTransactions = (limit = 4) => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const profileInformation = useProfileStore((state) => state.profileInformation);
+  const isProfileLoaded = useProfileStore((state) => state.isProfileLoaded);
 
-  useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        const mockTransactions = [
-          {
-            id: 'TXN-001',
-            date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-            description: 'Compra en NexoPay Store',
-            amount: 8999,
-            type: 'purchase',
-            status: 'completed'
-          },
-          {
-            id: 'TXN-002',
-            date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-            description: 'Pago de línea de crédito',
-            amount: -5000,
-            type: 'payment',
-            status: 'completed'
-          },
-          {
-            id: 'TXN-003',
-            date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-            description: 'Compra en NexoPay Store',
-            amount: 12999,
-            type: 'purchase',
-            status: 'completed'
-          },
-          {
-            id: 'TXN-004',
-            date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
-            description: 'Compra en NexoPay Store',
-            amount: 5999,
-            type: 'purchase',
-            status: 'completed'
-          },
-        ];
+  const transactions = useMemo(() => {
+    const movements = profileInformation?.history_last_movements ?? [];
+    const mapped = movements.map(mapMovementToTransaction);
+    const sorted = [...mapped].sort((a, b) => b.date - a.date);
+    return sorted.slice(0, limit);
+  }, [profileInformation?.history_last_movements, limit]);
 
-        setTransactions(mockTransactions.slice(0, limit));
-      } catch (error) {
-        console.error('Error loading transactions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTransactions();
-  }, [limit]);
+  const loading = !profileInformation && !isProfileLoaded;
 
   return { transactions, loading };
 };

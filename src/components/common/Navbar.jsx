@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HiOutlineBars3, HiOutlineXMark, HiOutlineBell, HiOutlineShoppingCart, HiOutlineHeart, HiOutlineChevronDown } from 'react-icons/hi2';
+import { HiOutlineBars3, HiOutlineXMark, HiOutlineShoppingCart, HiOutlineChevronDown } from 'react-icons/hi2';
 import NavItem from './NavItem';
 import CategoriesMegaMenu from './CategoriesMegaMenu';
 import CategoriesMobileMenu from './CategoriesMobileMenu';
@@ -33,7 +33,6 @@ const Navbar = ({
       return [];
     }
 
-    console.log('Categories from API:', categories);
 
     const categoriesArray = Array.isArray(categories) ? categories : [];
 
@@ -60,32 +59,27 @@ const Navbar = ({
     {
       label: 'Categorías',
       path: ROUTES.PRODUCTS,
-      dropdown: categoriesDropdown.length > 0 
-        ? categoriesDropdown 
-        : (categoriesLoading 
-          ? [] 
-          : [
-              { label: 'Electrónica', path: getProductsByCategoryUrl('Electrónica') },
-              { label: 'Computadoras', path: getProductsByCategoryUrl('Computadoras') },
-              { label: 'Audio', path: getProductsByCategoryUrl('Audio') },
-              { label: 'Tablets', path: getProductsByCategoryUrl('Tablets') },
-              { label: 'Televisores', path: getProductsByCategoryUrl('Televisores') },
-              { label: 'Fotografía', path: getProductsByCategoryUrl('Fotografía') },
-              { label: 'Smartwatches', path: getProductsByCategoryUrl('Smartwatches') },
-              { label: 'Gaming', path: getProductsByCategoryUrl('Gaming') },
-              { label: 'Monitores', path: getProductsByCategoryUrl('Monitores') },
-              { label: 'Accesorios', path: getProductsByCategoryUrl('Accesorios') }
-            ])
+      dropdown: categoriesDropdown.length > 0
+        ? categoriesDropdown
+        : []
     },
     {
-      label: 'Ofertas',
-      path: ROUTES.OFFERS
+      label: 'Productos',
+      path: ROUTES.PRODUCTS
     },
     {
-      label: 'Mis compras',
+      label: 'Ver carrito',
+      path: ROUTES.CART
+    },
+    {
+      label: 'Mi cuenta',
+      path: ROUTES.MY_ACCOUNT
+    },
+    {
+      label: 'Mis pedidos',
       path: ROUTES.MY_ORDERS
     }
-  ], [categoriesDropdown]);
+  ], [categoriesDropdown, categoriesLoading]);
 
   const items = navItems.length > 0 ? navItems : defaultNavItems;
 
@@ -112,29 +106,6 @@ const Navbar = ({
           )}
 
           <div className="hidden md:flex items-center gap-4 ml-auto">
-            <button
-              className={`p-2 rounded-full transition-colors duration-200 ${
-                isHomePage 
-                  ? 'text-white hover:bg-white/20' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              aria-label="Notificaciones"
-            >
-              <HiOutlineBell className="w-6 h-6" />
-            </button>
-
-            <Link
-              to={ROUTES.FAVORITES}
-              className={`p-2 rounded-full transition-colors duration-200 ${
-                isHomePage 
-                  ? 'text-white hover:bg-white/20' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              aria-label="Favoritos"
-            >
-              <HiOutlineHeart className="w-6 h-6" />
-            </Link>
-
             <button
               onClick={openCartSidebar}
               className={`p-2 rounded-full transition-colors duration-200 relative ${
@@ -286,16 +257,6 @@ const Navbar = ({
               </div>
               
               <div className="flex items-center justify-around p-4 border-b border-gray-200">
-                <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
-                  <HiOutlineBell className="w-6 h-6" />
-                </button>
-                <Link
-                  to={ROUTES.FAVORITES}
-                  onClick={closeMobileMenu}
-                  className="p-2 text-gray-700 hover:text-primary-600 transition-colors"
-                >
-                  <HiOutlineHeart className="w-6 h-6" />
-                </Link>
                 <button
                   onClick={() => {
                     openCartSidebar();

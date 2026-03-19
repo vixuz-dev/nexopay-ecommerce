@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-// import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../utils/routes';
 import {
   HiOutlineArrowLeft,
@@ -15,38 +14,35 @@ import {
   HiOutlineLockClosed,
   HiOutlineCheckCircle,
 } from 'react-icons/hi2';
+import useUserStore from '../stores/userStore';
+import useProfileStore from '../stores/profileStore';
+import { profileService } from '../api/services/profileService';
+import { userToProfileForm, profileFormToClientPayload } from '../utils/profileMapper';
+import useToastStore from '../stores/toastStore';
 
 const MyProfile = () => {
-  // TODO: Descomentar cuando se conecte la API
-  // const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
+  const profileInformation = useProfileStore((state) => state.profileInformation);
+  const showToast = useToastStore((state) => state.showToast);
+
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [profileData, setProfileData] = useState(userToProfileForm(null));
+  const [originalData, setOriginalData] = useState(profileData);
 
-  // Datos mock del usuario (temporal hasta conectar API)
-  const [profileData, setProfileData] = useState({
-    firstName: 'Juan',
-    lastName: 'Pérez',
-    email: 'juan.perez@ejemplo.com',
-    phone: '5551234567',
-    dateOfBirth: '1990-05-15',
-    curp: 'PEPJ900515HDFRXN01',
-    address: {
-      street: 'Calle Ejemplo',
-      number: '123',
-      interior: 'A',
-      neighborhood: 'Colonia Centro',
-      city: 'Ciudad de México',
-      state: 'CDMX',
-      zipCode: '06000',
-    },
-  });
+  const client = profileInformation?.client ?? user;
 
-  const [originalData] = useState(profileData);
+  useEffect(() => {
+    const formData = userToProfileForm(client);
+    setProfileData(formData);
+    setOriginalData(formData);
+  }, [client]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setProfileData((prev) => ({
@@ -65,12 +61,37 @@ const MyProfile = () => {
   };
 
   const handleSave = async () => {
+    const clientId = user?.client_id ?? profileInformation?.client?.client_id;
+    if (!clientId) {
+      showToast('No se pudo identificar el usuario', 'error');
+      return;
+    }
+
     setIsSaving(true);
-    // TODO: Implementar llamada a API para guardar datos
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simular guardado
-    setIsSaving(false);
-    setIsEditing(false);
-    // Aquí se mostraría un mensaje de éxito
+    try {
+      const payload = profileFormToClientPayload(profileData, clientId);
+      const updated = await profileService.updateClient(payload);
+
+      const userData = {
+        client_id: clientId,
+        name: updated.name ?? payload.name,
+        paternalLastName: updated.paternalLastName ?? payload.paternalLastName,
+        maternalLastName: updated.maternalLastName ?? payload.maternalLastName,
+        phone: updated.phone ?? payload.phone,
+        birthdate: updated.birthdate ?? payload.birthdate,
+        address: updated.address ?? payload.address,
+      };
+      setUser(userData);
+      useProfileStore.getState().setClientFromLogin(userData);
+
+      setOriginalData(profileData);
+      setIsEditing(false);
+      showToast('Perfil actualizado correctamente', 'success');
+    } catch (error) {
+      showToast(error?.message || 'Error al guardar el perfil', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -79,25 +100,37 @@ const MyProfile = () => {
   };
 
   const handleChangePassword = () => {
-    // TODO: Implementar modal o redirección para cambiar contraseña
-    console.log('Cambiar contraseña');
+    showToast('Función próximamente disponible', 'info');
   };
+
+  if (!user && !client) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate(ROUTES.MY_ACCOUNT)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-4 transition-colors"
           >
             <HiOutlineArrowLeft className="w-5 h-5" />
             <span className="text-sm font-medium">Volver a Mi Cuenta</span>
           </button>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
@@ -107,7 +140,7 @@ const MyProfile = () => {
                 Gestiona tu información personal
               </p>
             </div>
-            
+
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
@@ -130,7 +163,7 @@ const MyProfile = () => {
                 >
                   {isSaving ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                       Guardando...
                     </>
                   ) : (
@@ -146,15 +179,13 @@ const MyProfile = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Información Personal */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Información Básica */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <HiOutlineUser className="w-6 h-6 text-primary-600" />
                 Información Personal
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -162,8 +193,8 @@ const MyProfile = () => {
                   </label>
                   <input
                     type="text"
-                    name="firstName"
-                    value={profileData.firstName}
+                    name="name"
+                    value={profileData.name}
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -172,12 +203,26 @@ const MyProfile = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Apellidos
+                    Apellido Paterno
                   </label>
                   <input
                     type="text"
-                    name="lastName"
-                    value={profileData.lastName}
+                    name="paternalLastName"
+                    value={profileData.paternalLastName}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Apellido Materno
+                  </label>
+                  <input
+                    type="text"
+                    name="maternalLastName"
+                    value={profileData.maternalLastName}
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -195,6 +240,7 @@ const MyProfile = () => {
                     value={profileData.email}
                     onChange={handleInputChange}
                     disabled={!isEditing}
+                    placeholder="No disponible"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -242,19 +288,19 @@ const MyProfile = () => {
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     maxLength="18"
+                    placeholder="Opcional"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed uppercase"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Dirección */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <HiOutlineMapPin className="w-6 h-6 text-primary-600" />
                 Dirección
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -354,18 +400,32 @@ const MyProfile = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />
                 </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Referencias de ubicación
+                  </label>
+                  <input
+                    type="text"
+                    name="address.references"
+                    value={profileData.address.references}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    placeholder="Ej: Casa azul, entre calles X y Y"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Sidebar - Seguridad */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <HiOutlineLockClosed className="w-6 h-6 text-primary-600" />
                 Seguridad
               </h2>
-              
+
               <button
                 onClick={handleChangePassword}
                 className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-left flex items-center justify-between"
@@ -375,34 +435,30 @@ const MyProfile = () => {
               </button>
             </div>
 
-            {/* Información Adicional */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 Información de Cuenta
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Miembro desde</span>
-                  <span className="font-medium text-gray-900">Enero 2024</span>
+                  <span className="text-gray-600">Límite de crédito</span>
+                  <span className="font-medium text-gray-900">
+                    ${(user?.limitCreditAmount ?? 0).toLocaleString('es-MX')}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Estado de cuenta</span>
                   <span className="font-medium text-green-600">Activa</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Verificación</span>
-                  <span className="font-medium text-green-600">Verificada</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );
 };
 
 export default MyProfile;
-

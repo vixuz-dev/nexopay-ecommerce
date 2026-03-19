@@ -2,12 +2,12 @@
  * Builds the payload for create_order API
  * @param {Object} params
  * @param {Array} params.items - Cart items
- * @param {number} params.totalDeferredAmount - Total to defer (from API: sum of remainingBalance * qty)
+ * @param {number} params.totalAmount - Total purchase (subtotal + shipping)
  * @param {number} params.deferralMonths
  * @param {Object} params.deliveryAddress - Address from get_addresses (snake_case)
  * @returns {Object} - Payload for create_order
  */
-export const buildOrderPayload = ({ items, totalDeferredAmount, deferralMonths, deliveryAddress }) => {
+export const buildOrderPayload = ({ items, totalAmount, deferralMonths, deliveryAddress }) => {
   const totalProductQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const deliveryAddressPayload = deliveryAddress
@@ -44,7 +44,7 @@ export const buildOrderPayload = ({ items, totalDeferredAmount, deferralMonths, 
 
   return {
     totalProductQuantity,
-    total: Math.round(totalDeferredAmount),
+    total: Math.round(totalAmount),
     deliveryAddress: deliveryAddressPayload,
     detailOrder,
   };

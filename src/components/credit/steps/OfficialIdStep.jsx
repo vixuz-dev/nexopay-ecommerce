@@ -3,11 +3,38 @@ import { HiOutlineExclamationCircle, HiOutlineDocumentText, HiOutlineCheckCircle
 import FileUploader from '../../common/FileUploader';
 import DocumentVerificationLoader from '../../common/DocumentVerificationLoader';
 import { useCreditForm } from '../../../stores/creditFormStore';
+import useUserStore from '../../../stores/userStore';
 import { kycService } from '../../../api/services/kycService';
 import { fileToBase64 } from '../../../utils/imageUtils';
 
+const buildKycContext = (formData, user) => {
+  const fullNameParts = [
+    user?.paternalLastName,
+    user?.maternalLastName,
+    user?.name,
+  ].filter(Boolean);
+  const fullName = fullNameParts.join(' ').trim() || undefined;
+
+  const personalAddress = formData?.personalAddress || {};
+  const hasAddress = personalAddress.calle || personalAddress.ciudad || personalAddress.estado;
+  const address = hasAddress
+    ? {
+        city: personalAddress.ciudad ?? '',
+        state: personalAddress.estado ?? '',
+        neighborhood: personalAddress.colonia ?? '',
+        street: personalAddress.calle ?? '',
+        internalNumber: personalAddress.numeroInterior ?? '',
+        externalNumber: personalAddress.numeroExterior ?? '',
+        zipCode: personalAddress.codigoPostal ?? '',
+      }
+    : undefined;
+
+  return { fullName, address };
+};
+
 const OfficialIdStep = ({ setCustomNextHandler }) => {
   const { formData, updateFormData, goToNextStep, setIsCurrentStepValid } = useCreditForm();
+  const user = useUserStore((s) => s.user);
   const officialIdData = formData.officialId || {};
   const [documentType, setDocumentType] = useState(officialIdData.documentType || null);
   const [validationError, setValidationError] = useState('');
@@ -46,8 +73,6 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
     'documentType',
     'issuingCountry',
     'documentNumber',
-    'lastName',
-    'firstName',
     'nationality',
     'dateOfBirth',
     'sex',
@@ -55,6 +80,12 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
     'mrzLine1',
     'mrzLine2'
   ];
+
+  const getPassportName = (kycData) => {
+    const first = kycData?.firstName ?? kycData?.names ?? '';
+    const last = kycData?.lastName ?? kycData?.last_name ?? '';
+    return { first, last };
+  };
 
   const validateFrontKycData = (kycData) => {
     if (!kycData || kycData.documentType !== 'ine') {
@@ -104,6 +135,10 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
       }
     });
 
+    const { first, last } = getPassportName(kycData);
+    if (!first?.trim()) missingFields.push('names');
+    if (!last?.trim()) missingFields.push('last_name');
+
     return {
       valid: missingFields.length === 0,
       missingFields
@@ -146,7 +181,8 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64, 'passport');
+      const { fullName, address } = buildKycContext(formData, user);
+      const kycData = await kycService.evaluateDocument(base64, 'passport', { fullName, address });
       
       const validation = validatePassportKycData(kycData);
       
@@ -263,7 +299,8 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64, 'ine_front');
+      const { fullName, address } = buildKycContext(formData, user);
+      const kycData = await kycService.evaluateDocument(base64, 'ine_front', { fullName, address });
       
       const validation = validateFrontKycData(kycData);
       
@@ -384,7 +421,8 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
     try {
       const base64 = await fileToBase64(file);
-      const kycData = await kycService.evaluateDocument(base64, 'ine_back');
+      const { fullName, address } = buildKycContext(formData, user);
+      const kycData = await kycService.evaluateDocument(base64, 'ine_back', { fullName, address });
       
       const validation = validateBackKycData(kycData);
       

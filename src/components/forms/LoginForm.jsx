@@ -7,6 +7,7 @@ import { formatPhoneNumber } from '../../utils/format';
 import { hashPassword } from '../../utils/passwordUtils';
 import { setCookie } from '../../utils/cookieUtils';
 import useUserStore from '../../stores/userStore';
+import useProfileStore from '../../stores/profileStore';
 import { ROUTES } from '../../utils/routes';
 
 const LoginForm = ({ onLoginSuccess, onBack }) => {
@@ -79,6 +80,7 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
         }
         
         setUser(userData);
+        useProfileStore.getState().setClientFromLogin(userData);
         onLoginSuccess(response.body);
       }
 

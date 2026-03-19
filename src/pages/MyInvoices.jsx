@@ -12,9 +12,8 @@ import InvoiceCard from '../components/invoices/InvoiceCard';
 
 const MyInvoices = () => {
   const navigate = useNavigate();
-  const { invoices, loading } = useInvoices();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const { invoices, loading, error: invoicesError } = useInvoices({ page: 1, limit: 50 });
 
   const showButton = useCreditLineStatusStore((state) => state.showButton);
   const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
@@ -47,21 +46,17 @@ const MyInvoices = () => {
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(invoice => invoice.status === statusFilter);
-    }
-
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(invoice => {
-        const invoiceNumber = invoice.invoiceNumber.toLowerCase();
-        const itemsText = invoice.items.map(item => item.name.toLowerCase()).join(' ');
+        const invoiceNumber = (invoice.invoiceNumber || '').toLowerCase();
+        const itemsText = (invoice.items || []).map(item => (item.name || '').toLowerCase()).join(' ');
         return invoiceNumber.includes(term) || itemsText.includes(term);
       });
     }
 
     return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [invoices, statusFilter, searchTerm]);
+  }, [invoices, searchTerm]);
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
@@ -69,20 +64,6 @@ const MyInvoices = () => {
 
   const handleClearSearch = () => {
     setSearchTerm('');
-  };
-
-  const handleStatusFilterChange = (value) => {
-    setStatusFilter(value);
-  };
-
-  const handlePay = (invoice, payment = null) => {
-    console.log('Pay invoice:', invoice, payment);
-    navigate(ROUTES.PAY_CREDIT, { 
-      state: { 
-        invoiceId: invoice.id,
-        paymentId: payment ? payment.type : null
-      } 
-    });
   };
 
   return (
@@ -115,6 +96,10 @@ const MyInvoices = () => {
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
           </div>
+        ) : invoicesError ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+            <p className="text-red-700">{invoicesError.message || 'No se pudieron cargar las facturas.'}</p>
+          </div>
         ) : (
           <>
             <InvoiceSummary invoices={invoices} />
@@ -122,9 +107,7 @@ const MyInvoices = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <InvoiceFilters
                 searchTerm={searchTerm}
-                statusFilter={statusFilter}
                 onSearchChange={handleSearchChange}
-                onStatusFilterChange={handleStatusFilterChange}
                 onClearSearch={handleClearSearch}
               />
 
@@ -141,11 +124,7 @@ const MyInvoices = () => {
 
                   <div className="space-y-4">
                     {filteredInvoices.map((invoice) => (
-                      <InvoiceCard
-                        key={invoice.id}
-                        invoice={invoice}
-                        onPay={handlePay}
-                      />
+                      <InvoiceCard key={invoice.id} invoice={invoice} />
                     ))}
                   </div>
                 </>

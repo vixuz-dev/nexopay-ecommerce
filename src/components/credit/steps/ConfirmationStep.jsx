@@ -6,7 +6,8 @@ import {
   HiOutlineDocumentText,
   HiOutlineCreditCard,
   HiOutlineShoppingBag,
-  HiOutlineCamera
+  HiOutlineCamera,
+  HiOutlineEnvelope
 } from 'react-icons/hi2';
 import { useCreditForm } from '../../../stores/creditFormStore';
 
@@ -14,9 +15,9 @@ const ConfirmationStep = () => {
   const { formData } = useCreditForm();
   
   const personalAddress = formData.personalAddress || {};
-  const location = formData.location || {};
   const identityVerification = formData.identityVerification || {};
   const officialId = formData.officialId || {};
+  const emailCurp = formData.emailCurp || {};
   const personalReferences = formData.personalReferences || {};
   const eligibility = formData.eligibility || {};
 
@@ -46,7 +47,7 @@ const ConfirmationStep = () => {
   return (
     <div>
       <div className="mb-6">
-        <h2 id="step-title-7" className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-8" className="text-2xl font-bold text-gray-900 mb-2">
           Confirmación
         </h2>
         <p className="text-gray-600">
@@ -104,14 +105,6 @@ const ConfirmationStep = () => {
                 <p className="font-medium text-gray-900">{personalAddress.codigoPostal || 'No especificado'}</p>
               </div>
             </div>
-            {location.lat && location.lng && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <span className="text-gray-500 text-sm">Ubicación en mapa:</span>
-                <p className="font-medium text-gray-900 text-sm">
-                  Lat: {location.lat.toFixed(6)}, Lng: {location.lng.toFixed(6)}
-                </p>
-              </div>
-            )}
           </section>
 
           <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -160,6 +153,25 @@ const ConfirmationStep = () => {
                 ) : (
                   <span className="text-sm text-gray-500">Parte trasera no cargada</span>
                 )}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
+              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                <HiOutlineEnvelope className="w-6 h-6 text-primary-600" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg">Datos complementarios</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Correo electrónico:</span>
+                <p className="font-medium text-gray-900">{emailCurp.email || 'No especificado'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">CURP:</span>
+                <p className="font-medium text-gray-900">{emailCurp.curp || 'No especificado'}</p>
               </div>
             </div>
           </section>

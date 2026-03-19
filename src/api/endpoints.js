@@ -76,19 +76,40 @@ export const ENDPOINTS = {
     GET_ACTIVE: `${API_BASE_URL}/subcategories/get_active_subcategories`,
   },
 
+  // Home
+  HOME: {
+    GET_HOME: `${API_BASE_URL}/ecommerce/home/get_home`,
+  },
+
   // Products
   PRODUCTS: {
     GET_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_products`,
+    GET_SIMILAR_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_similar_products`,
+    GET_AFFILIATE_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_affiliate_products`,
+  },
+
+  // Ecommerce Payments
+  ECOMMERCE_PAYMENTS: {
+    GET_PENDING_PAYMENTS: `${API_BASE_URL}/ecommerce/payments/get_pending_payments`,
+  },
+
+  // Ecommerce Affiliates
+  ECOMMERCE_AFFILIATES: {
+    GET_AFFILIATE_SALES_SUMMARY: `${API_BASE_URL}/ecommerce/affiliates/get_affiliate_sales_summary`,
   },
 
   // Ecommerce Orders
   ECOMMERCE_ORDERS: {
     CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,
+    GET_ORDERS_BY_STATUS: `${API_BASE_URL}/ecommerce/orders/get_orders_by_status`,
+    GET_ORDER_BY_ID: `${API_BASE_URL}/ecommerce/orders/get_order_by_id`,
   },
 
   // Orders
   ORDERS: {
     CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,
+    GET_ORDERS_BY_STATUS: `${API_BASE_URL}/ecommerce/orders/get_orders_by_status`,
+    GET_ORDER_BY_ID: `${API_BASE_URL}/ecommerce/orders/get_order_by_id`,
   },
 
   // Addresses
@@ -112,7 +133,19 @@ export const ENDPOINTS = {
 
   // Ecommerce profile
   ECOMMERCE_PROFILE: {
-    GET_CREDIT_LINE: `${API_BASE_URL}/ecommerce/profile/get_credit_line`,
+    GET_PROFILE_INFORMATION: `${API_BASE_URL}/ecommerce/profile/get_profile_information`,
+    UPDATE_CLIENT: `${API_BASE_URL}/ecommerce/profile/update_client`,
+  },
+
+  // Credit line
+  CREDIT_LINE: {
+    GET_CREDIT_LINE: `${API_BASE_URL}/ecommerce/credit_line/get_credit_line`,
+    GET_CREDIT_LINE_HISTORY: `${API_BASE_URL}/ecommerce/credit_line/get_credit_line_history`,
+  },
+
+  // Invoices
+  INVOICES: {
+    GET_BY_STATUS: `${API_BASE_URL}/ecommerce/invoices/get_invoices_by_status`,
   },
 
   // Credit line request
@@ -120,5 +153,11 @@ export const ENDPOINTS = {
     CREATE: `${API_BASE_URL}/ecommerce/credit_line_request/create_credit_line_request`,
     GET_REQUESTS: `${API_BASE_URL}/ecommerce/credit_line_request/get_credit_line_requests`,
     HAVE_CREDIT_LINE_REQUEST: `${API_BASE_URL}/ecommerce/credit_line_request/have_credit_line_request`,
+  },
+
+  // Email verification (AWS)
+  EMAIL_VERIFICATION: {
+    ADD_EMAIL: `${API_BASE_URL_AWS}/emails/add-email-verification`,
+    VALIDATE_OTP: `${API_BASE_URL_AWS}/emails/validate-email-otp`,
   },
 };

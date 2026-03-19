@@ -5,7 +5,7 @@ import { formatPrice, calculateCreditUsage } from '../../utils/creditUtils';
 const CreditCard = ({ creditInfo }) => {
   if (!creditInfo) return null;
 
-  const usagePercentage = calculateCreditUsage(creditInfo.creditUsed, creditInfo.creditLimit);
+  const usagePercentage = creditInfo.usagePercentage ?? calculateCreditUsage(creditInfo.creditUsed, creditInfo.creditLimit);
 
   return (
     <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl shadow-xl p-6 md:p-8 text-white">
@@ -37,7 +37,6 @@ const CreditCard = ({ creditInfo }) => {
       <div className="mb-4">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-primary-100">Uso de crédito</span>
-          <span className="font-semibold">{usagePercentage}%</span>
         </div>
         <div className="w-full bg-white/20 rounded-full h-3">
           <div

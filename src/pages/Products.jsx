@@ -1,25 +1,24 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import ProductGrid from '../components/ecommerce/ProductGrid';
 import SidebarFilter from '../components/ecommerce/SidebarFilter';
 import { useProductsApi } from '../hooks/useProductsApi';
+import { useAffiliateProductsApi } from '../hooks/useAffiliateProductsApi';
 import { useCategories } from '../hooks/useCategories';
-import { useDebounce } from '../hooks/useDebounce';
-import { productsService } from '../api/services/productsService';
-import { mapApiProductToComponent } from '../utils/productMapper';
-import { HiOutlineFunnel, HiOutlineXMark } from 'react-icons/hi2';
-import Dropdown from '../components/common/Dropdown';
+import { mapApiProductToComponent, mapSimilarProductToComponent } from '../utils/productMapper';
+import { HiOutlineFunnel, HiOutlineXMark, HiOutlineArrowLeft } from 'react-icons/hi2';
+import { ROUTES } from '../utils/routes';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  
+
   const search = searchParams.get('q') || '';
   const categoryIdParam = searchParams.get('categoryId');
   const subcategoryIdParam = searchParams.get('subcategoryId');
-  const sortBy = searchParams.get('sort') || 'name-asc';
+  const affiliateIdParam = searchParams.get('affiliateId');
   const page = parseInt(searchParams.get('page')) || 1;
   const totalItems = parseInt(searchParams.get('totalItems')) || 20;
 
@@ -27,7 +26,10 @@ const Products = () => {
 
   const categoryId = categoryIdParam ? parseInt(categoryIdParam) : 0;
   const subcategoryId = subcategoryIdParam ? parseInt(subcategoryIdParam) : 0;
+  const affiliateId = affiliateIdParam ? parseInt(affiliateIdParam) : null;
   const availabilityParam = searchParams.get('availability') || '';
+
+  const isAffiliateMode = Boolean(affiliateId);
 
   const selectedCategories = useMemo(() => {
     if (!apiCategories || categoryId === 0) return [];
@@ -47,20 +49,37 @@ const Products = () => {
     productName: search || '',
   }), [page, totalItems, categoryId, subcategoryId, search]);
 
-  const { products: apiProducts, isLoading: productsLoading, isError, error } = useProductsApi(apiParams);
+  const affiliateParams = useMemo(() => ({
+    affiliateId,
+    categoryId: categoryId || 0,
+    filter: 'category',
+    page,
+    totalItems,
+  }), [affiliateId, categoryId, page, totalItems]);
+
+  const { products: apiProductsCatalog, isLoading: productsLoading, isError, error } = useProductsApi(
+    isAffiliateMode ? null : apiParams
+  );
+
+  const { products: apiProductsAffiliate, isLoading: affiliateLoading } = useAffiliateProductsApi(
+    isAffiliateMode ? affiliateParams : null
+  );
+
+  const apiProducts = isAffiliateMode ? apiProductsAffiliate : apiProductsCatalog;
+  const productsLoadingState = isAffiliateMode ? affiliateLoading : productsLoading;
 
   const products = useMemo(() => {
     const list = Array.isArray(apiProducts) ? apiProducts : [];
     if (list.length === 0) return [];
-    return list.map(mapApiProductToComponent);
-  }, [apiProducts]);
+    return list.map(isAffiliateMode ? mapSimilarProductToComponent : mapApiProductToComponent);
+  }, [apiProducts, isAffiliateMode]);
 
   const maxProductPrice = useMemo(() => {
     if (!products || products.length === 0) return 0;
     return Math.max(...products.map(p => p.price || 0));
   }, [products]);
 
-  const loading = productsLoading || categoriesLoading;
+  const loading = productsLoadingState || categoriesLoading;
 
   const categories = useMemo(() => {
     if (!apiCategories) return [];
@@ -184,7 +203,8 @@ const Products = () => {
   const hasActiveFilters =
     selectedCategories.length > 0 ||
     !!search ||
-    !!availabilityParam;
+    !!availabilityParam ||
+    isAffiliateMode;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -239,6 +259,19 @@ const Products = () => {
         {/* Main Content Area - Solo este hace scroll */}
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {isAffiliateMode && (
+            <div className="mb-6 flex items-center gap-3 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+              <Link
+                to={ROUTES.PRODUCTS}
+                className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium transition-colors"
+              >
+                <HiOutlineArrowLeft className="w-5 h-5" />
+                Ver todos los productos
+              </Link>
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-700">Productos del vendedor</span>
+            </div>
+          )}
           {/* Mobile Filter Toggle Button */}
           <div className="mb-6 lg:hidden">
             <button

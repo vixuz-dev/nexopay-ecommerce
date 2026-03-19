@@ -2,19 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { referenceSchema } from '../schemas/credit';
 import { creditLineRequestService } from '../api/services/creditLineRequestService';
+import { creditLineService } from '../api/services/creditLineService';
 import { profileService } from '../api/services/profileService';
 
-/**
- * Unified store for all credit request / credit line data.
- * - Wizard form (solicitud de crédito)
- * - Request status (can request? approved?)
- * - Credit line profile (orders, creditLine, lastMovements)
- * - Credit line requests list (mis solicitudes)
- */
+const CREDIT_STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
+
 const useCreditStore = create(
   persist(
     (set, get) => ({
-      // ─── Wizard form (solicitud de crédito) ─────────────────────────────
       formData: {},
       currentStep: 1,
       completedSteps: [],
@@ -22,21 +17,26 @@ const useCreditStore = create(
       referenceValidationErrors: null,
       isCurrentStepValid: false,
 
-      // ─── Request status (have_credit_line_request) ─────────────────────
       showButton: 1,
       requestStatus: '',
       isStatusLoaded: false,
       isLoaded: false,
+      lastCreditStatusFetchAt: 0,
 
-      // ─── Credit line profile (get_credit_line) ─────────────────────────
       creditLineProfile: null,
       isProfileLoaded: false,
 
-      // ─── Credit line requests (get_credit_line_requests) ───────────────
       creditLineRequests: [],
       isRequestsLoaded: false,
 
-      // ─── Wizard actions ───────────────────────────────────────────────
+      creditLine: null,
+      creditLineHistory: null,
+
+      lastCreditRequestResult: null,
+
+      setLastCreditRequestResult: (result) => set({ lastCreditRequestResult: result }),
+      clearLastCreditRequestResult: () => set({ lastCreditRequestResult: null }),
+
       updateFormData: (stepData) => {
         set((state) => {
           const newData = { ...state.formData, ...stepData };
@@ -60,7 +60,7 @@ const useCreditStore = create(
 
       goToNextStep: () => {
         const { currentStep, completedSteps, formData, isCurrentStepValid } = get();
-        const totalSteps = 7;
+        const totalSteps = 8;
 
         if (!isCurrentStepValid) return;
 
@@ -142,13 +142,27 @@ const useCreditStore = create(
         set({
           creditLineProfile: null,
           creditLineRequests: [],
+          creditLine: null,
+          creditLineHistory: null,
           isProfileLoaded: false,
           isRequestsLoaded: false,
         });
       },
 
-      // ─── Request status actions ────────────────────────────────────────
-      fetchCreditLineStatus: async () => {
+      fetchCreditLineStatus: async (options = {}) => {
+        const forceRefresh = options?.forceRefresh ?? false;
+        const state = get();
+        const cacheValid =
+          !forceRefresh &&
+          state.isStatusLoaded &&
+          state.lastCreditStatusFetchAt > 0 &&
+          Date.now() - state.lastCreditStatusFetchAt < CREDIT_STATUS_CACHE_TTL_MS;
+        if (cacheValid) {
+          return {
+            showButton: state.showButton,
+            requestStatus: state.requestStatus,
+          };
+        }
         try {
           const result = await creditLineRequestService.haveCreditLineRequest();
           set({
@@ -156,6 +170,7 @@ const useCreditStore = create(
             requestStatus: result.requestStatus != null ? String(result.requestStatus) : '',
             isStatusLoaded: true,
             isLoaded: true,
+            lastCreditStatusFetchAt: Date.now(),
           });
           return result;
         } catch (err) {
@@ -172,12 +187,19 @@ const useCreditStore = create(
           requestStatus: requestStatus != null ? String(requestStatus) : get().requestStatus,
           isStatusLoaded: true,
           isLoaded: true,
+          lastCreditStatusFetchAt: Date.now(),
         });
       },
 
-      resetStatus: () => set({ showButton: 1, requestStatus: '', isStatusLoaded: false, isLoaded: false }),
+      resetStatus: () =>
+        set({
+          showButton: 1,
+          requestStatus: '',
+          isStatusLoaded: false,
+          isLoaded: false,
+          lastCreditStatusFetchAt: 0,
+        }),
 
-      // ─── Credit line profile actions (get_credit_line) ───────────────────
       fetchCreditLineProfile: async () => {
         set({ isProfileLoaded: false });
         try {
@@ -195,7 +217,6 @@ const useCreditStore = create(
 
       setCreditLineProfile: (profile) => set({ creditLineProfile: profile, isProfileLoaded: true }),
 
-      // ─── Credit line requests actions (get_credit_line_requests) ─────────
       fetchCreditLineRequests: async () => {
         set({ isRequestsLoaded: false });
         try {
@@ -210,6 +231,28 @@ const useCreditStore = create(
       },
 
       setCreditLineRequests: (requests) => set({ creditLineRequests: requests ?? [], isRequestsLoaded: true }),
+
+      fetchCreditLine: async () => {
+        try {
+          const data = await creditLineService.getCreditLine();
+          set({ creditLine: data });
+          return data;
+        } catch (err) {
+          set({ creditLine: null });
+          throw err;
+        }
+      },
+
+      fetchCreditLineHistory: async () => {
+        try {
+          const data = await creditLineService.getCreditLineHistory();
+          set({ creditLineHistory: data ?? null });
+          return data;
+        } catch (err) {
+          set({ creditLineHistory: null });
+          throw err;
+        }
+      },
     }),
     {
       name: 'credit-storage',
@@ -235,6 +278,9 @@ const useCreditStore = create(
           isProfileLoaded: state.isProfileLoaded,
           creditLineRequests: state.creditLineRequests,
           isRequestsLoaded: state.isRequestsLoaded,
+          creditLine: state.creditLine,
+          creditLineHistory: state.creditLineHistory,
+          lastCreditRequestResult: state.lastCreditRequestResult,
         };
       },
     }
@@ -245,10 +291,11 @@ export const useCreditForm = () => {
   const store = useCreditStore();
   return {
     ...store,
-    totalSteps: 7,
+    totalSteps: 8,
   };
 };
 
-export const useCreditFormStore = () => useCreditStore();
+export const useCreditFormStore = (selector) => useCreditStore(selector);
+useCreditFormStore.getState = useCreditStore.getState;
 
 export default useCreditStore;

@@ -97,9 +97,14 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
       });
     }
     let cancelled = false;
-    if (hasPersistedRef1 || hasPersistedRef2) {
-      Promise.all([form1.trigger(), form2.trigger()]).then(([r1, r2]) => {
+    const triggers = [];
+    if (hasPersistedRef1) triggers.push(form1.trigger());
+    if (hasPersistedRef2) triggers.push(form2.trigger());
+    if (triggers.length > 0) {
+      Promise.all(triggers).then((results) => {
         if (!cancelled && setIsCurrentStepValid) {
+          const r1 = hasPersistedRef1 ? results[0] : form1.formState.isValid;
+          const r2 = hasPersistedRef2 ? results[hasPersistedRef1 ? 1 : 0] : form2.formState.isValid;
           setIsCurrentStepValid(currentReference === 1 ? r1 : (r1 && r2));
         }
       });

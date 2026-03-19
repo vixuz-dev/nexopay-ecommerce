@@ -1,19 +1,26 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { HiOutlineCalendarDays, HiOutlineBanknotes, HiOutlineCheckCircle } from 'react-icons/hi2';
+import { useNavigate, Link } from 'react-router-dom';
+import { HiOutlineCalendarDays, HiOutlineBanknotes, HiOutlineCheckCircle, HiOutlineArrowRight } from 'react-icons/hi2';
 import { useCredit } from '../../hooks/useCredit';
 import { useCreditTransactions } from '../../hooks/useCreditTransactions';
-import { formatPrice } from '../../utils/creditUtils';
+import { usePendingPayments } from '../../hooks/usePendingPayments';
+import { formatPrice, isAfterCutoffDate } from '../../utils/creditUtils';
 import { ROUTES } from '../../utils/routes';
 import CreditCard from './CreditCard';
 import CreditInfoCard from './CreditInfoCard';
 import CreditTransactionsList from './CreditTransactionsList';
 import CreditPaymentSection from './CreditPaymentSection';
 
-const CreditSection = () => {
+const CreditSection = ({ hasApproved = true }) => {
   const navigate = useNavigate();
   const { creditInfo, loading: creditLoading } = useCredit();
   const { transactions, loading: transactionsLoading } = useCreditTransactions(4);
+  const { data: pendingPaymentsData } = usePendingPayments();
+  const hasPendingPayments = (pendingPaymentsData?.payments ?? []).length > 0;
+
+  if (!hasApproved) {
+    return null;
+  }
 
   if (creditLoading) {
     return (
@@ -32,7 +39,7 @@ const CreditSection = () => {
   };
 
   const handleViewAllTransactions = () => {
-    navigate(ROUTES.CREDIT_TRANSACTIONS);
+    navigate(ROUTES.ACCOUNT_MOVEMENTS);
   };
 
   return (
@@ -59,12 +66,28 @@ const CreditSection = () => {
             icon={HiOutlineCheckCircle}
             iconBg="bg-green-100"
             iconColor="text-green-600"
-            label="Pago Mínimo"
-            value={formatPrice(creditInfo.minimumPayment)}
-            subtitle="Aproximado hasta hoy"
+            label="Crédito usado"
+            value={formatPrice(creditInfo.creditUsed)}
           />
         </div>
       </div>
+
+      {creditInfo.daysUntilCutoff === 0 && hasPendingPayments && (
+        <div className="mb-6 p-4 bg-primary-50 border border-primary-200 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p className="text-primary-900 font-medium">
+              Tu estado de cuenta del periodo actual ya está disponible. Revisa los montos a pagar y realiza tu pago antes de la fecha límite.
+            </p>
+            <Link
+              to={ROUTES.ACCOUNT_PAYMENTS}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap"
+            >
+              Ver pagos pendientes
+              <HiOutlineArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="mb-8">
         <CreditTransactionsList
@@ -72,9 +95,11 @@ const CreditSection = () => {
           onViewAll={handleViewAllTransactions}
         />
 
-        <div className="mt-6">
-          <CreditPaymentSection onPay={handlePay} />
-        </div>
+        {isAfterCutoffDate(creditInfo.cutOffDate) && (
+          <div className="mt-6">
+            <CreditPaymentSection onPay={handlePay} />
+          </div>
+        )}
       </div>
     </>
   );

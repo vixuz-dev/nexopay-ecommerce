@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { productsService } from '../api/services/productsService';
-import { useCategories } from './useCategories';
 
 /**
  * Custom hook to fetch product detail by product name
@@ -20,7 +19,7 @@ export const useProductDetail = (productName, categoryId, subcategoryId) => {
         setLoading(true);
         setError(null);
         
-        if (!productName || !categoryId || !subcategoryId) {
+        if (!productName) {
           setError('Parámetros incompletos para cargar el producto');
           setLoading(false);
           return;
@@ -29,8 +28,8 @@ export const useProductDetail = (productName, categoryId, subcategoryId) => {
         const data = await productsService.getProducts({
           page: 1,
           totalItems: 20,
-          categoryId: Number(categoryId),
-          subcategoryId: Number(subcategoryId),
+          categoryId: categoryId ? Number(categoryId) : 0,
+          subcategoryId: subcategoryId ? Number(subcategoryId) : 0,
           productName: productName,
         });
 

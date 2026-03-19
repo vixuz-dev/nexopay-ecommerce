@@ -5,7 +5,14 @@ import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
-import { orderService } from '../api/services/orderService';
+import usePreOrderStore from '../stores/preOrderStore';
+import useUserStore from '../stores/userStore';
+import { buildMercadoPagoPaymentPayload } from '../utils/mercadoPagoPayloadBuilder';
+import { mercadoPagoService } from '../api/services/mercadoPagoService';
+import { getShippingCost } from '../constants/checkoutConfig';
+import useAddressesStore from '../stores/addressesStore';
+import usePaymentMethodsStore from '../stores/paymentMethodsStore';
+import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import {
   HiOutlineMapPin,
   HiOutlinePlus,
@@ -15,6 +22,7 @@ import {
   CheckoutOrderSummary,
   CheckoutPaymentSummary,
   CheckoutPaymentMethods,
+  PaymentErrorModal,
 } from '../components/checkout';
 
 const Checkout = () => {
@@ -22,6 +30,7 @@ const Checkout = () => {
   const location = useLocation();
   const showToast = useToastStore((s) => s.showToast);
   const preOrder = usePreOrderStore((s) => s.preOrder);
+  const user = useUserStore((s) => s.user);
   const {
     items,
     getSubtotal,
@@ -33,15 +42,20 @@ const Checkout = () => {
     clearCart,
   } = useCartStore();
 
-  const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [addressesLoading, setAddressesLoading] = useState(true);
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [showAllAddresses, setShowAllAddresses] = useState(false);
+  const addresses = useAddressesStore((s) => s.addresses);
+  const addressesLoading = useAddressesStore((s) => s.isLoading);
+  const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
+  const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
+  const paymentMethods = usePaymentMethodsStore((s) => s.paymentMethods);
+  const fetchPaymentMethods = usePaymentMethodsStore((s) => s.fetchPaymentMethods);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState({ isOpen: false, message: '' });
 
   const [cardData, setCardData] = useState({
     cardNumber: '',
@@ -52,60 +66,45 @@ const Checkout = () => {
   });
 
   useEffect(() => {
+    if (user) {
+      console.log('[DEBUG] User info (userStore) - campos disponibles:', Object.keys(user));
+      console.log('[DEBUG] User completo:', user);
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (preOrder) {
       console.log('[DEBUG] PreOrder en store:', preOrder);
     }
   }, [preOrder]);
 
   useEffect(() => {
-    mercadoPagoService.getPaymentMethods()
-      .then((methods) => {
-        const filtered = (methods || [])
-          .filter((pm) => {
-            if (!MERCADO_PAGO_PAYMENT_METHOD_IDS.includes(pm.id)) return false;
-            if (pm.id === 'visa' || pm.id === 'master') {
-              return pm.payment_type_id === 'credit_card';
-            }
-            return true;
-          })
-          .sort((a, b) => MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(a.id) - MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(b.id));
-        setPaymentMethods(filtered);
-      })
-      .catch(() => setPaymentMethods([]));
-  }, []);
+    fetchPaymentMethods();
+  }, [fetchPaymentMethods]);
 
   useEffect(() => {
-    addressService.getAddresses()
-      .then((list) => {
-        const arr = Array.isArray(list) ? list : [];
-        setAddresses(arr);
-        const fromState = location.state?.selectedAddressId;
-        if (arr.length > 0) {
-          const exists = fromState && arr.some((a) => a.client_address_id === fromState);
-          setSelectedAddressId(exists ? fromState : (arr.find((a) => a.is_principal === 1) || arr[0]).client_address_id);
-        } else {
-          setSelectedAddressId(null);
-        }
-      })
-      .catch(() => setAddresses([]))
-      .finally(() => setAddressesLoading(false));
-  }, [location.state?.selectedAddressId]);
+    fetchAddresses();
+  }, [fetchAddresses]);
 
-  const fetchAddresses = () => {
-    addressService.getAddresses()
-      .then((list) => {
-        const arr = Array.isArray(list) ? list : [];
-        setAddresses(arr);
-        if (arr.length > 0) {
-          setSelectedAddressId((prev) => {
-            const exists = prev && arr.some((a) => a.client_address_id === prev);
-            return exists ? prev : (arr.find((a) => a.is_principal === 1) || arr[0]).client_address_id;
-          });
-        } else {
-          setSelectedAddressId(null);
-        }
-      })
-      .catch(() => setAddresses([]));
+  useEffect(() => {
+    const fromState = location.state?.selectedAddressId;
+    if (addresses.length === 0) {
+      setSelectedAddressId(null);
+      return;
+    }
+    const exists = fromState && addresses.some((a) => a.client_address_id === fromState);
+    setSelectedAddressId(exists ? fromState : (addresses.find((a) => a.is_principal === 1) || addresses[0]).client_address_id);
+  }, [addresses, location.state?.selectedAddressId]);
+
+  const handleAddressSuccess = async () => {
+    invalidateAddresses();
+    const list = await fetchAddresses();
+    setSelectedAddressId((prev) => {
+      const exists = prev && list.some((a) => a.client_address_id === prev);
+      if (exists) return prev;
+      const principal = list.find((a) => a.is_principal === 1) || list[0];
+      return principal?.client_address_id ?? null;
+    });
   };
 
   useEffect(() => {
@@ -127,7 +126,7 @@ const Checkout = () => {
 
   const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
-  const handleCheckout = () => {
+  const handleCheckout = async (cardTokenResult) => {
     if (!acceptedTerms) {
       showToast('Por favor acepta los términos y condiciones', 'error');
       return;
@@ -143,34 +142,89 @@ const Checkout = () => {
       return;
     }
 
-    const requiredAddressFields = ['nameReceived', 'phoneReceived', 'deliveryStreet', 'deliveryExternalNumber', 'deliveryNeighborhood', 'deliveryCity', 'deliveryState', 'deliveryZipCode'];
-    const missing = requiredAddressFields.filter((f) => !deliveryAddress[f]?.trim());
+    const requiredAddressFields = ['name_received', 'phone_received', 'street', 'external_number', 'neighborhood', 'city', 'state', 'zip_code'];
+    const missing = requiredAddressFields.filter((f) => !selectedAddress[f]?.trim());
     if (missing.length > 0) {
-      alert('Por favor completa todos los campos obligatorios de la dirección de entrega');
+      showToast('Por favor completa todos los campos obligatorios de la dirección de entrega', 'error');
+      return;
+    }
+
+    const useCardPayment = paymentMethod === 'card' && cardTokenResult;
+    if (useCardPayment && !user?.client_id) {
+      showToast('No se encontró la información del usuario. Inicia sesión nuevamente.', 'error');
+      return;
+    }
+
+    if (useCardPayment && !user?.email) {
+      showToast('No se encontró el correo del usuario. Actualiza tu perfil.', 'error');
+      return;
+    }
+
+    const numericOrderId = preOrder?.order_id ?? preOrder?.orderId;
+    const hasValidOrderId = numericOrderId != null && !Number.isNaN(Number(numericOrderId));
+    if (useCardPayment && !hasValidOrderId) {
+      showToast('No hay orden creada. Regresa al carrito para proceder.', 'error');
       return;
     }
 
     setIsProcessing(true);
 
+    if (useCardPayment) {
+      try {
+        const token = typeof cardTokenResult === 'string' ? cardTokenResult : cardTokenResult.token;
+        const paymentMethodId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_method_id ?? 'master') : 'master';
+        const paymentTypeId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_type_id ?? 'credit_card') : 'credit_card';
+
+        const payload = buildMercadoPagoPaymentPayload({
+          clientId: user.client_id,
+          isInitialPayment: true,
+          orderId: numericOrderId,
+          transactionAmount: preOrder.totalInitialPayment ?? initialPayment,
+          token,
+          paymentMethodId,
+          paymentTypeId,
+          payerEmail: user.email,
+        });
+
+        await mercadoPagoService.generatePayment(payload);
+      } catch (err) {
+        setPaymentError({
+          isOpen: true,
+          message: err?.message || 'Error al procesar el pago. Intenta de nuevo.',
+        });
+        setIsProcessing(false);
+        return;
+      }
+    }
+
+    const monthlyPayment = deferralMonths > 0 ? deferredAmount / deferralMonths : 0;
+    const today = new Date();
+    const paymentSchedule = Array.from({ length: deferralMonths }, (_, i) => ({
+      number: i + 1,
+      date: new Date(today.getFullYear(), today.getMonth() + i + 1, 1),
+      amount: monthlyPayment,
+      status: 'pending',
+    }));
+
+    const orderState = {
+      items: [...items],
+      subtotal,
+      shipping,
+      total,
+      initialPayment,
+      deferredAmount,
+      monthlyPayment,
+      deferralMonths,
+      paymentSchedule,
+      orderDate: new Date(),
+      orderId: preOrder.orderId ?? preOrder.id,
+      orderNumber: preOrder.orderNumber ?? preOrder.order_id ?? `NXP-${Date.now().toString().slice(-8)}`,
+    };
+
     clearCart();
 
     navigate(ROUTES.ORDER_CONFIRMATION, {
-      state: {
-        order: {
-          items: [...items],
-          subtotal,
-          shipping,
-          total,
-          initialPayment,
-          deferredAmount,
-          monthlyPayment: deferredAmount / deferralMonths,
-          deferralMonths,
-          paymentSchedule: getPaymentSchedule(),
-          orderDate: new Date(),
-          orderId: preOrder.orderId ?? preOrder.id,
-          orderNumber: preOrder.orderNumber ?? preOrder.order_id ?? `NXP-${Date.now().toString().slice(-8)}`,
-        },
-      },
+      state: { order: orderState },
     });
 
     setIsProcessing(false);
@@ -258,47 +312,75 @@ const Checkout = () => {
                       <p className="text-xs text-gray-600">Aquí se enviarán tus productos</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddAddressModalOpen(true)}
-                    className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
-                    aria-label="Agregar otra dirección"
-                  >
-                    <HiOutlinePlus className="w-5 h-5" />
-                  </button>
+                  {!showAllAddresses && selectedAddress && location.state?.selectedAddressId && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllAddresses(true)}
+                      className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                    >
+                      Cambiar
+                    </button>
+                  )}
+                  {showAllAddresses && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddAddressModalOpen(true)}
+                      className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
+                      aria-label="Agregar otra dirección"
+                    >
+                      <HiOutlinePlus className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
-                {addresses.length > 1 ? (
-                  <div className="space-y-2">
-                    {addresses.map((addr) => (
-                      <label
-                        key={addr.client_address_id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                          selectedAddressId === addr.client_address_id
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="deliveryAddress"
-                          checked={selectedAddressId === addr.client_address_id}
-                          onChange={() => setSelectedAddressId(addr.client_address_id)}
-                          className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
-                          <p className="text-xs text-gray-600">
-                            {addr.name_received} · {addr.street} {addr.external_number}
-                            {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                ) : selectedAddress && (
+                {showAllAddresses || !location.state?.selectedAddressId || !selectedAddress ? (
+                  addresses.length > 1 ? (
+                    <div className="space-y-2">
+                      {addresses.map((addr) => (
+                        <label
+                          key={addr.client_address_id}
+                          className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                            selectedAddressId === addr.client_address_id
+                              ? 'border-primary-500 bg-primary-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="deliveryAddress"
+                            checked={selectedAddressId === addr.client_address_id}
+                            onChange={() => {
+                              setSelectedAddressId(addr.client_address_id);
+                              setShowAllAddresses(false);
+                            }}
+                            className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
+                            <p className="text-xs text-gray-600">
+                              {addr.name_received} · {addr.street} {addr.external_number}
+                              {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : selectedAddress && (
+                    <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
+                      <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
+                      <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedAddress.street} {selectedAddress.external_number}
+                        {selectedAddress.internal_number ? ` Int. ${selectedAddress.internal_number}` : ''}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
+                      </p>
+                    </div>
+                  )
+                ) : (
                   <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
                     <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
                     <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
@@ -341,7 +423,13 @@ const Checkout = () => {
       <AddAddressModal
         isOpen={isAddAddressModalOpen}
         onClose={() => setIsAddAddressModalOpen(false)}
-        onSuccess={fetchAddresses}
+        onSuccess={handleAddressSuccess}
+      />
+
+      <PaymentErrorModal
+        isOpen={paymentError.isOpen}
+        message={paymentError.message}
+        onClose={() => setPaymentError({ isOpen: false, message: '' })}
       />
 
       <Footer />

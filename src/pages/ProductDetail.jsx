@@ -92,9 +92,20 @@ const ProductDetail = () => {
   const currentProduct = getCurrentProductData();
 
   const buildAttributes = () => {
+    if (product?.productVariants && currentProduct?.productVariantId) {
+      const variant = product.productVariants.find(
+        (v) => v.productVariantId === currentProduct.productVariantId
+      );
+      if (variant?.attributes && Array.isArray(variant.attributes) && variant.attributes.length > 0) {
+        return variant.attributes;
+      }
+    }
+    if (product?.attributes && Array.isArray(product.attributes) && product.attributes.length > 0) {
+      return product.attributes;
+    }
     const attrs = [];
-    if (selectedVariants.color) attrs.push({ name: 'color', value: selectedVariants.color });
-    if (selectedVariants.size) attrs.push({ name: 'talla', value: selectedVariants.size });
+    if (selectedVariants.color) attrs.push({ name: 'Color', value: selectedVariants.color });
+    if (selectedVariants.size) attrs.push({ name: 'Almacenamiento', value: selectedVariants.size });
     return attrs;
   };
 
@@ -118,7 +129,7 @@ const ProductDetail = () => {
         productVariantId: currentProduct?.productVariantId,
         attributes: attrs,
       });
-      navigate(ROUTES.CHECKOUT);
+      navigate(ROUTES.CART);
     }
   };
 
@@ -168,7 +179,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!productName || !categoryId || !subcategoryId) {
+  if (!productName) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -713,12 +724,9 @@ const ProductDetail = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <SellerProducts 
-            currentProduct={product} 
-            sellerId="FGBDCEHFA42612"
-            onViewMoreProducts={() => {
-              navigate(`/productos?seller=${encodeURIComponent('FGBDCEHFA42612')}`);
-            }}
+          <SellerProducts
+            currentProduct={product}
+            sellerId={product?.affiliateId ? String(product.affiliateId) : 'NexoPay'}
           />
         </div>
       </main>

@@ -1,98 +1,33 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi2';
 import ProductCard from './ProductCard';
+import { useProductsApi } from '../../hooks/useProductsApi';
+import { mapApiProductToComponent } from '../../utils/productMapper';
 
-const ProductCarousel = ({ limit = null, showOnlyDiscounted = false }) => {
+const ProductCarousel = ({ limit = null, showOnlyDiscounted = false, products: productsProp }) => {
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'Smartphone Samsung Galaxy A54',
-      price: 8999,
-      originalPrice: 10999,
-      discount: 18,
-      image: null,
-      category: 'Electrónica',
-      rating: 4.5,
-      inStock: true
-    },
-    {
-      id: 2,
-      name: 'Laptop HP Pavilion 15',
-      price: 12999,
-      originalPrice: 14999,
-      discount: 13,
-      image: null,
-      category: 'Computadoras',
-      rating: 4.7,
-      inStock: true
-    },
-    {
-      id: 3,
-      name: 'Auriculares Sony WH-1000XM4',
-      price: 5999,
-      originalPrice: null,
-      discount: null,
-      image: null,
-      category: 'Audio',
-      rating: 4.8,
-      inStock: true
-    },
-    {
-      id: 4,
-      name: 'Tablet iPad Air',
-      price: 10999,
-      originalPrice: 12999,
-      discount: 15,
-      image: null,
-      category: 'Tablets',
-      rating: 4.6,
-      inStock: true
-    },
-    {
-      id: 5,
-      name: 'Smart TV LG 55" 4K',
-      price: 14999,
-      originalPrice: 17999,
-      discount: 17,
-      image: null,
-      category: 'Televisores',
-      rating: 4.4,
-      inStock: true
-    },
-    {
-      id: 6,
-      name: 'Cámara Canon EOS Rebel',
-      price: 15999,
-      originalPrice: null,
-      discount: null,
-      image: null,
-      category: 'Fotografía',
-      rating: 4.9,
-      inStock: false
+  const { products: apiProducts, isLoading: apiLoading } = useProductsApi(
+    productsProp ? null : {
+      page: 1,
+      totalItems: 20,
+      categoryId: 0,
+      subcategoryId: 0,
+      productName: '',
     }
-  ];
+  );
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setProducts(mockProducts);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const products = useMemo(() => {
+    if (Array.isArray(productsProp) && productsProp.length > 0) {
+      return productsProp.map((p) => (p.id != null ? p : mapApiProductToComponent(p)));
+    }
+    const list = Array.isArray(apiProducts) ? apiProducts : [];
+    return list.map(mapApiProductToComponent);
+  }, [productsProp, apiProducts]);
 
-    loadProducts();
-  }, []);
+  const loading = productsProp ? false : apiLoading;
 
   const scroll = (direction) => {
     const container = scrollContainerRef.current;

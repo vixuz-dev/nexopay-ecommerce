@@ -1,7 +1,7 @@
 import React from 'react';
 import { HiOutlineMagnifyingGlass, HiOutlineXMark } from 'react-icons/hi2';
 
-const InvoiceFilters = ({ searchTerm, statusFilter, onSearchChange, onStatusFilterChange, onClearSearch }) => {
+const InvoiceFilters = ({ searchTerm, onSearchChange, onClearSearch }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
       <div className="flex-1 relative">
@@ -25,17 +25,6 @@ const InvoiceFilters = ({ searchTerm, statusFilter, onSearchChange, onStatusFilt
           </button>
         )}
       </div>
-
-      <select
-        value={statusFilter}
-        onChange={(e) => onStatusFilterChange(e.target.value)}
-        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-      >
-        <option value="all">Todas las facturas</option>
-        <option value="pending">Pendientes</option>
-        <option value="partial">Parciales</option>
-        <option value="paid">Pagadas</option>
-      </select>
     </div>
   );
 };

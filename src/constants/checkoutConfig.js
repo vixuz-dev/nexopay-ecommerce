@@ -13,10 +13,4 @@ export const CHECKOUT_CONFIG = {
   PRODUCT_DETAIL_MONTHLY_INSTALLMENTS: 12,
 };
 
-export const getShippingCost = (subtotal) => {
-  const { SHIPPING_COST, FREE_SHIPPING_THRESHOLD } = CHECKOUT_CONFIG;
-  if (FREE_SHIPPING_THRESHOLD != null && subtotal >= FREE_SHIPPING_THRESHOLD) {
-    return 0;
-  }
-  return SHIPPING_COST;
-};
+export const getShippingCost = () => 0;

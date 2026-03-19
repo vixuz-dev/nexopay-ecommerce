@@ -149,7 +149,7 @@ const RequestCredit = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="container mx-auto px-4 py-[10rem] md:py-[15rem]">
+      <div className="container mx-auto px-4 pt-[3rem] md:pt-[5rem] pb-[10rem] md:pb-[15rem]">
         <div className="mb-8 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
             Solicitud de Crédito

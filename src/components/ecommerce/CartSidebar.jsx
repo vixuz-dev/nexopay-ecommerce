@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useCartStore from '../../stores/cartStore';
-import { ROUTES } from '../../utils/routes';
+import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG, getShippingCost } from '../../constants/checkoutConfig';
+import { productsService } from '../../api/services/productsService';
 import {
   HiOutlineXMark,
   HiOutlineShoppingCart,
@@ -17,12 +18,58 @@ const CartSidebar = ({ isOpen, onClose }) => {
     items,
     removeItem,
     updateQuantity,
+    updateItemCategoryIds,
     getSubtotal,
     getTotalItems,
     clearCart,
     isEmpty,
     getInitialPayment,
   } = useCartStore();
+
+  useEffect(() => {
+    if (!isOpen || items.length === 0) return;
+    const itemsToHydrate = items.filter(
+      (item) => !item.categoryId || !item.subcategoryId
+    );
+    if (itemsToHydrate.length === 0) return;
+
+    const hydrate = async () => {
+      for (const item of itemsToHydrate) {
+        try {
+          const data = await productsService.getProducts({
+            page: 1,
+            totalItems: 5,
+            categoryId: 0,
+            subcategoryId: 0,
+            productName: item.name,
+          });
+          const list = (() => {
+            if (!data) return [];
+            if (Array.isArray(data?.body?.products)) return data.body.products;
+            if (Array.isArray(data?.body)) return data.body;
+            if (Array.isArray(data?.products)) return data.products;
+            return Array.isArray(data) ? data : [];
+          })();
+          const match = list.find(
+            (p) =>
+              String(p.productId) === String(item.id) ||
+              String(p.productName) === String(item.name)
+          );
+          if (match?.categoryId != null || match?.subcategoryId != null) {
+            const catId = match.categoryId ?? match.category_id;
+            const subId = match.subcategoryId ?? match.subcategory_id;
+            if (catId != null || subId != null) {
+              updateItemCategoryIds(item.id, item.size, catId, subId);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    hydrate();
+  }, [isOpen, items, updateItemCategoryIds]);
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -103,13 +150,19 @@ const CartSidebar = ({ isOpen, onClose }) => {
             </div>
           ) : (
             <div className="p-6 space-y-4">
-              {items.map((item) => (
+              {items.map((item) => {
+                const productDetailUrl = getProductDetailUrl(item.name, item.categoryId, item.subcategoryId);
+                return (
                 <div
                   key={`${item.id}-${item.size}`}
                   className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
                 >
-                  {/* Imagen */}
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                  {/* Imagen - clickeable */}
+                  <Link
+                    to={productDetailUrl}
+                    onClick={onClose}
+                    className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block"
+                  >
                     {item.image ? (
                       <img
                         src={item.image}
@@ -119,18 +172,23 @@ const CartSidebar = ({ isOpen, onClose }) => {
                     ) : (
                       <ProductPlaceholder name={item.name} className="w-full h-full" />
                     )}
-                  </div>
+                  </Link>
 
                   {/* Información */}
                   <div className="flex-1 min-w-0">
                     <Link
-                      to={`${ROUTES.PRODUCT_DETAIL}?id=${item.id}${item.category ? `&category=${encodeURIComponent(item.category)}` : ''}`}
+                      to={productDetailUrl}
                       onClick={onClose}
                       className="block"
                     >
                       <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 hover:text-primary-600 transition-colors">
                         {item.name}
                       </h3>
+                      {item.attributes && item.attributes.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                          {item.attributes.map((a) => `${a.name}: ${a.value}`).join(' · ')}
+                        </p>
+                      )}
                     </Link>
                     {/* Cantidad y Precio */}
                     <div className="flex items-center justify-between">
@@ -180,7 +238,8 @@ const CartSidebar = ({ isOpen, onClose }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
@@ -204,11 +263,6 @@ const CartSidebar = ({ isOpen, onClose }) => {
                   )}
                 </span>
               </div>
-              {CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD != null && subtotal < CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD && (
-                <p className="text-xs text-gray-500">
-                  Agrega {formatPrice(CHECKOUT_CONFIG.FREE_SHIPPING_THRESHOLD - subtotal)} más para envío gratis
-                </p>
-              )}
               <div className="border-t border-gray-200 pt-3">
                 <div className="flex justify-between font-bold text-gray-900">
                   <span>Total:</span>

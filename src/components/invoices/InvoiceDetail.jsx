@@ -3,16 +3,21 @@ import { formatPrice, formatDate, getDaysUntil } from '../../utils/creditUtils';
 import { HiOutlineCheckCircle, HiOutlineClock, HiOutlineCalendarDays } from 'react-icons/hi2';
 
 const InvoiceDetail = ({ invoice, onPay }) => {
+  const schedule = invoice.paymentSchedule || {};
+  const initialPayment = schedule.initialPayment || {};
+  const monthlyPayments = schedule.monthlyPayments || [];
+  const items = invoice.items || [];
+
   const allPayments = [
     {
       type: 'initial',
       label: 'Pago inicial',
-      amount: invoice.paymentSchedule.initialPayment.amount,
-      dueDate: invoice.paymentSchedule.initialPayment.date,
-      status: invoice.paymentSchedule.initialPayment.status,
-      paidDate: invoice.paymentSchedule.initialPayment.paidDate
+      amount: initialPayment.amount || 0,
+      dueDate: initialPayment.date || new Date(),
+      status: initialPayment.status || 'pending',
+      paidDate: initialPayment.paidDate
     },
-    ...invoice.paymentSchedule.monthlyPayments.map(p => ({
+    ...monthlyPayments.map(p => ({
       type: 'monthly',
       label: `Mensualidad ${p.month}`,
       amount: p.amount,
@@ -27,7 +32,7 @@ const InvoiceDetail = ({ invoice, onPay }) => {
       <div>
         <h4 className="text-sm font-semibold text-gray-900 mb-4">Productos</h4>
         <div className="space-y-3">
-          {invoice.items.map((item) => (
+          {items.map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200"
@@ -44,7 +49,7 @@ const InvoiceDetail = ({ invoice, onPay }) => {
                 <p className="text-sm text-gray-600">Cantidad: {item.quantity}</p>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
+                <p className="font-semibold text-gray-900">{formatPrice((item.price ?? 0) * (item.quantity ?? 1))}</p>
               </div>
             </div>
           ))}
@@ -129,11 +134,11 @@ const InvoiceDetail = ({ invoice, onPay }) => {
       <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
         <div>
           <p className="text-xs text-gray-600 mb-1">Total pagado</p>
-          <p className="text-lg font-bold text-green-600">{formatPrice(invoice.totalPaid)}</p>
+          <p className="text-lg font-bold text-green-600">{formatPrice(invoice.totalPaid ?? 0)}</p>
         </div>
         <div>
           <p className="text-xs text-gray-600 mb-1">Total pendiente</p>
-          <p className="text-lg font-bold text-gray-900">{formatPrice(invoice.totalPending)}</p>
+          <p className="text-lg font-bold text-gray-900">{formatPrice(invoice.totalPending ?? 0)}</p>
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { initMercadoPago } from '@mercadopago/sdk-react';
+import { MERCADO_PAGO_PUBLIC_KEY } from './constants/app';
 import { SWRConfig } from 'swr';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -7,14 +9,18 @@ import { swrConfig } from './api/config/swrConfig';
 import CartSidebar from './components/ecommerce/CartSidebar';
 import ScrollToTop from './components/common/ScrollToTop';
 import ToastContainer from './components/common/ToastContainer';
+import EmailVerificationBanner from './components/common/EmailVerificationBanner';
+import GlobalLoader from './components/common/GlobalLoader';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import PublicRoute from './components/common/PublicRoute';
 import useUIStore from './stores/uiStore';
-import { ROUTES } from './utils/routes';
+import { ROUTES, getOrderDetailUrl } from './utils/routes';
 import Home from './pages/Home';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import ValidateOtp from './pages/ValidateOtp';
+import VerificacionCorreo from './pages/VerificacionCorreo';
+import VerificacionCorreoIngresarCodigo from './pages/VerificacionCorreoIngresarCodigo';
 import RequestCredit from './pages/RequestCredit';
 import MyCredit from './pages/MyCredit';
 import Products from './pages/Products';
@@ -22,7 +28,8 @@ import ProductDetail from './pages/ProductDetail';
 import MyAccount from './pages/MyAccount';
 import MyOrders from './pages/MyOrders';
 import MyProfile from './pages/MyProfile';
-import CreditTransactions from './pages/CreditTransactions';
+import AccountMovements from './pages/AccountMovements';
+import AccountPayments from './pages/AccountPayments';
 import MyInvoices from './pages/MyInvoices';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import Cart from './pages/Cart';
@@ -30,8 +37,20 @@ import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
 import NotFound from './pages/NotFound';
 
+const InvoiceDetailRedirect = () => {
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get('orderId');
+  return <Navigate to={orderId ? getOrderDetailUrl(orderId) : ROUTES.MY_ORDERS} replace />;
+};
+
 function App() {
   const { isCartSidebarOpen, closeCartSidebar } = useUIStore();
+
+  useEffect(() => {
+    if (MERCADO_PAGO_PUBLIC_KEY) {
+      initMercadoPago(MERCADO_PAGO_PUBLIC_KEY, { locale: 'es-MX' });
+    }
+  }, []);
 
   return (
     <SWRConfig value={swrConfig}>
@@ -39,7 +58,9 @@ function App() {
         <ThemeProvider>
           <div className="min-h-screen">
           <ScrollToTop />
+          <EmailVerificationBanner />
           <CartSidebar isOpen={isCartSidebarOpen} onClose={closeCartSidebar} />
+          <GlobalLoader />
           <ToastContainer />
           <Routes>
             <Route
@@ -72,6 +93,22 @@ function App() {
                 <PublicRoute>
                   <ValidateOtp />
                 </PublicRoute>
+              }
+            />
+            <Route
+              path={ROUTES.EMAIL_VERIFICATION}
+              element={
+                <ProtectedRoute>
+                  <VerificacionCorreo />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={ROUTES.EMAIL_VERIFICATION_ENTER_CODE}
+              element={
+                <ProtectedRoute>
+                  <VerificacionCorreoIngresarCodigo />
+                </ProtectedRoute>
               }
             />
             <Route
@@ -120,6 +157,14 @@ function App() {
               }
             />
             <Route
+              path={ROUTES.ORDER_DETAIL}
+              element={
+                <ProtectedRoute>
+                  <InvoiceDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path={ROUTES.MY_ORDERS}
               element={
                 <ProtectedRoute>
@@ -136,12 +181,24 @@ function App() {
               }
             />
             <Route
-              path={ROUTES.CREDIT_TRANSACTIONS}
+              path={ROUTES.ACCOUNT_MOVEMENTS}
               element={
                 <ProtectedRoute>
-                  <CreditTransactions />
+                  <AccountMovements />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path={ROUTES.ACCOUNT_PAYMENTS}
+              element={
+                <ProtectedRoute>
+                  <AccountPayments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/movimientos-credito"
+              element={<Navigate to={ROUTES.ACCOUNT_MOVEMENTS} replace />}
             />
             <Route
               path={ROUTES.MY_INVOICES}
@@ -151,14 +208,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path={ROUTES.INVOICE_DETAIL}
-              element={
-                <ProtectedRoute>
-                  <InvoiceDetailPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path={ROUTES.INVOICE_DETAIL} element={<InvoiceDetailRedirect />} />
+            <Route path="/mis-compras" element={<Navigate to={ROUTES.MY_ORDERS} replace />} />
             <Route path="/carrito" element={<Navigate to={ROUTES.CART} replace />} />
             <Route path="/pago" element={<Navigate to={ROUTES.CHECKOUT} replace />} />
             <Route path="/confirmacion" element={<Navigate to={ROUTES.ORDER_CONFIRMATION} replace />} />

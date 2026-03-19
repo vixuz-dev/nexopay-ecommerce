@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-import { ROUTES } from '../utils/routes';
+import { ROUTES, getProductDetailUrl } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
+import useUIStore from '../stores/uiStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import { CHECKOUT_CONFIG, getShippingCost } from '../constants/checkoutConfig';
 import { orderService } from '../api/services/orderService';
-import { buildOrderPayload, doesPreOrderMatchCart } from '../utils/orderPayloadBuilder';
+import { buildOrderPayload } from '../utils/orderPayloadBuilder';
 import {
   HiOutlineXMark,
   HiOutlineChevronLeft,
@@ -24,7 +25,7 @@ import {
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import AddAddressModal from '../components/common/AddAddressModal';
-import { addressService } from '../api/services/addressService';
+import useAddressesStore from '../stores/addressesStore';
 
 const formatAddressLine = (addr) => {
   const parts = [
@@ -35,14 +36,17 @@ const formatAddressLine = (addr) => {
 };
 
 const Cart = () => {
-  const [addresses, setAddresses] = useState([]);
-  const [addressesLoading, setAddressesLoading] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const showToast = useToastStore((s) => s.showToast);
-  const preOrder = usePreOrderStore((s) => s.preOrder);
+  const showGlobalLoader = useUIStore((s) => s.showGlobalLoader);
+  const hideGlobalLoader = useUIStore((s) => s.hideGlobalLoader);
+  const addresses = useAddressesStore((s) => s.addresses);
+  const addressesLoading = useAddressesStore((s) => s.isLoading);
+  const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
+  const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
   const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
   const { 
     items, 
@@ -75,29 +79,33 @@ const Cart = () => {
   const deferredAmount = getDeferredAmount();
   const monthlyPayment = getMonthlyPayment();
 
-  const fetchAddresses = async () => {
-    setAddressesLoading(true);
-    try {
-      const data = await addressService.getAddresses();
-      const list = Array.isArray(data) ? data : [];
-      setAddresses(list);
-      setSelectedAddressId((prev) => {
-        if (list.length === 0) return null;
-        const exists = list.some((a) => a.client_address_id === prev);
-        if (exists) return prev;
-        const principal = list.find((a) => a.is_principal === 1) || list[0];
-        return principal.client_address_id;
-      });
-    } catch (err) {
-      setAddresses([]);
-    } finally {
-      setAddressesLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchAddresses();
-  }, []);
+  }, [fetchAddresses]);
+
+  useEffect(() => {
+    if (addresses.length === 0) {
+      setSelectedAddressId(null);
+      return;
+    }
+    setSelectedAddressId((prev) => {
+      const exists = prev && addresses.some((a) => a.client_address_id === prev);
+      if (exists) return prev;
+      const principal = addresses.find((a) => a.is_principal === 1) || addresses[0];
+      return principal?.client_address_id ?? null;
+    });
+  }, [addresses]);
+
+  const handleAddressSuccess = async () => {
+    invalidateAddresses();
+    const list = await fetchAddresses();
+    setSelectedAddressId((prev) => {
+      const exists = prev && list.some((a) => a.client_address_id === prev);
+      if (exists) return prev;
+      const principal = list.find((a) => a.is_principal === 1) || list[0];
+      return principal?.client_address_id ?? null;
+    });
+  };
 
   const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
@@ -123,26 +131,27 @@ const Cart = () => {
       return;
     }
 
-    if (preOrder && doesPreOrderMatchCart(preOrder, items)) {
-      navigate(ROUTES.CHECKOUT, { state: { selectedAddressId } });
-      return;
-    }
-
     setIsProcessing(true);
+    showGlobalLoader();
 
     try {
       const payload = buildOrderPayload({
         items,
-        totalDeferredAmount: deferredAmount,
+        totalAmount: subtotal,
         deferralMonths,
         deliveryAddress: selectedAddress,
       });
 
       const response = await orderService.createOrder(payload);
 
+      const orderData = response.order ?? response;
+      const numericOrderId = response.order_id ?? response.id ?? orderData.order_id ?? orderData.id ?? (typeof response.orderId === 'number' ? response.orderId : null);
+      const orderIdDisplay = response.orderId ?? response.order_id ?? response.id ?? orderData.orderId ?? orderData.order_id ?? orderData.id;
+
       setPreOrder({
-        orderId: response.orderId,
-        orderNumber: response.orderId,
+        orderId: orderIdDisplay,
+        order_id: numericOrderId,
+        orderNumber: orderIdDisplay,
         creditAmount: response.creditAmount,
         total: response.total,
         totalInitialPayment: response.totalInitialPayment,
@@ -154,6 +163,7 @@ const Cart = () => {
     } catch (err) {
       showToast(err?.message || 'Error al crear la orden. Intenta de nuevo.', 'error');
     } finally {
+      hideGlobalLoader();
       setIsProcessing(false);
     }
   };
@@ -220,8 +230,11 @@ const Cart = () => {
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
                 >
                   <div className="flex flex-col md:flex-row gap-6">
-                    {/* Imagen del Producto */}
-                    <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                    {/* Imagen del Producto - clickeable */}
+                    <Link
+                      to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
+                      className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block"
+                    >
                       {item.image ? (
                         <img
                           src={item.image}
@@ -231,19 +244,24 @@ const Cart = () => {
                       ) : (
                         <ProductPlaceholder name={item.name} className="w-full h-full" />
                       )}
-                    </div>
+                    </Link>
 
                     {/* Información del Producto */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <Link
-                            to={`${ROUTES.PRODUCT_DETAIL}?id=${item.id}${item.category ? `&category=${encodeURIComponent(item.category)}` : ''}`}
+                            to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
                             className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors"
                           >
                             {item.name}
                           </Link>
                           <p className="text-sm text-gray-600 mt-1">{item.category}</p>
+                          {item.attributes && item.attributes.length > 0 && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {item.attributes.map((a) => `${a.name}: ${a.value}`).join(' · ')}
+                            </p>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -574,7 +592,7 @@ const Cart = () => {
       <AddAddressModal
         isOpen={isAddAddressModalOpen}
         onClose={() => setIsAddAddressModalOpen(false)}
-        onSuccess={fetchAddresses}
+        onSuccess={handleAddressSuccess}
       />
 
       <Footer />

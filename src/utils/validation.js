@@ -97,3 +97,16 @@ export const isValidMexicanPostalCode = (cp) => {
   const digits = (cp || '').replace(/\D/g, '');
   return digits.length === 5 && digits !== '00000';
 };
+
+const CURP_REGEX = /^[A-Z]{4}\d{6}[HMX][A-Z]{2}[A-Z0-9]{5}$/;
+
+/**
+ * Validate Mexican CURP (Clave Única de Registro de Población)
+ * Format: 4 letters + 6 digits (YYMMDD) + 1 letter (H/M/X) + 2 letters (state) + 5 alphanumeric
+ * @param {string} curp - CURP to validate
+ * @returns {boolean} - True if valid format
+ */
+export const isValidCURP = (curp) => {
+  const trimmed = (curp || '').trim().toUpperCase();
+  return trimmed.length === 18 && CURP_REGEX.test(trimmed);
+};

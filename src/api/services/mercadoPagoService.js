@@ -1,5 +1,6 @@
 import { ENDPOINTS } from '../endpoints';
 import { MERCADO_PAGO_PAYMENT_METHOD_IDS } from '../../constants/app';
+import { getMercadoPagoErrorMessage } from '../../utils/mercadoPagoErrors';
 
 /**
  * Service for Mercado Pago API calls (AWS)
@@ -68,6 +69,29 @@ export const mercadoPagoService = {
       throw error;
     }
 
-    return data.body ?? data.data ?? data;
+    const result = data.body ?? data.data ?? data;
+    const paymentBody = data?.payment?.body ?? result?.payment?.body ?? result;
+    const paymentStatus = paymentBody?.status ?? result?.payment?.status ?? result?.status;
+    const statusDetail = paymentBody?.status_detail ?? result?.payment?.status_detail ?? result?.status_detail;
+
+    if (paymentStatus === 'rejected') {
+      const message = getMercadoPagoErrorMessage(statusDetail);
+      const error = new Error(message);
+      error.paymentStatus = paymentStatus;
+      error.statusDetail = statusDetail;
+      error.paymentId = paymentBody?.payment_id ?? result?.payment_id ?? result?.payment?.id;
+      throw error;
+    }
+
+    if (paymentStatus && paymentStatus !== 'approved' && paymentStatus !== 'pending' && paymentStatus !== 'in_process') {
+      const error = new Error(
+        statusDetail ? getMercadoPagoErrorMessage(statusDetail) : (paymentBody?.status_Message ?? result?.status_Message ?? 'El pago no pudo completarse. Intenta de nuevo.')
+      );
+      error.paymentStatus = paymentStatus;
+      error.statusDetail = statusDetail;
+      throw error;
+    }
+
+    return result;
   },
 };

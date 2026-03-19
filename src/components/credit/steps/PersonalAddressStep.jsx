@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreditForm } from '../../../stores/creditFormStore';
 import { personalAddressSchema } from '../../../schemas/credit';
+import { CIUDADES_MEXICO } from '../../../constants/app';
 import Dropdown from '../../common/Dropdown';
 
 const PersonalAddressStep = ({ setCustomNextHandler }) => {
@@ -103,28 +104,10 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
     { value: 'Zacatecas', label: 'Zacatecas' }
   ];
 
-  const ciudades = [
-    { value: 'Ciudad de México', label: 'Ciudad de México' },
-    { value: 'Guadalajara', label: 'Guadalajara' },
-    { value: 'Monterrey', label: 'Monterrey' },
-    { value: 'Puebla', label: 'Puebla' },
-    { value: 'Tijuana', label: 'Tijuana' },
-    { value: 'León', label: 'León' },
-    { value: 'Juárez', label: 'Juárez' },
-    { value: 'Torreón', label: 'Torreón' },
-    { value: 'Querétaro', label: 'Querétaro' },
-    { value: 'San Luis Potosí', label: 'San Luis Potosí' },
-    { value: 'Mérida', label: 'Mérida' },
-    { value: 'Mexicali', label: 'Mexicali' },
-    { value: 'Aguascalientes', label: 'Aguascalientes' },
-    { value: 'Tampico', label: 'Tampico' },
-    { value: 'Culiacán', label: 'Culiacán' },
-    { value: 'Zamora', label: 'Zamora' },
-    { value: 'Morelia', label: 'Morelia' },
-    { value: 'Chihuahua', label: 'Chihuahua' },
-    { value: 'Saltillo', label: 'Saltillo' },
-    { value: 'Hermosillo', label: 'Hermosillo' }
-  ];
+  const ciudades = CIUDADES_MEXICO.map((ciudad) => ({
+    value: ciudad,
+    label: ciudad,
+  }));
 
   return (
     <div>

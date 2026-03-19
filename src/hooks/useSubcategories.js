@@ -1,44 +1,41 @@
-import { useMemo } from 'react';
-import useSWR from 'swr';
-import { subcategoryService } from '../api/services/subcategoryService';
+import { useEffect, useMemo } from 'react';
+import useCategoriesStore from '../stores/categoriesStore';
 
-const CACHE_KEY = 'subcategories';
-
+/**
+ * Custom hook to get subcategories from the global store.
+ * Fetches once and shares data across all components.
+ * @param {number|string|null} categoryId - Filter subcategories by category
+ */
 export const useSubcategories = (categoryId = null) => {
-  const { data, error, isLoading, mutate } = useSWR(
-    CACHE_KEY,
-    () => subcategoryService.getActiveSubcategories(),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 30 * 60 * 1000,
-    }
-  );
+  const subcategories = useCategoriesStore((state) => state.subcategories);
+  const isLoading = useCategoriesStore((state) => state.isSubcategoriesLoading);
+  const isLoaded = useCategoriesStore((state) => state.isSubcategoriesLoaded);
+  const error = useCategoriesStore((state) => state.subcategoriesError);
+  const fetchSubcategories = useCategoriesStore((state) => state.fetchSubcategories);
+
+  useEffect(() => {
+    fetchSubcategories().catch(() => {});
+  }, [fetchSubcategories]);
 
   const filteredSubcategories = useMemo(() => {
-    if (!data || !Array.isArray(data)) {
-      return [];
-    }
+    const list = subcategories ?? [];
+    if (!Array.isArray(list)) return [];
+    if (!categoryId) return [];
 
-    if (!categoryId) {
-      return [];
-    }
-
-    return data.filter(
+    return list.filter(
       (subcategory) =>
         String(subcategory.category_id) === String(categoryId) ||
         String(subcategory.categoryId) === String(categoryId) ||
         String(subcategory.parent_id) === String(categoryId) ||
         String(subcategory.parentId) === String(categoryId)
     );
-  }, [data, categoryId]);
+  }, [subcategories, categoryId]);
 
   return {
     subcategories: filteredSubcategories,
-    isLoading,
-    isError: error,
+    isLoading: isLoading || (!isLoaded && (subcategories?.length ?? 0) === 0),
+    isError: !!error,
     error,
-    mutate,
+    mutate: fetchSubcategories,
   };
 };
-

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { useProducts } from '../../hooks';
+import { useProducts, useSimilarProducts } from '../../hooks';
 import ProductCard from './ProductCard';
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi2';
 
@@ -7,56 +7,47 @@ const SimilarProducts = ({ currentProduct, limit = 10 }) => {
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  
-  const { products: allProducts, loading } = useProducts({
-    inStock: true
+
+  const categoryId = currentProduct?.categoryId ?? null;
+  const { products: apiSimilarProducts, loading: apiLoading } = useSimilarProducts(
+    categoryId,
+    limit,
+    0,
+    currentProduct?.id
+  );
+
+  const { products: allProducts, loading: catalogLoading } = useProducts({
+    inStock: true,
   });
 
-  const similarProducts = useMemo(() => {
-    if (!currentProduct || !allProducts.length) return [];
-    
+  const fallbackSimilarProducts = useMemo(() => {
+    if (!currentProduct || !allProducts.length || categoryId) return [];
     const currentPrice = currentProduct.price || 0;
     const currentRating = currentProduct.rating || 0;
     const currentCategory = currentProduct.category || '';
     const priceRange = currentPrice * 0.5;
-    
     const scoredProducts = allProducts
-      .filter(p => p.id !== currentProduct.id)
-      .map(product => {
+      .filter((p) => p.id !== currentProduct.id)
+      .map((product) => {
         let score = 0;
-        
-        if (product.category === currentCategory) {
-          score += 10;
-        }
-        
+        if (product.category === currentCategory) score += 10;
         const priceDiff = Math.abs((product.price || 0) - currentPrice);
-        if (priceDiff <= priceRange) {
-          score += 5;
-        }
-        
+        if (priceDiff <= priceRange) score += 5;
         const ratingDiff = Math.abs((product.rating || 0) - currentRating);
-        if (ratingDiff <= 1) {
-          score += 3;
-        }
-        
-        if (product.discount && product.discount > 0) {
-          score += 2;
-        }
-        
+        if (ratingDiff <= 1) score += 3;
+        if (product.discount && product.discount > 0) score += 2;
         return { product, score };
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(item => item.product);
-    
-    if (scoredProducts.length === 0) {
-      return allProducts
-        .filter(p => p.id !== currentProduct.id)
-        .slice(0, limit);
-    }
-    
-    return scoredProducts;
-  }, [allProducts, currentProduct, limit]);
+      .map((item) => item.product);
+    return scoredProducts.length > 0
+      ? scoredProducts
+      : allProducts.filter((p) => p.id !== currentProduct.id).slice(0, limit);
+  }, [allProducts, currentProduct, limit, categoryId]);
+
+  const similarProducts = categoryId ? apiSimilarProducts : fallbackSimilarProducts;
+  const loading = categoryId ? apiLoading : catalogLoading;
 
   const scroll = (direction) => {
     const container = scrollContainerRef.current;

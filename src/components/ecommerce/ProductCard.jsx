@@ -36,6 +36,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     if (inStock) {
       addItem(product, 1, null, {
         productVariantId: product.productVariantId,
+        attributes: product.attributes || [],
       });
       openCartSidebar();
     }
@@ -145,7 +146,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           
           {/* Monthly Payment */}
           <p className="text-xs text-primary-600 font-medium">
-            Desde {formatPrice(getMonthlyFromApi(product))} mensual
+            {product.monthlyPaymentOption || `Desde ${formatPrice(getMonthlyFromApi(product))} mensual`}
           </p>
         </div>
 

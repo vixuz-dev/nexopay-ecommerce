@@ -11,9 +11,11 @@ import PersonalAddressStep from './steps/PersonalAddressStep';
 import LocationStep from './steps/LocationStep';
 import IdentityVerificationStep from './steps/IdentityVerificationStep';
 import OfficialIdStep from './steps/OfficialIdStep';
+import EmailCurpStep from './steps/EmailCurpStep';
 import PersonalReferencesStep from './steps/PersonalReferencesStep';
 import TellUsAboutYouStep from './steps/TellUsAboutYouStep';
 import ConfirmationStep from './steps/ConfirmationStep';
+import EmailErrorModal from './EmailErrorModal';
 
 export { useCreditForm };
 
@@ -56,6 +58,12 @@ const steps = [
   },
   {
     id: 7,
+    title: 'Datos complementarios',
+    description: 'Correo y CURP',
+    component: EmailCurpStep
+  },
+  {
+    id: 8,
     title: 'Confirmación',
     description: 'Revisa tu solicitud',
     component: ConfirmationStep
@@ -66,6 +74,7 @@ const CreditWizard = () => {
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailErrorModal, setEmailErrorModal] = useState({ isOpen: false, message: '' });
   const {
     currentStep,
     formData,
@@ -82,6 +91,8 @@ const CreditWizard = () => {
     resetForm,
     fetchCreditLineStatus,
     fetchCreditLineRequests,
+    setLastCreditRequestResult,
+    setCreditLineStatus,
   } = useCreditForm();
 
   const currentStepData = steps.find(step => step.id === currentStep);
@@ -97,10 +108,26 @@ const CreditWizard = () => {
     setIsSubmitting(true);
     try {
       const payload = await mapCreditRequestToBackend(formData);
-      await creditLineRequestService.createCreditLineRequest(payload);
+      const response = await creditLineRequestService.createCreditLineRequest(payload);
+      if (response?.success === false) {
+        const message = response?.statusMessage || response?.message || 'No se pudo crear la solicitud de crédito.';
+        setEmailErrorModal({ isOpen: true, message });
+        return;
+      }
+      const body = response?.body || response?.data || response;
+      if (body && (body.approvedRequest !== undefined || body.creditLineAmount !== undefined || body.showButton !== undefined)) {
+        setLastCreditRequestResult({
+          approvedRequest: body.approvedRequest ?? null,
+          creditLineAmount: body.creditLineAmount ?? 0,
+          showButton: body.showButton,
+        });
+        if (body.showButton !== undefined) {
+          setCreditLineStatus(body.showButton, body.requestStatus ?? '');
+        }
+      }
       showToast('Solicitud enviada correctamente. Te contactaremos pronto.', 'success');
       resetForm();
-      await Promise.all([fetchCreditLineStatus(), fetchCreditLineRequests()]);
+      await Promise.all([fetchCreditLineStatus({ forceRefresh: true }), fetchCreditLineRequests()]);
       navigate(ROUTES.MY_CREDIT);
     } catch (error) {
       const message = error.message || error.statusMessage || 'No se pudo enviar la solicitud. Intenta de nuevo.';
@@ -147,6 +174,16 @@ const CreditWizard = () => {
           isSubmitting={isSubmitting}
         />
       </div>
+
+      <EmailErrorModal
+        isOpen={emailErrorModal.isOpen}
+        message={emailErrorModal.message}
+        onEdit={() => {
+          setEmailErrorModal({ isOpen: false, message: '' });
+          goToStep(7);
+        }}
+        onClose={() => setEmailErrorModal({ isOpen: false, message: '' })}
+      />
     </div>
   );
 };

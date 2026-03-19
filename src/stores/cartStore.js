@@ -50,6 +50,8 @@ const useCartStore = create(
                   total: unitTotalPrice * newQuantity,
                   productVariantId: productVariantId ?? item.productVariantId,
                   attributes: attributes.length > 0 ? attributes : item.attributes,
+                  categoryId: product.categoryId ?? item.categoryId,
+                  subcategoryId: product.subcategoryId ?? item.subcategoryId,
                 }
               : item
           );
@@ -63,6 +65,8 @@ const useCartStore = create(
             originalPrice: product.originalPrice,
             discount: product.discount,
             category: product.category,
+            categoryId: product.categoryId ?? null,
+            subcategoryId: product.subcategoryId ?? null,
             size: normalizedSize,
             stock: product.stock ?? 999,
             quantity,
@@ -110,6 +114,17 @@ const useCartStore = create(
           }
           return item;
         });
+        set({ items: updatedItems });
+      },
+
+      updateItemCategoryIds: (itemId, size, categoryId, subcategoryId) => {
+        const items = get().items;
+        const normalizedSize = size || 'Estándar';
+        const updatedItems = items.map((item) =>
+          item.id === itemId && item.size === normalizedSize
+            ? { ...item, categoryId: categoryId ?? item.categoryId, subcategoryId: subcategoryId ?? item.subcategoryId }
+            : item
+        );
         set({ items: updatedItems });
       },
 
@@ -181,26 +196,26 @@ const useCartStore = create(
         return months > 0 ? deferredAmount / months : 0;
       },
 
-      // Generar calendario de pagos
+      // Generar calendario de pagos (total restante / total de meses)
       getPaymentSchedule: () => {
-        const monthlyPayment = get().getMonthlyPayment();
+        const deferredAmount = get().getDeferredAmount();
         const months = get().deferralMonths;
+        const monthlyAmount = months > 0 ? deferredAmount / months : 0;
         const schedule = [];
-        
         const today = new Date();
-        
+
         for (let i = 1; i <= months; i++) {
           const paymentDate = new Date(today);
           paymentDate.setMonth(paymentDate.getMonth() + i);
-          
+
           schedule.push({
             number: i,
             date: paymentDate,
-            amount: monthlyPayment,
-            status: 'pending', // pending, paid, overdue
+            amount: monthlyAmount,
+            status: 'pending',
           });
         }
-        
+
         return schedule;
       },
 

@@ -157,6 +157,17 @@
     @apply text-highlight-500;
   }
 
+  /* Mercado Pago Secure Fields - reduce iframe height */
+  .mp-secure-field {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .mp-secure-field iframe {
+    height: 24px !important;
+    min-height: 24px !important;
+  }
+
   /* Carousel group for independent hover effects */
   .carousel-group:hover .carousel-group-hover\:opacity-100 {
     opacity: 1;

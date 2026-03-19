@@ -3,17 +3,6 @@
  */
 
 /**
- * Convert date from DD/MM/YYYY to YYYY-MM-DD format
- * @param {string} dateStr - Date in DD/MM/YYYY format
- * @returns {string} - Date in YYYY-MM-DD format
- */
-const convertDateFormat = (dateStr) => {
-  if (!dateStr) return '';
-  const [day, month, year] = dateStr.split('/');
-  return `${year}-${month}-${day}`;
-};
-
-/**
  * Convert file to base64 string with data URI prefix
  * @param {File} file - File object
  * @returns {Promise<string>} - Base64 string with data URI prefix
@@ -62,6 +51,7 @@ export const mapCreditRequestToBackend = async (formData) => {
   const personalReferences = formData.personalReferences || {};
   const eligibility = formData.eligibility || {};
   const officialId = formData.officialId || {};
+  const emailCurp = formData.emailCurp || {};
 
   let selfieBase64 = '';
   if (identityVerification.selfieFile) {
@@ -77,9 +67,9 @@ export const mapCreditRequestToBackend = async (formData) => {
 
   let birthdate = '';
   if (officialId.documentType === 'passport' && passportKycData.dateOfBirth) {
-    birthdate = convertDateFormat(passportKycData.dateOfBirth);
+    birthdate = passportKycData.dateOfBirth;
   } else if (officialId.documentType === 'ine' && frontKycData.dateOfBirth) {
-    birthdate = convertDateFormat(frontKycData.dateOfBirth);
+    birthdate = frontKycData.dateOfBirth;
   }
 
   const references = [];
@@ -179,8 +169,8 @@ export const mapCreditRequestToBackend = async (formData) => {
       documentType: 'passport',
       issuingCountry: passportKycData.issuingCountry || '',
       documentNumber: passportKycData.documentNumber || '',
-      lastName: passportKycData.lastName || '',
-      firstName: passportKycData.firstName || '',
+      lastName: passportKycData.lastName || passportKycData.last_name || '',
+      firstName: passportKycData.firstName || passportKycData.names || '',
       nationality: passportKycData.nationality || '',
       dateOfBirth: passportKycData.dateOfBirth || '',
       sex: passportKycData.sex || '',
@@ -191,6 +181,8 @@ export const mapCreditRequestToBackend = async (formData) => {
   }
 
   const creditLineRequest = {
+    email: emailCurp.email || '',
+    curp: (emailCurp.curp || '').toUpperCase(),
     birthdate,
     street: personalAddress.calle || '',
     externalNumber: personalAddress.numeroExterior || '',

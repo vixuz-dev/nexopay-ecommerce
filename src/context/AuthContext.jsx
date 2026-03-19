@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../api/services/authService';
+import { profileService } from '../api/services/profileService';
+import useProfileStore from '../stores/profileStore';
+import { getCookie, removeCookie } from '../utils/cookieUtils';
+import useAddressesStore from '../stores/addressesStore';
+import useUserStore from '../stores/userStore';
 import { useCreditFormStore } from '../stores/creditFormStore';
 
 // Initial state
@@ -75,15 +80,46 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (authService.isAuthenticated()) {
-          // You might want to validate the token with the server here
+        const token = getCookie('authToken') || authService.getToken();
+        if (!token) {
+          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: { loading: false } });
+          return;
+        }
+
+        const storedUser = useUserStore.getState().user;
+        if (storedUser) {
           dispatch({
             type: AUTH_ACTIONS.LOGIN_SUCCESS,
-            payload: { user: { id: '1', email: 'user@example.com' } }, // Mock user
+            payload: { user: storedUser },
+          });
+          return;
+        }
+
+        const profile = await useProfileStore.getState().fetchProfileInformation();
+        const client = profile?.client ?? profile?.user ?? profile?.client_information;
+        if (client) {
+          const user = {
+            client_id: client.client_id ?? client.clientId ?? client.id,
+            email: client.email ?? client.personal_email ?? client.client_email,
+            name: client.name,
+            paternalLastName: client.paternalLastName ?? client.paternal_lastname,
+            maternalLastName: client.maternalLastName ?? client.maternal_lastname,
+            phone: client.phone,
+            birthdate: client.birthdate,
+            creditApproved: client.creditApproved ?? client.credit_approved,
+            limitCreditAmount: client.limitCreditAmount ?? client.limit_credit_amount,
+            creditStatus: client.creditStatus ?? client.credit_status,
+            address: client.address,
+            emailVerified: client.emailVerified ?? client.verifiedEmail ?? client.verified_email ?? false,
+          };
+          useUserStore.getState().setUser(user);
+          useProfileStore.getState().setClientFromLogin(user);
+          dispatch({
+            type: AUTH_ACTIONS.LOGIN_SUCCESS,
+            payload: { user },
           });
         } else {
           dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: { loading: false } });
@@ -99,7 +135,20 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Login function
+  useEffect(() => {
+    const unsubscribe = useUserStore.subscribe(() => {
+      const token = getCookie('authToken') || authService.getToken();
+      const user = useUserStore.getState().user;
+      if (token && user) {
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_SUCCESS,
+          payload: { user },
+        });
+      }
+    });
+    return unsubscribe;
+  }, []);
+
   const login = async (email, password) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
@@ -126,10 +175,12 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Reset credit form store
+      removeCookie('authToken');
+      useUserStore.getState().clearUser();
+      useProfileStore.getState().clearProfileInformation();
       const { resetForm } = useCreditFormStore.getState();
       resetForm();
-      
+      useAddressesStore.getState().clearAddresses();
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     }
   };

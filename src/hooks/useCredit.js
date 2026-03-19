@@ -1,36 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import useProfileStore from '../stores/profileStore';
+
+const mapProfileToCreditInfo = (creditLineInfo) => {
+  if (!creditLineInfo || !creditLineInfo.has_line_credit) return null;
+  return {
+    creditLimit: creditLineInfo.limit_credit_amount ?? 0,
+    creditUsed: creditLineInfo.credit_used ?? 0,
+    creditAvailable: creditLineInfo.remaining_credit_amount ?? 0,
+    currentBalance: creditLineInfo.credit_used ?? 0,
+    usagePercentage: creditLineInfo.usage_percentage ?? 0,
+    cutOffDate: creditLineInfo.next_cutoff_date ?? '—',
+    paymentDueDate: creditLineInfo.next_payment_date ?? '—',
+    minimumPayment: Number(creditLineInfo.minimum_payment) || 0,
+    daysUntilCutoff: creditLineInfo.days_until_cutoff ?? null,
+  };
+};
 
 export const useCredit = () => {
-  const [creditInfo, setCreditInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const profileInformation = useProfileStore((state) => state.profileInformation);
+  const isProfileLoaded = useProfileStore((state) => state.isProfileLoaded);
+  const creditLineInfo = profileInformation?.credit_line_information;
 
-  useEffect(() => {
-    const loadCreditInfo = async () => {
-      try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        const mockCreditInfo = {
-          creditLimit: 50000,
-          creditUsed: 15000,
-          creditAvailable: 35000,
-          currentBalance: 15000,
-          minimumPayment: 3000,
-          paymentDueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-          cutOffDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-          nextPaymentDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
-        };
-
-        setCreditInfo(mockCreditInfo);
-      } catch (error) {
-        console.error('Error loading credit info:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCreditInfo();
-  }, []);
+  const creditInfo = useMemo(() => mapProfileToCreditInfo(creditLineInfo), [creditLineInfo]);
+  const loading = !profileInformation && !isProfileLoaded;
 
   return { creditInfo, loading };
 };

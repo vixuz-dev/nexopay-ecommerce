@@ -146,16 +146,6 @@ const CategoriesMegaMenu = ({ isHomePage = false, onClose }) => {
                 );
               })}
             </ul>
-
-            <div className="px-4 pb-4">
-              <Link
-                to="/ofertas"
-                onClick={handleItemClick}
-                className="mt-2 block rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
-              >
-                Ver ofertas
-              </Link>
-            </div>
           </div>
 
           {/* 2) SEGUNDO: Subcategorías */}

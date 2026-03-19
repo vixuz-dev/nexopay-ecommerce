@@ -1,5 +1,7 @@
 import { removeCookie } from './cookieUtils';
 import useUserStore from '../stores/userStore';
+import useAddressesStore from '../stores/addressesStore';
+import useProfileStore from '../stores/profileStore';
 import { useCreditFormStore } from '../stores/creditFormStore';
 import { mutate } from 'swr';
 import { ROUTES } from './routes';
@@ -49,9 +51,13 @@ export const performLogout = () => {
   const { clearUser } = useUserStore.getState();
   clearUser();
 
+  useProfileStore.getState().clearProfileInformation();
+
   const creditStore = useCreditFormStore.getState();
   creditStore.resetForm();
   creditStore.clearCreditData?.();
+
+  useAddressesStore.getState().clearAddresses();
 
   removeCookie('authToken');
   

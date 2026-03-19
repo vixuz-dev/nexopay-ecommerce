@@ -37,3 +37,13 @@ export const calculateCreditUsage = (creditUsed, creditLimit) => {
   return ((creditUsed / creditLimit) * 100).toFixed(0);
 };
 
+export const isAfterCutoffDate = (cutOffDate) => {
+  if (!cutOffDate || cutOffDate === '—' || typeof cutOffDate !== 'string') return false;
+  const cutoff = new Date(cutOffDate);
+  if (Number.isNaN(cutoff.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  cutoff.setHours(0, 0, 0, 0);
+  return today > cutoff;
+};
+

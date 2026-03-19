@@ -2,6 +2,10 @@
  * Application constants
  */
 
+export const ASSETS = {
+  FEATURED_IMAGES_BASE: 'https://nexopay-assets.s3.us-west-2.amazonaws.com/images',
+};
+
 export const APP_CONFIG = {
   NAME: 'NexoPay',
   VERSION: '1.0.0',
@@ -51,6 +55,8 @@ export const PAYMENT_STATUS = {
   CANCELLED: 'cancelled',
   REFUNDED: 'refunded',
 };
+
+export const MERCADO_PAGO_PUBLIC_KEY = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY || '';
 
 export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
   'visa',

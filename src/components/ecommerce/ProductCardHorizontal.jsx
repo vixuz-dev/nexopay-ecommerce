@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ProductPlaceholder from '../common/ProductPlaceholder';
+import { getProductDetailUrl } from '../../utils/routes';
 
 const ProductCardHorizontal = ({ product }) => {
   const {
@@ -14,6 +15,8 @@ const ProductCardHorizontal = ({ product }) => {
     inStock = true
   } = product;
 
+  const productDetailUrl = getProductDetailUrl(name, product.categoryId, product.subcategoryId);
+
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
@@ -24,8 +27,8 @@ const ProductCardHorizontal = ({ product }) => {
   };
 
   return (
-    <Link 
-      to={`/producto?id=${id}${category ? `&category=${encodeURIComponent(category)}` : ''}`}
+    <Link
+      to={productDetailUrl}
       className="group bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300 overflow-hidden flex h-full"
     >
       <div className="relative w-32 sm:w-40 flex-shrink-0 bg-gray-100">

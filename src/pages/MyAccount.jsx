@@ -1,66 +1,50 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import CreditSection from '../components/credit/CreditSection';
 import RecommendedProducts from '../components/account/RecommendedProducts';
 import ShopCTABanner from '../components/account/ShopCTABanner';
-import InvoicesSummaryCard from '../components/account/InvoicesSummaryCard';
-import { useInvoices } from '../hooks/useInvoices';
 import useCreditStore from '../stores/creditStore';
+import useUserStore from '../stores/userStore';
+import useProfileStore from '../stores/profileStore';
 import {
   HiOutlineClock,
   HiOutlineCheckCircle,
   HiOutlineShoppingBag,
   HiOutlineCreditCard
 } from 'react-icons/hi2';
-import { formatPrice, formatDate } from '../utils/creditUtils';
+import { formatPrice } from '../utils/creditUtils';
 
 const MyAccount = () => {
-  const navigate = useNavigate();
-  const { invoices } = useInvoices();
-  const showButton = useCreditStore((state) => state.showButton);
-  const requestStatus = useCreditStore((state) => state.requestStatus);
-  const isLoaded = useCreditStore((state) => state.isLoaded);
-  const fetchCreditLineStatus = useCreditStore((state) => state.fetchCreditLineStatus);
-  const fetchCreditLineProfile = useCreditStore((state) => state.fetchCreditLineProfile);
+  const user = useUserStore((state) => state.user);
+  const fetchCreditLineHistory = useCreditStore((state) => state.fetchCreditLineHistory);
+  const fetchProfileInformation = useProfileStore((state) => state.fetchProfileInformation);
+  const profileInformation = useProfileStore((state) => state.profileInformation);
 
-  const hasApprovedCreditRequest =
-    isLoaded &&
-    showButton === 0 &&
-    requestStatus &&
-    String(requestStatus).toLowerCase() === 'aprobado';
+  const creditLineInfo = profileInformation?.credit_line_information ?? {};
+  const hasApprovedCreditRequest = creditLineInfo.has_line_credit === true;
 
   useEffect(() => {
-    let cancelled = false;
-    if (!isLoaded) {
-      fetchCreditLineStatus().catch(() => {
-        if (!cancelled) void 0;
-      });
-    }
-    return () => { cancelled = true; };
-  }, [isLoaded, fetchCreditLineStatus]);
+    fetchProfileInformation().catch(() => {});
+  }, [fetchProfileInformation]);
 
   useEffect(() => {
-    fetchCreditLineProfile().catch(() => {});
-  }, [fetchCreditLineProfile]);
+    fetchCreditLineHistory().catch(() => {});
+  }, [fetchCreditLineHistory]);
 
-  const user = {
-    id: '1',
-    email: 'usuario@ejemplo.com',
-    name: 'Usuario Ejemplo',
-  };
-  const isAuthenticated = true;
+  const displayName = user?.name?.trim() || 'Usuario';
+  const isAuthenticated = !!user;
   const loading = false;
 
+  const orders = profileInformation?.orders ?? {};
   const dashboardStats = {
-    totalOrders: 12,
-    pendingOrders: 2,
-    completedOrders: 10,
-    totalSpent: 125000,
-    creditLimit: 50000,
-    creditUsed: 15000,
-    creditAvailable: 35000,
+    totalOrders: orders.total_orders ?? 0,
+    pendingOrders: orders.pending_orders ?? 0,
+    completedOrders: orders.completed_orders ?? 0,
+    canceledOrders: orders.canceled_orders ?? 0,
+    creditLimit: creditLineInfo.limit_credit_amount ?? 0,
+    creditUsed: creditLineInfo.credit_used ?? 0,
+    creditAvailable: creditLineInfo.remaining_credit_amount ?? 0,
   };
 
 
@@ -74,7 +58,7 @@ const MyAccount = () => {
             Mi Cuenta
           </h1>
           <p className="text-gray-600">
-            Bienvenido de vuelta, {user?.email || 'Usuario'}
+            Bienvenido de vuelta, {displayName}
           </p>
         </div>
 
@@ -122,11 +106,11 @@ const MyAccount = () => {
           )}
         </div>
 
-        {hasApprovedCreditRequest && <CreditSection />}
+        <CreditSection hasApproved={hasApprovedCreditRequest} />
 
-        <InvoicesSummaryCard invoices={invoices} />
-
+        {/* Recomendados para ti - Oculto por ahora
         <RecommendedProducts limit={6} />
+        */}
 
         <div className="mt-6">
           <ShopCTABanner />

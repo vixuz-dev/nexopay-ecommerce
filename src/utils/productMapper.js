@@ -44,8 +44,8 @@ export const mapApiProductToComponent = (apiProduct) => {
       return img.url || null;
     }).filter(Boolean) : [],
     category: apiProduct.categoryName,
-    categoryId: apiProduct.categoryId,
-    subcategoryId: apiProduct.subcategoryId,
+    categoryId: apiProduct.categoryId ?? apiProduct.category_id ?? null,
+    subcategoryId: apiProduct.subcategoryId ?? apiProduct.subcategory_id ?? null,
     subcategoryName: apiProduct.subcategoryName,
     description: apiProduct.productDescription,
     inStock: apiProduct.stock > 0,
@@ -63,6 +63,38 @@ export const mapApiProductToComponent = (apiProduct) => {
     imagesVariant: apiProduct.imagesVariant || [],
     isSimpleProduct: apiProduct.isSimpleProduct,
     productVariants: apiProduct.productVariants || [],
+  };
+};
+
+/**
+ * Maps similar products API response to component-expected format
+ * API returns: productId, productVariantId, discountPercentage, imageUrl, category, name, currentPrice, originalPrice, monthlyPaymentOption
+ * @param {Object} apiProduct - Product from get_similar_products API
+ * @returns {Object} - Mapped product for ProductCard
+ */
+export const mapSimilarProductToComponent = (apiProduct) => {
+  const id = apiProduct.productId ?? apiProduct.id;
+  const name = apiProduct.name ?? apiProduct.productName;
+  const price = apiProduct.currentPrice ?? apiProduct.price ?? apiProduct.finalPrice ?? 0;
+  const originalPrice = apiProduct.originalPrice ?? null;
+  const discount = apiProduct.discountPercentage ?? apiProduct.discount ?? null;
+  const image = apiProduct.imageUrl ?? apiProduct.image ?? apiProduct.variantImageUrl ?? null;
+
+  return {
+    id,
+    name,
+    price,
+    originalPrice,
+    discount: discount != null ? Number(discount) : null,
+    image,
+    images: image ? [image] : [],
+    category: apiProduct.category ?? apiProduct.categoryName ?? null,
+    categoryId: apiProduct.categoryId ?? apiProduct.category_id ?? null,
+    subcategoryId: apiProduct.subcategoryId ?? apiProduct.subcategory_id ?? null,
+    productVariantId: apiProduct.productVariantId ?? apiProduct.product_variant_id ?? null,
+    attributes: apiProduct.attributes || [],
+    monthlyPaymentOption: apiProduct.monthlyPaymentOption ?? null,
+    inStock: true,
   };
 };
 

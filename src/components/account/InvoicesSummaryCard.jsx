@@ -12,11 +12,11 @@ const InvoicesSummaryCard = ({ invoices }) => {
   }
 
   const activeInvoices = invoices.filter(inv => inv.status !== 'paid').length;
-  const allPayments = invoices.flatMap(inv => 
-    inv.paymentSchedule.monthlyPayments.filter(p => p.status === 'pending')
+  const allPayments = invoices.flatMap(inv =>
+    (inv.paymentSchedule?.monthlyPayments || []).filter(p => p.status === 'pending')
   );
   const pendingPayments = allPayments.length;
-  const totalPending = invoices.reduce((sum, inv) => sum + inv.totalPending, 0);
+  const totalPending = invoices.reduce((sum, inv) => sum + (inv.totalPending ?? 0), 0);
 
   return (
     <div className="bg-gradient-to-br from-white to-primary-50/30 rounded-2xl shadow-lg border border-primary-100 overflow-hidden">

@@ -32,6 +32,14 @@ const InvoiceCard = ({ invoice, onPay }) => {
           bgColor: 'bg-red-100',
           badgeColor: 'bg-red-100 text-red-800'
         };
+      case 'canceled':
+        return {
+          label: 'Cancelada',
+          icon: HiOutlineExclamationTriangle,
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-100',
+          badgeColor: 'bg-gray-100 text-gray-800'
+        };
       default:
         return {
           label: 'Desconocido',
@@ -46,15 +54,24 @@ const InvoiceCard = ({ invoice, onPay }) => {
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
 
-  const pendingPayments = invoice.paymentSchedule.monthlyPayments.filter(p => p.status === 'pending').length;
-  const completedPayments = invoice.paymentSchedule.monthlyPayments.filter(p => p.status === 'paid').length;
-  const totalPayments = invoice.paymentSchedule.monthlyPayments.length;
-  const progressPercentage = ((completedPayments + (invoice.paymentSchedule.initialPayment.status === 'paid' ? 1 : 0)) / (totalPayments + 1)) * 100;
+  const schedule = invoice.paymentSchedule || {};
+  const monthlyPayments = schedule.monthlyPayments || [];
+  const initialPayment = schedule.initialPayment || {};
+  const items = invoice.items || [];
 
-  const nextPayment = invoice.paymentSchedule.monthlyPayments.find(p => p.status === 'pending');
-  const itemsSummary = invoice.items.length === 1 
-    ? invoice.items[0].name 
-    : `${invoice.items[0].name} + ${invoice.items.length - 1} más`;
+  const pendingPayments = monthlyPayments.filter(p => p.status === 'pending').length;
+  const completedPayments = monthlyPayments.filter(p => p.status === 'paid').length;
+  const totalPayments = monthlyPayments.length;
+  const progressPercentage = totalPayments > 0
+    ? ((completedPayments + (initialPayment.status === 'paid' ? 1 : 0)) / (totalPayments + 1)) * 100
+    : invoice.totalPending === 0 ? 100 : 0;
+
+  const nextPayment = monthlyPayments.find(p => p.status === 'pending');
+  const itemsSummary = items.length === 0
+    ? 'Producto'
+    : items.length === 1
+      ? items[0].name
+      : `${items[0].name} + ${items.length - 1} más`;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -70,7 +87,7 @@ const InvoiceCard = ({ invoice, onPay }) => {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">{invoice.invoiceNumber}</h3>
-                <p className="text-xs text-gray-500">{formatDate(invoice.date)}</p>
+                <p className="text-xs text-gray-500">{formatDate(invoice.date || new Date())}</p>
               </div>
             </div>
 

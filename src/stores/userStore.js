@@ -7,12 +7,16 @@ const useUserStore = create(
       user: null,
 
       setUser: (userData) => {
+        const email = userData.email ?? userData.personal_email ?? userData.client_email;
+        const emailVerified = userData.emailVerified ?? userData.verifiedEmail ?? false;
+        const clientId = userData.client_id ?? userData.clientId;
         set({
           user: {
-            client_id: userData.client_id,
+            client_id: clientId,
+            email,
             name: userData.name,
-            paternalLastName: userData.paternalLastName,
-            maternalLastName: userData.maternalLastName,
+            paternalLastName: userData.paternalLastName ?? userData.paternal_lastname,
+            maternalLastName: userData.maternalLastName ?? userData.maternal_lastname,
             phone: userData.phone,
             birthdate: userData.birthdate,
             creditApproved: userData.creditApproved,
@@ -28,8 +32,16 @@ const useUserStore = create(
               zipCode: '',
               references: '',
             },
+            emailVerified,
           },
         });
+      },
+
+      setEmailVerified: (verified) => {
+        const user = get().user;
+        if (user) {
+          set({ user: { ...user, emailVerified: verified } });
+        }
       },
 
       clearUser: () => {

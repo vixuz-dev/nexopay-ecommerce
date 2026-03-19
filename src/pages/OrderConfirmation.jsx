@@ -218,7 +218,7 @@ const OrderConfirmation = () => {
                             {formatMonthYear(payment.date)}
                           </td>
                           <td className="py-3 text-right font-medium text-gray-900">
-                            {formatPrice(payment.amount)}
+                            {formatPrice(orderData.monthlyPayment)}
                           </td>
                           <td className="py-3 text-center">
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">

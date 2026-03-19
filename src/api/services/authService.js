@@ -1,4 +1,5 @@
 import { ENDPOINTS } from '../endpoints';
+import { getCookie, removeCookie } from '../../utils/cookieUtils';
 
 /**
  * Authentication service
@@ -66,7 +67,7 @@ class AuthService {
    * @returns {Promise<void>}
    */
   async logout() {
-    const token = localStorage.getItem('authToken');
+    const token = getCookie('authToken') || localStorage.getItem('authToken');
     
     if (token) {
       try {
@@ -82,15 +83,16 @@ class AuthService {
       }
     }
 
+    removeCookie('authToken');
     localStorage.removeItem('authToken');
   }
 
   /**
-   * Get current user token
+   * Get current user token (checks cookie first, then localStorage)
    * @returns {string|null} - Auth token or null
    */
   getToken() {
-    return localStorage.getItem('authToken');
+    return getCookie('authToken') || localStorage.getItem('authToken');
   }
 
   /**

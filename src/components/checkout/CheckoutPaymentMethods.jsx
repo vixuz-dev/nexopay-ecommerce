@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HiOutlineLockClosed,
@@ -7,6 +7,8 @@ import {
 } from 'react-icons/hi2';
 import { formatPriceMXN } from '../../utils/format';
 import { ROUTES } from '../../utils/routes';
+import { MercadoPagoCardForm } from './MercadoPagoCardForm';
+import { MERCADO_PAGO_PUBLIC_KEY } from '../../constants/app';
 
 export const CheckoutPaymentMethods = ({
   paymentMethod,
@@ -28,6 +30,9 @@ export const CheckoutPaymentMethods = ({
   onCheckout,
   initialPayment,
 }) => {
+  const cardFormRef = useRef(null);
+  const useMercadoPagoForm = Boolean(MERCADO_PAGO_PUBLIC_KEY);
+
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1).padStart(2, '0'),
     label: String(i + 1).padStart(2, '0'),
@@ -67,6 +72,7 @@ export const CheckoutPaymentMethods = ({
           </div>
         </label>
 
+        {/* OXXO - Oculto por ahora
         {oxxoPm && (
           <label
             className={`flex gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -91,6 +97,7 @@ export const CheckoutPaymentMethods = ({
             </div>
           </label>
         )}
+        */}
 
         {paymentMethods.length === 0 && (
           <div className="p-4 text-center text-gray-500 text-sm">
@@ -101,75 +108,86 @@ export const CheckoutPaymentMethods = ({
 
       {showCardForm && (
         <div className="space-y-4 mb-6 pt-4 border-t border-gray-200">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Número de tarjeta
-            </label>
-            <input
-              type="text"
-              value={cardData.cardNumber}
-              onChange={(e) => onCardDataChange('cardNumber', e.target.value.replace(/\D/g, '').slice(0, 16))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="1234 5678 9012 3456"
+          {useMercadoPagoForm ? (
+            <MercadoPagoCardForm
+              ref={cardFormRef}
+              cardholderName={cardData.cardHolder}
+              onCardholderChange={(v) => onCardDataChange('cardHolder', v)}
+              disabled={isProcessing}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre en la tarjeta
-            </label>
-            <input
-              type="text"
-              value={cardData.cardHolder}
-              onChange={(e) => onCardDataChange('cardHolder', e.target.value.toUpperCase())}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="JUAN PÉREZ"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vencimiento
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={cardData.expiryMonth}
-                  onChange={(e) => onCardDataChange('expiryMonth', e.target.value)}
-                  className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                >
-                  <option value="">MM</option>
-                  {months.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-                <select
-                  value={cardData.expiryYear}
-                  onChange={(e) => onCardDataChange('expiryYear', e.target.value)}
-                  className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                >
-                  <option value="">AA</option>
-                  {years.map((y) => (
-                    <option key={y.value} value={y.value}>{y.label.slice(-2)}</option>
-                  ))}
-                </select>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de tarjeta
+                </label>
+                <input
+                  type="text"
+                  value={cardData.cardNumber}
+                  onChange={(e) => onCardDataChange('cardNumber', e.target.value.replace(/\D/g, '').slice(0, 16))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="1234 5678 9012 3456"
+                />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CVV
-              </label>
-              <input
-                type="text"
-                value={cardData.cvv}
-                onChange={(e) => onCardDataChange('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="123"
-              />
-            </div>
-          </div>
 
-          <label className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg cursor-pointer">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre en la tarjeta
+                </label>
+                <input
+                  type="text"
+                  value={cardData.cardHolder}
+                  onChange={(e) => onCardDataChange('cardHolder', e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="JUAN PÉREZ"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Vencimiento
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={cardData.expiryMonth}
+                      onChange={(e) => onCardDataChange('expiryMonth', e.target.value)}
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    >
+                      <option value="">MM</option>
+                      {months.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={cardData.expiryYear}
+                      onChange={(e) => onCardDataChange('expiryYear', e.target.value)}
+                      className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    >
+                      <option value="">AA</option>
+                      {years.map((y) => (
+                        <option key={y.value} value={y.value}>{y.label.slice(-2)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    CVV
+                  </label>
+                  <input
+                    type="text"
+                    value={cardData.cvv}
+                    onChange={(e) => onCardDataChange('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <label className="hidden flex items-start gap-3 p-4 bg-blue-50 rounded-lg cursor-pointer">
             <input
               type="checkbox"
               checked={saveCard}
@@ -188,6 +206,7 @@ export const CheckoutPaymentMethods = ({
         </div>
       )}
 
+      {/* OXXO message - Oculto por ahora
       {showOxxoMessage && (
         <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <div className="flex items-start gap-3">
@@ -204,6 +223,7 @@ export const CheckoutPaymentMethods = ({
           </div>
         </div>
       )}
+      */}
 
       <label className="flex items-start gap-3 mb-6 cursor-pointer">
         <input
@@ -225,7 +245,15 @@ export const CheckoutPaymentMethods = ({
       </label>
 
       <button
-        onClick={onCheckout}
+        type="button"
+        onClick={async () => {
+          if (showCardForm && useMercadoPagoForm && cardFormRef.current) {
+            const tokenResult = await cardFormRef.current.getToken();
+            if (tokenResult) onCheckout(tokenResult);
+          } else {
+            onCheckout();
+          }
+        }}
         disabled={!acceptedTerms || isProcessing}
         className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
           acceptedTerms && !isProcessing

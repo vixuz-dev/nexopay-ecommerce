@@ -12,6 +12,8 @@ export const ROUTES = {
   LOGIN: '/iniciar-sesion',
   REGISTER: '/registro',
   VALIDATE_OTP: '/validar-otp',
+  EMAIL_VERIFICATION: '/verificacion-correo',
+  EMAIL_VERIFICATION_ENTER_CODE: '/verificacion-correo/ingresar-codigo',
 
   // Crédito
   REQUEST_CREDIT: '/solicitar-credito',
@@ -22,18 +24,19 @@ export const ROUTES = {
   // Productos
   PRODUCTS: '/productos',
   PRODUCT_DETAIL: '/producto',
-  OFFERS: '/ofertas',
 
   // Proceso de compra (hierarquía: /comprar/*)
   CART: '/comprar/carrito',
   CHECKOUT: '/comprar/pago',
   ORDER_CONFIRMATION: '/comprar/confirmacion',
-  MY_ORDERS: '/mis-compras',
+  MY_ORDERS: '/mis-pedidos',
+  ORDER_DETAIL: '/mis-pedidos/:orderId',
 
   // Cuenta
   MY_ACCOUNT: '/mi-cuenta',
+  ACCOUNT_MOVEMENTS: '/mi-cuenta/movimientos',
+  ACCOUNT_PAYMENTS: '/mi-cuenta/pagos',
   MY_PROFILE: '/mi-perfil',
-  CREDIT_TRANSACTIONS: '/movimientos-credito',
   MY_INVOICES: '/mis-facturas',
   INVOICE_DETAIL: '/factura',
 
@@ -136,3 +139,20 @@ export const getProductsByCategoryUrl = (categoryId, subcategoryId = null, produ
   return queryString ? `${ROUTES.PRODUCTS}?${queryString}` : ROUTES.PRODUCTS;
 };
 
+/**
+ * Genera la URL de productos del vendedor/afiliado
+ * @param {number} affiliateId - ID del afiliado
+ * @param {number} [categoryId] - ID de categoría (opcional, para filtrar por categoría)
+ * @param {number} [page] - Número de página
+ * @returns {string} - URL con affiliateId
+ */
+export const getProductsByAffiliateUrl = (affiliateId, categoryId = null, page = 1) => {
+  const params = new URLSearchParams();
+  params.set('affiliateId', String(affiliateId));
+  if (categoryId) params.set('categoryId', String(categoryId));
+  if (page > 1) params.set('page', String(page));
+  return `${ROUTES.PRODUCTS}?${params.toString()}`;
+};
+
+export const getOrderDetailUrl = (orderId) =>
+  `/mis-pedidos/${encodeURIComponent(orderId)}`;

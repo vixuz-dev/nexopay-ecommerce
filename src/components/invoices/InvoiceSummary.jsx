@@ -15,14 +15,14 @@ const InvoiceSummary = ({ invoices }) => {
     }
 
     const activeInvoices = invoices.filter(inv => inv.status !== 'paid');
-    const allPayments = invoices.flatMap(inv => 
-      inv.paymentSchedule.monthlyPayments.filter(p => p.status === 'pending')
+    const allPayments = invoices.flatMap(inv =>
+      (inv.paymentSchedule?.monthlyPayments || []).filter(p => p.status === 'pending')
     );
     
     const nextPayment = allPayments
       .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
 
-    const totalPending = invoices.reduce((sum, inv) => sum + inv.totalPending, 0);
+    const totalPending = invoices.reduce((sum, inv) => sum + (inv.totalPending ?? 0), 0);
 
     return {
       totalInvoices: invoices.length,

@@ -1,24 +1,33 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { useProducts } from '../../hooks';
+import React, { useRef, useState, useEffect } from 'react';
+import { useAffiliateProducts } from '../../hooks/useAffiliateProducts';
+import { useAffiliateSalesSummary } from '../../hooks/useAffiliateSalesSummary';
 import ProductCardHorizontal from './ProductCardHorizontal';
 import SellerInfo from './SellerInfo';
 import { HiOutlineChevronRight } from 'react-icons/hi2';
 
-const SellerProducts = ({ currentProduct, sellerId = 'NexoPay', onViewMoreProducts }) => {
+const SellerProducts = ({ currentProduct, sellerId = 'NexoPay' }) => {
   const scrollContainerRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  
-  const { products: allProducts, loading } = useProducts({
-    inStock: true
-  });
 
-  const sellerProducts = useMemo(() => {
-    if (!currentProduct || !allProducts.length) return [];
-    
-    return allProducts
-      .filter(p => p.id !== currentProduct.id)
-      .slice(0, 5);
-  }, [allProducts, currentProduct]);
+  const affiliateId = currentProduct?.affiliateId ?? currentProduct?.affiliate_id ?? null;
+  const categoryId = currentProduct?.categoryId ?? currentProduct?.category_id ?? null;
+
+  const { products: sellerProducts, loading } = useAffiliateProducts(
+    affiliateId,
+    categoryId,
+    'category',
+    5,
+    0,
+    currentProduct?.id
+  );
+
+  const { data: salesSummary } = useAffiliateSalesSummary(affiliateId);
+  const totalSales = salesSummary?.totalSales ?? 0;
+  const productCount = sellerProducts.length;
+
+  if (!affiliateId) {
+    return null;
+  }
 
   const scroll = () => {
     const container = scrollContainerRef.current;
@@ -66,9 +75,6 @@ const SellerProducts = ({ currentProduct, sellerId = 'NexoPay', onViewMoreProduc
     return null;
   }
 
-  const sales = Math.floor(Math.random() * 5000) + 1000;
-  const productCount = Math.floor(Math.random() * 200) + 50;
-
   return (
     <section className="mb-6">
       <div className="mb-4">
@@ -113,24 +119,16 @@ const SellerProducts = ({ currentProduct, sellerId = 'NexoPay', onViewMoreProduc
             `}</style>
           </div>
 
-          {onViewMoreProducts && (
-            <div className="mt-4">
-              <button
-                onClick={onViewMoreProducts}
-                className="text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors"
-              >
-                Ver más productos del vendedor
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="lg:col-span-1">
           <SellerInfo
-            sellerId={sellerId}
+            sellerId={salesSummary?.affiliateName || sellerId}
             productCount={productCount}
-            sales={sales}
-            onViewMoreProducts={onViewMoreProducts}
+            totalSales={totalSales}
+            level={salesSummary?.level}
+            timeWithUsDays={salesSummary?.timeWithUsDays}
+            goodService={salesSummary?.goodService}
           />
         </div>
       </div>
