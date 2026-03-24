@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import { useClearCart } from '../hooks/useClearCart';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import {
   HiOutlineCheckCircle,
@@ -19,6 +20,7 @@ import {
 const OrderConfirmation = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { clearCart } = useClearCart();
   const { 
     items,
     getSubtotal,
@@ -28,7 +30,6 @@ const OrderConfirmation = () => {
     getDeferredAmount,
     getMonthlyPayment,
     getPaymentSchedule,
-    clearCart,
   } = useCartStore();
 
   const [orderData, setOrderData] = useState(location.state?.order ?? null);

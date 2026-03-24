@@ -48,7 +48,10 @@ const Home = () => {
 
   const brandsForSection = useMemo(() => {
     const list = Array.isArray(brands) ? brands : [];
-    return list.map((b) => ({ name: b.name ?? b, logo: b.logo ?? null }));
+    return list.map((b) => ({
+      name: b.name ?? b,
+      logo: b.logo_url ?? b.logo ?? null,
+    }));
   }, [brands]);
 
   const categoriesForCarousel = useMemo(() => {
@@ -121,7 +124,7 @@ const Home = () => {
         </section>
 
         {brandsForSection.length > 0 && (
-          <BrandSection brands={brandsForSection} />
+          <BrandSection brands={brandsForSection} title={brandsTitle} />
         )}
         
         <FeaturedProductsSection />

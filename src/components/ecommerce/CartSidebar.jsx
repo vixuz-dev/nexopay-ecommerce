@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useCartStore from '../../stores/cartStore';
+import { useCartApi } from '../../hooks/useCartApi';
+import { useRemoveFromCart } from '../../hooks/useRemoveFromCart';
+import { useUpdateCartQuantity } from '../../hooks/useUpdateCartQuantity';
+import { useClearCart } from '../../hooks/useClearCart';
+import { useAuth } from '../../context/AuthContext';
 import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG, getShippingCost } from '../../constants/checkoutConfig';
 import { productsService } from '../../api/services/productsService';
@@ -14,17 +19,25 @@ import ProductPlaceholder from '../common/ProductPlaceholder';
 
 const CartSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
+  const { removeFromCart } = useRemoveFromCart();
+  const { updateQuantityInCart } = useUpdateCartQuantity();
+  const { clearCart } = useClearCart();
   const {
     items,
-    removeItem,
-    updateQuantity,
     updateItemCategoryIds,
     getSubtotal,
     getTotalItems,
-    clearCart,
     isEmpty,
     getInitialPayment,
   } = useCartStore();
+
+  useEffect(() => {
+    if (isOpen && isAuthenticated) {
+      fetchCart();
+    }
+  }, [isOpen, isAuthenticated, fetchCart]);
 
   useEffect(() => {
     if (!isOpen || items.length === 0) return;
@@ -87,11 +100,15 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const initialPayment = getInitialPayment();
 
   const handleQuantityChange = (itemId, size, newQuantity, maxStock = 999) => {
-    updateQuantity(itemId, Math.min(newQuantity, maxStock), size);
+    if (newQuantity < 1) {
+      removeFromCart(itemId, size);
+      return;
+    }
+    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxStock));
   };
 
   const handleRemoveItem = (itemId, size) => {
-    removeItem(itemId, size);
+    removeFromCart(itemId, size);
   };
 
   const handleViewCart = () => {
@@ -122,6 +139,9 @@ const CartSidebar = ({ isOpen, onClose }) => {
             <h2 className="text-xl font-bold text-gray-900">
               Carrito ({totalItems})
             </h2>
+            {cartLoading && (
+              <div className="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+            )}
           </div>
           <button
             onClick={onClose}

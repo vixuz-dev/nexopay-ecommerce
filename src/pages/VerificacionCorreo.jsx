@@ -28,7 +28,7 @@ const VerificacionCorreo = () => {
     setError('');
 
     try {
-      await emailVerificationService.addEmailVerification(user.client_id, email);
+      await emailVerificationService.addEmailVerification(user.client_id);
       showToast('Código enviado a tu correo', 'success', 3000);
       navigate(ROUTES.EMAIL_VERIFICATION_ENTER_CODE, {
         state: { email },

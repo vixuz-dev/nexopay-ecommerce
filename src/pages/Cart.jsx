@@ -7,6 +7,11 @@ import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
 import useUIStore from '../stores/uiStore';
 import usePreOrderStore from '../stores/preOrderStore';
+import { useCartApi } from '../hooks/useCartApi';
+import { useRemoveFromCart } from '../hooks/useRemoveFromCart';
+import { useUpdateCartQuantity } from '../hooks/useUpdateCartQuantity';
+import { useClearCart } from '../hooks/useClearCart';
+import { useAuth } from '../context/AuthContext';
 import { CHECKOUT_CONFIG, getShippingCost } from '../constants/checkoutConfig';
 import { orderService } from '../api/services/orderService';
 import { buildOrderPayload } from '../utils/orderPayloadBuilder';
@@ -40,6 +45,8 @@ const Cart = () => {
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
   const showToast = useToastStore((s) => s.showToast);
   const showGlobalLoader = useUIStore((s) => s.showGlobalLoader);
   const hideGlobalLoader = useUIStore((s) => s.hideGlobalLoader);
@@ -48,11 +55,11 @@ const Cart = () => {
   const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
   const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
   const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
+  const { removeFromCart } = useRemoveFromCart();
+  const { updateQuantityInCart } = useUpdateCartQuantity();
+  const { clearCart } = useClearCart();
   const { 
     items, 
-    removeItem, 
-    updateQuantity, 
-    clearCart, 
     getSubtotal, 
     isEmpty,
     deferralMonths,
@@ -78,6 +85,12 @@ const Cart = () => {
   const initialPayment = getInitialPayment();
   const deferredAmount = getDeferredAmount();
   const monthlyPayment = getMonthlyPayment();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCart();
+    }
+  }, [isAuthenticated, fetchCart]);
 
   useEffect(() => {
     fetchAddresses();
@@ -110,13 +123,17 @@ const Cart = () => {
   const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
   const handleQuantityChange = (itemId, size, newQuantity) => {
+    if (newQuantity < 1) {
+      removeFromCart(itemId, size);
+      return;
+    }
     const item = items.find(i => i.id === itemId && i.size === size);
     const maxQty = item?.stock ?? 999;
-    updateQuantity(itemId, Math.min(newQuantity, maxQty), size);
+    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxQty));
   };
 
   const handleRemoveItem = (itemId, size) => {
-    removeItem(itemId, size);
+    removeFromCart(itemId, size);
   };
 
   const handleCheckout = async () => {
@@ -176,6 +193,21 @@ const Cart = () => {
     const monthly = deferralMonths > 0 ? deferred / deferralMonths : 0;
     return { initial, deferred, monthly };
   };
+
+  if (cartLoading && isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <PurchaseFlowBreadcrumb currentStep="cart" />
+          <div className="flex justify-center items-center py-20">
+            <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (isEmpty()) {
     return (

@@ -88,7 +88,7 @@ const VerificacionCorreoIngresarCodigo = () => {
     setIsLoading(true);
     setErrors({});
     try {
-      await emailVerificationService.addEmailVerification(user.client_id, email);
+      await emailVerificationService.addEmailVerification(user.client_id);
       showToast('Código reenviado a tu correo', 'success', 3000);
       setCountdown(RESEND_COOLDOWN);
       setCanResend(false);
@@ -113,10 +113,15 @@ const VerificacionCorreoIngresarCodigo = () => {
       return;
     }
 
+    if (!user?.client_id) {
+      setErrors({ general: 'No se encontró la sesión. Inicia sesión nuevamente.' });
+      return;
+    }
+
     setIsValidating(true);
     setErrors({});
     try {
-      await emailVerificationService.validateEmailOtp(email, parseInt(otpString, 10));
+      await emailVerificationService.validateEmailOtp(user.client_id, parseInt(otpString, 10));
       setEmailVerified(true);
       setShowSuccessModal(true);
     } catch (err) {

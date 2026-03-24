@@ -3,8 +3,8 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
+import { useAddToCart } from '../hooks/useAddToCart';
 import { mapApiProductDetailToComponent } from '../utils/productDetailMapper';
-import useCartStore from '../stores/cartStore';
 import useUIStore from '../stores/uiStore';
 import { ROUTES, getProductsByCategoryUrl } from '../utils/routes';
 import { 
@@ -32,7 +32,7 @@ const MAX_VISIBLE_THUMBNAILS = 4;
 const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const addItem = useCartStore((state) => state.addItem);
+  const { addToCart } = useAddToCart();
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
   
   const productName = searchParams.get('name') || searchParams.get('productName');
@@ -110,27 +110,25 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = () => {
-    if (product && product.inStock) {
-      const variantSize = selectedVariants.size || null;
-      const attrs = buildAttributes();
-      addItem(currentProduct, quantity, variantSize, {
-        productVariantId: currentProduct?.productVariantId,
-        attributes: attrs,
-      });
-      openCartSidebar();
-    }
+    if (!product || !product.inStock) return;
+    const variantSize = selectedVariants.size || null;
+    const attrs = buildAttributes();
+    addToCart(currentProduct, quantity, variantSize, {
+      productVariantId: currentProduct?.productVariantId,
+      attributes: attrs,
+    });
+    openCartSidebar();
   };
 
   const handleBuyNow = () => {
-    if (product && product.inStock) {
-      const variantSize = selectedVariants.size || null;
-      const attrs = buildAttributes();
-      addItem(currentProduct, quantity, variantSize, {
-        productVariantId: currentProduct?.productVariantId,
-        attributes: attrs,
-      });
-      navigate(ROUTES.CART);
-    }
+    if (!product || !product.inStock) return;
+    const variantSize = selectedVariants.size || null;
+    const attrs = buildAttributes();
+    addToCart(currentProduct, quantity, variantSize, {
+      productVariantId: currentProduct?.productVariantId,
+      attributes: attrs,
+    });
+    navigate(ROUTES.CART);
   };
 
   const handleMouseMove = (e) => {

@@ -2,14 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineShoppingCart, HiOutlineHeart } from 'react-icons/hi2';
 import ProductPlaceholder from '../common/ProductPlaceholder';
-import useCartStore from '../../stores/cartStore';
+import { useAddToCart } from '../../hooks/useAddToCart';
 import useUIStore from '../../stores/uiStore';
 import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG } from '../../constants/checkoutConfig';
 
 const ProductCard = ({ product, showAddToCart = false }) => {
   const navigate = useNavigate();
-  const addItem = useCartStore((state) => state.addItem);
+  const { addToCart } = useAddToCart();
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
   
   const {
@@ -33,13 +33,12 @@ const ProductCard = ({ product, showAddToCart = false }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (inStock) {
-      addItem(product, 1, null, {
-        productVariantId: product.productVariantId,
-        attributes: product.attributes || [],
-      });
-      openCartSidebar();
-    }
+    if (!inStock) return;
+    addToCart(product, 1, null, {
+      productVariantId: product.productVariantId ?? product.id,
+      attributes: product.attributes || [],
+    });
+    openCartSidebar();
   };
 
   const formatPrice = (amount) => {

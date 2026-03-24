@@ -98,6 +98,15 @@ export const ENDPOINTS = {
     GET_AFFILIATE_SALES_SUMMARY: `${API_BASE_URL}/ecommerce/affiliates/get_affiliate_sales_summary`,
   },
 
+  // Ecommerce Carts
+  ECOMMERCE_CARTS: {
+    GET_CART: `${API_BASE_URL}/ecommerce/carts/get_cart`,
+    ADD_PRODUCT_CART: `${API_BASE_URL}/ecommerce/carts/add_product_cart`,
+    DELETE_PRODUCT_CART: `${API_BASE_URL}/ecommerce/carts/delete_product`,
+    UPDATE_PRODUCT_QUANTITY: `${API_BASE_URL}/ecommerce/carts/update_product_quantity`,
+    DELETE_CART: `${API_BASE_URL}/ecommerce/carts/delete_cart`,
+  },
+
   // Ecommerce Orders
   ECOMMERCE_ORDERS: {
     CREATE_ORDER: `${API_BASE_URL}/ecommerce/orders/create_order`,

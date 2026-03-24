@@ -11,5 +11,7 @@ export { useProducts, useProduct, getCategories } from './useProducts';
 export { useSimilarProducts } from './useSimilarProducts';
 export { useAffiliateProducts } from './useAffiliateProducts';
 export { useAffiliateSalesSummary } from './useAffiliateSalesSummary';
+export { useSearchProducts } from './useSearchProducts';
+export { useCartApi } from './useCartApi';
 export { useCategories } from './useCategories';
 export { useHomeData } from './useHomeData';

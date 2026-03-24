@@ -3,18 +3,21 @@ import { LoginForm } from '../components/forms/LoginForm';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/routes';
 import useCategoriesStore from '../stores/categoriesStore';
+import { useCartApi } from '../hooks/useCartApi';
 
 const Login = () => {
   const navigate = useNavigate();
   const invalidateCategories = useCategoriesStore((s) => s.invalidateCategories);
   const fetchCategories = useCategoriesStore((s) => s.fetchCategories);
+  const { fetchCart } = useCartApi({ syncToStore: true });
 
   const handleLoginSuccess = async () => {
     try {
       invalidateCategories();
       await fetchCategories();
+      await fetchCart();
     } catch (err) {
-      console.error('Error al pre-cargar categorías:', err);
+      console.error('Error al pre-cargar:', err);
     }
     navigate(ROUTES.HOME);
   };

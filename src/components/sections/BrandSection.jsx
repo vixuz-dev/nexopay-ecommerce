@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi2';
 import BrandCard from '../common/BrandCard';
 
-const BrandSection = ({ brands = [], autoScroll = true, scrollInterval = 3000 }) => {
+const BrandSection = ({ brands = [], title = 'Marcas destacadas', autoScroll = true, scrollInterval = 3000 }) => {
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -75,7 +75,7 @@ const BrandSection = ({ brands = [], autoScroll = true, scrollInterval = 3000 })
       <div className="container mx-auto px-6">
         <div className="mb-10 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            Marcas destacadas
+            {title}
           </h2>
           <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
             Las mejores marcas en un solo lugar

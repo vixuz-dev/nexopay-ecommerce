@@ -60,11 +60,12 @@ export const performLogout = () => {
   useAddressesStore.getState().clearAddresses();
 
   removeCookie('authToken');
-  
-  // Clear all SWR cache
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('authToken');
+  }
+
   mutate(() => true, undefined, { revalidate: false });
-  
-  // Redirect to login
+
   if (typeof window !== 'undefined') {
     window.location.href = ROUTES.LOGIN;
   }

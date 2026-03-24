@@ -81,8 +81,8 @@ const UserAvatar = ({ isHomePage = false }) => {
     return 'U';
   };
 
-  const avatarBgColor = isHomePage ? 'bg-white/20 hover:bg-white/30' : 'bg-primary-100 hover:bg-primary-200';
-  const avatarTextColor = isHomePage ? 'text-primary-600' : 'text-primary-700';
+  const avatarBgColor = isHomePage ? 'bg-white hover:bg-gray-50' : 'bg-primary-500 hover:bg-primary-600';
+  const avatarTextColor = isHomePage ? 'text-primary-700' : 'text-white';
 
   return (
     <div 

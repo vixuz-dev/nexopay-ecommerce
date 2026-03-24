@@ -171,6 +171,11 @@ const useCartStore = create(
         set({ items: [], deferralMonths: CHECKOUT_CONFIG.DEFAULT_DEFERRAL_MONTHS });
       },
 
+      setItemsFromApi: (items) => {
+        const validItems = Array.isArray(items) ? items : [];
+        set({ items: validItems });
+      },
+
       getSubtotal: () => {
         return get().items.reduce((sum, item) => sum + item.total, 0);
       },

@@ -4,13 +4,12 @@ import { ENDPOINTS } from '../endpoints';
  * Service for email verification API calls (AWS)
  */
 class EmailVerificationService {
-  async addEmailVerification(clientId, email) {
+  async addEmailVerification(clientId) {
     const response = await fetch(ENDPOINTS.EMAIL_VERIFICATION.ADD_EMAIL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: Number(clientId),
-        email: String(email),
       }),
     });
 
@@ -37,12 +36,12 @@ class EmailVerificationService {
     return data;
   }
 
-  async validateEmailOtp(email, otpCode) {
+  async validateEmailOtp(clientId, otpCode) {
     const response = await fetch(ENDPOINTS.EMAIL_VERIFICATION.VALIDATE_OTP, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: String(email),
+        client_id: Number(clientId),
         otp_code: Number(otpCode),
       }),
     });

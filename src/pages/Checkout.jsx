@@ -4,6 +4,9 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import { useCartApi } from '../hooks/useCartApi';
+import { useClearCart } from '../hooks/useClearCart';
+import { useAuth } from '../context/AuthContext';
 import useToastStore from '../stores/toastStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import useUserStore from '../stores/userStore';
@@ -28,9 +31,12 @@ import {
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const showToast = useToastStore((s) => s.showToast);
   const preOrder = usePreOrderStore((s) => s.preOrder);
   const user = useUserStore((s) => s.user);
+  const { fetchCart } = useCartApi({ syncToStore: true });
+  const { clearCart } = useClearCart();
   const {
     items,
     getSubtotal,
@@ -39,7 +45,6 @@ const Checkout = () => {
     getInitialPayment,
     getDeferredAmount,
     getPaymentSchedule,
-    clearCart,
   } = useCartStore();
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -77,6 +82,12 @@ const Checkout = () => {
       console.log('[DEBUG] PreOrder en store:', preOrder);
     }
   }, [preOrder]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCart();
+    }
+  }, [isAuthenticated, fetchCart]);
 
   useEffect(() => {
     fetchPaymentMethods();
