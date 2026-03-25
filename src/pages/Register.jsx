@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { RegisterForm } from '../components/forms/RegisterForm';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/routes';
+import nexopayLogo from '../assets/images/NexoPay-Logo.png';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const Register = () => {
       <div className="w-full max-w-lg mx-auto px-6">
         <div className="text-center mb-8">
           <img
-            src="/src/assets/images/NexoPay-Logo.png"
+            src={nexopayLogo}
             alt="NexoPay Logo"
             className="h-12 mx-auto mb-6"
           />

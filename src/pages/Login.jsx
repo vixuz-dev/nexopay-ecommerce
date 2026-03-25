@@ -2,6 +2,7 @@ import React from 'react';
 import { LoginForm } from '../components/forms/LoginForm';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/routes';
+import nexopayLogo from '../assets/images/NexoPay-Logo.png';
 import useCategoriesStore from '../stores/categoriesStore';
 import { useCartApi } from '../hooks/useCartApi';
 
@@ -33,7 +34,7 @@ const Login = () => {
         {/* Logo */}
         <div className="text-center mb-8">
           <img 
-            src="/src/assets/images/NexoPay-Logo.png" 
+            src={nexopayLogo} 
             alt="NexoPay Logo" 
             className="h-12 mx-auto mb-6"
           />
