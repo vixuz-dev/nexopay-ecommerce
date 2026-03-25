@@ -57,18 +57,6 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    console.log("[NexoPay] env", {
-      VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "No existe",
-      VITE_API_BASE_URL_AWS: import.meta.env.VITE_API_BASE_URL_AWS || "No existe",
-      VITE_APP_SECRET_KEY: import.meta.env.VITE_APP_SECRET_KEY || "No existe",
-      VITE_APP_VERSION: import.meta.env.VITE_APP_VERSION || "No existe",
-      VITE_MERCADO_PAGO_PUBLIC_KEY: import.meta.env
-        .VITE_MERCADO_PAGO_PUBLIC_KEY || "No existe",
-      VITE_GOOGLE_MAP_KEY: import.meta.env.VITE_GOOGLE_MAP_KEY || "No existe",
-    });
-  }, []);
-
   return (
     <SWRConfig value={swrConfig}>
       <AuthProvider>
