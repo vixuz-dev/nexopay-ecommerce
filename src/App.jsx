@@ -1,46 +1,51 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { initMercadoPago } from '@mercadopago/sdk-react';
-import { MERCADO_PAGO_PUBLIC_KEY } from './constants/app';
-import { SWRConfig } from 'swr';
-import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { swrConfig } from './api/config/swrConfig';
-import CartSidebar from './components/ecommerce/CartSidebar';
-import ScrollToTop from './components/common/ScrollToTop';
-import ToastContainer from './components/common/ToastContainer';
-import EmailVerificationBanner from './components/common/EmailVerificationBanner';
-import GlobalLoader from './components/common/GlobalLoader';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import PublicRoute from './components/common/PublicRoute';
-import useUIStore from './stores/uiStore';
-import { ROUTES, getOrderDetailUrl } from './utils/routes';
-import Home from './pages/Home';
-import Register from './pages/Register';
-import Login from './pages/Login';
-import ValidateOtp from './pages/ValidateOtp';
-import VerificacionCorreo from './pages/VerificacionCorreo';
-import VerificacionCorreoIngresarCodigo from './pages/VerificacionCorreoIngresarCodigo';
-import RequestCredit from './pages/RequestCredit';
-import MyCredit from './pages/MyCredit';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
-import MyAccount from './pages/MyAccount';
-import MyOrders from './pages/MyOrders';
-import MyProfile from './pages/MyProfile';
-import AccountMovements from './pages/AccountMovements';
-import AccountPayments from './pages/AccountPayments';
-import MyInvoices from './pages/MyInvoices';
-import InvoiceDetailPage from './pages/InvoiceDetailPage';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import OrderConfirmation from './pages/OrderConfirmation';
-import NotFound from './pages/NotFound';
+import React, { useEffect } from "react";
+import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
+import { initMercadoPago } from "@mercadopago/sdk-react";
+import { MERCADO_PAGO_PUBLIC_KEY } from "./constants/app";
+import { SWRConfig } from "swr";
+import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { swrConfig } from "./api/config/swrConfig";
+import CartSidebar from "./components/ecommerce/CartSidebar";
+import ScrollToTop from "./components/common/ScrollToTop";
+import ToastContainer from "./components/common/ToastContainer";
+import EmailVerificationBanner from "./components/common/EmailVerificationBanner";
+import GlobalLoader from "./components/common/GlobalLoader";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import PublicRoute from "./components/common/PublicRoute";
+import useUIStore from "./stores/uiStore";
+import { ROUTES, getOrderDetailUrl } from "./utils/routes";
+import Home from "./pages/Home";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import ValidateOtp from "./pages/ValidateOtp";
+import VerificacionCorreo from "./pages/VerificacionCorreo";
+import VerificacionCorreoIngresarCodigo from "./pages/VerificacionCorreoIngresarCodigo";
+import RequestCredit from "./pages/RequestCredit";
+import MyCredit from "./pages/MyCredit";
+import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
+import MyAccount from "./pages/MyAccount";
+import MyOrders from "./pages/MyOrders";
+import MyProfile from "./pages/MyProfile";
+import AccountMovements from "./pages/AccountMovements";
+import AccountPayments from "./pages/AccountPayments";
+import MyInvoices from "./pages/MyInvoices";
+import InvoiceDetailPage from "./pages/InvoiceDetailPage";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import NotFound from "./pages/NotFound";
 
 const InvoiceDetailRedirect = () => {
   const [searchParams] = useSearchParams();
-  const orderId = searchParams.get('orderId');
-  return <Navigate to={orderId ? getOrderDetailUrl(orderId) : ROUTES.MY_ORDERS} replace />;
+  const orderId = searchParams.get("orderId");
+  return (
+    <Navigate
+      to={orderId ? getOrderDetailUrl(orderId) : ROUTES.MY_ORDERS}
+      replace
+    />
+  );
 };
 
 function App() {
@@ -48,8 +53,20 @@ function App() {
 
   useEffect(() => {
     if (MERCADO_PAGO_PUBLIC_KEY) {
-      initMercadoPago(MERCADO_PAGO_PUBLIC_KEY, { locale: 'es-MX' });
+      initMercadoPago(MERCADO_PAGO_PUBLIC_KEY, { locale: "es-MX" });
     }
+  }, []);
+
+  useEffect(() => {
+    console.log("[NexoPay] env", {
+      VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL || "No existe",
+      VITE_API_BASE_URL_AWS: import.meta.env.VITE_API_BASE_URL_AWS || "No existe",
+      VITE_APP_SECRET_KEY: import.meta.env.VITE_APP_SECRET_KEY || "No existe",
+      VITE_APP_VERSION: import.meta.env.VITE_APP_VERSION || "No existe",
+      VITE_MERCADO_PAGO_PUBLIC_KEY: import.meta.env
+        .VITE_MERCADO_PAGO_PUBLIC_KEY || "No existe",
+      VITE_GOOGLE_MAP_KEY: import.meta.env.VITE_GOOGLE_MAP_KEY || "No existe",
+    });
   }, []);
 
   return (
@@ -57,191 +74,212 @@ function App() {
       <AuthProvider>
         <ThemeProvider>
           <div className="min-h-screen">
-          <ScrollToTop />
-          <EmailVerificationBanner />
-          <CartSidebar isOpen={isCartSidebarOpen} onClose={closeCartSidebar} />
-          <GlobalLoader />
-          <ToastContainer />
-          <Routes>
-            <Route
-              path={ROUTES.HOME}
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
+            <ScrollToTop />
+            <EmailVerificationBanner />
+            <CartSidebar
+              isOpen={isCartSidebarOpen}
+              onClose={closeCartSidebar}
             />
-            <Route
-              path={ROUTES.LOGIN}
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path={ROUTES.REGISTER}
-              element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path={ROUTES.VALIDATE_OTP}
-              element={
-                <PublicRoute>
-                  <ValidateOtp />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path={ROUTES.EMAIL_VERIFICATION}
-              element={
-                <ProtectedRoute>
-                  <VerificacionCorreo />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.EMAIL_VERIFICATION_ENTER_CODE}
-              element={
-                <ProtectedRoute>
-                  <VerificacionCorreoIngresarCodigo />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.REQUEST_CREDIT}
-              element={
-                <ProtectedRoute>
-                  <RequestCredit />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.MY_CREDIT}
-              element={
-                <ProtectedRoute>
-                  <MyCredit />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/mi-credito" element={<Navigate to={ROUTES.MY_CREDIT} replace />} />
-            <Route
-              path={ROUTES.CREDIT_REQUEST}
-              element={<Navigate to={ROUTES.MY_CREDIT} replace />}
-            />
-            <Route
-              path={ROUTES.PRODUCTS}
-              element={
-                <ProtectedRoute>
-                  <Products />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.PRODUCT_DETAIL}
-              element={
-                <ProtectedRoute>
-                  <ProductDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.MY_ACCOUNT}
-              element={
-                <ProtectedRoute>
-                  <MyAccount />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.ORDER_DETAIL}
-              element={
-                <ProtectedRoute>
-                  <InvoiceDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.MY_ORDERS}
-              element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.MY_PROFILE}
-              element={
-                <ProtectedRoute>
-                  <MyProfile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.ACCOUNT_MOVEMENTS}
-              element={
-                <ProtectedRoute>
-                  <AccountMovements />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.ACCOUNT_PAYMENTS}
-              element={
-                <ProtectedRoute>
-                  <AccountPayments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/movimientos-credito"
-              element={<Navigate to={ROUTES.ACCOUNT_MOVEMENTS} replace />}
-            />
-            <Route
-              path={ROUTES.MY_INVOICES}
-              element={
-                <ProtectedRoute>
-                  <MyInvoices />
-                </ProtectedRoute>
-              }
-            />
-            <Route path={ROUTES.INVOICE_DETAIL} element={<InvoiceDetailRedirect />} />
-            <Route path="/mis-compras" element={<Navigate to={ROUTES.MY_ORDERS} replace />} />
-            <Route path="/carrito" element={<Navigate to={ROUTES.CART} replace />} />
-            <Route path="/pago" element={<Navigate to={ROUTES.CHECKOUT} replace />} />
-            <Route path="/confirmacion" element={<Navigate to={ROUTES.ORDER_CONFIRMATION} replace />} />
-            <Route
-              path={ROUTES.CART}
-              element={
-                <ProtectedRoute>
-                  <Cart />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.CHECKOUT}
-              element={
-                <ProtectedRoute>
-                  <Checkout />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={ROUTES.ORDER_CONFIRMATION}
-              element={
-                <ProtectedRoute>
-                  <OrderConfirmation />
-                </ProtectedRoute>
-              }
-            />
-            <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
-          </Routes>
-        </div>
-      </ThemeProvider>
-    </AuthProvider>
+            <GlobalLoader />
+            <ToastContainer />
+            <Routes>
+              <Route
+                path={ROUTES.HOME}
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.LOGIN}
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path={ROUTES.REGISTER}
+                element={
+                  <PublicRoute>
+                    <Register />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path={ROUTES.VALIDATE_OTP}
+                element={
+                  <PublicRoute>
+                    <ValidateOtp />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path={ROUTES.EMAIL_VERIFICATION}
+                element={
+                  <ProtectedRoute>
+                    <VerificacionCorreo />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.EMAIL_VERIFICATION_ENTER_CODE}
+                element={
+                  <ProtectedRoute>
+                    <VerificacionCorreoIngresarCodigo />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.REQUEST_CREDIT}
+                element={
+                  <ProtectedRoute>
+                    <RequestCredit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MY_CREDIT}
+                element={
+                  <ProtectedRoute>
+                    <MyCredit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mi-credito"
+                element={<Navigate to={ROUTES.MY_CREDIT} replace />}
+              />
+              <Route
+                path={ROUTES.CREDIT_REQUEST}
+                element={<Navigate to={ROUTES.MY_CREDIT} replace />}
+              />
+              <Route
+                path={ROUTES.PRODUCTS}
+                element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.PRODUCT_DETAIL}
+                element={
+                  <ProtectedRoute>
+                    <ProductDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MY_ACCOUNT}
+                element={
+                  <ProtectedRoute>
+                    <MyAccount />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.ORDER_DETAIL}
+                element={
+                  <ProtectedRoute>
+                    <InvoiceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MY_ORDERS}
+                element={
+                  <ProtectedRoute>
+                    <MyOrders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MY_PROFILE}
+                element={
+                  <ProtectedRoute>
+                    <MyProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.ACCOUNT_MOVEMENTS}
+                element={
+                  <ProtectedRoute>
+                    <AccountMovements />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.ACCOUNT_PAYMENTS}
+                element={
+                  <ProtectedRoute>
+                    <AccountPayments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/movimientos-credito"
+                element={<Navigate to={ROUTES.ACCOUNT_MOVEMENTS} replace />}
+              />
+              <Route
+                path={ROUTES.MY_INVOICES}
+                element={
+                  <ProtectedRoute>
+                    <MyInvoices />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.INVOICE_DETAIL}
+                element={<InvoiceDetailRedirect />}
+              />
+              <Route
+                path="/mis-compras"
+                element={<Navigate to={ROUTES.MY_ORDERS} replace />}
+              />
+              <Route
+                path="/carrito"
+                element={<Navigate to={ROUTES.CART} replace />}
+              />
+              <Route
+                path="/pago"
+                element={<Navigate to={ROUTES.CHECKOUT} replace />}
+              />
+              <Route
+                path="/confirmacion"
+                element={<Navigate to={ROUTES.ORDER_CONFIRMATION} replace />}
+              />
+              <Route
+                path={ROUTES.CART}
+                element={
+                  <ProtectedRoute>
+                    <Cart />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.CHECKOUT}
+                element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path={ROUTES.ORDER_CONFIRMATION}
+                element={
+                  <ProtectedRoute>
+                    <OrderConfirmation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
+            </Routes>
+          </div>
+        </ThemeProvider>
+      </AuthProvider>
     </SWRConfig>
   );
 }
