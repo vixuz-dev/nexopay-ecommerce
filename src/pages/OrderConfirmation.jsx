@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
+import { APP_CONFIG } from '../constants/app';
 import { useClearCart } from '../hooks/useClearCart';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import {
@@ -24,7 +25,6 @@ const OrderConfirmation = () => {
   const { 
     items,
     getSubtotal,
-    isEmpty,
     deferralMonths,
     getInitialPayment,
     getDeferredAmount,
@@ -37,7 +37,7 @@ const OrderConfirmation = () => {
   useEffect(() => {
     if (orderData) return;
 
-    if (!isEmpty()) {
+    if (items.length > 0) {
       const subtotal = getSubtotal();
       const shipping = subtotal > 5000 ? 0 : 200;
       
@@ -335,14 +335,14 @@ const OrderConfirmation = () => {
               <div className="space-y-2 text-sm">
                 <p className="flex items-center gap-2 text-gray-700">
                   <span className="font-medium">Email:</span>
-                  <a href="mailto:soporte@nexopay.com" className="text-primary-600 hover:underline">
-                    soporte@nexopay.com
+                  <a href={`mailto:${APP_CONFIG.SUPPORT_EMAIL}`} className="text-primary-600 hover:underline">
+                    {APP_CONFIG.SUPPORT_EMAIL}
                   </a>
                 </p>
                 <p className="flex items-center gap-2 text-gray-700">
                   <span className="font-medium">WhatsApp:</span>
-                  <a href="tel:+525512345678" className="text-primary-600 hover:underline">
-                    +52 55 1234 5678
+                  <a href={`tel:${APP_CONFIG.SUPPORT_PHONE_RAW}`} className="text-primary-600 hover:underline">
+                    {APP_CONFIG.SUPPORT_PHONE}
                   </a>
                 </p>
               </div>

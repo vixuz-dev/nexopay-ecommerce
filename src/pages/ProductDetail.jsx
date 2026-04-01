@@ -19,7 +19,6 @@ import {
   HiOutlineShieldCheck,
   HiOutlineCreditCard,
   HiOutlineXMark,
-  HiOutlineCalendarDays,
   HiOutlineBuildingStorefront
 } from 'react-icons/hi2';
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
@@ -64,11 +63,6 @@ const ProductDetail = () => {
       style: 'currency',
       currency: 'MXN'
     }).format(amount);
-  };
-
-  const getMonthlyFromApi = (p) => {
-    const amountToDefer = p?.remainingBalance ?? p?.price ?? 0;
-    return amountToDefer / CHECKOUT_CONFIG.PRODUCT_DETAIL_MONTHLY_INSTALLMENTS;
   };
 
   const getCurrentProductData = () => {
@@ -306,7 +300,7 @@ const ProductDetail = () => {
         <nav className="mb-6 text-sm">
           <ol className="flex items-center justify-center sm:justify-start gap-2 text-gray-600">
             <li>
-              <Link to="/" className="hover:text-primary-600 transition-colors">Inicio</Link>
+              <Link to={ROUTES.HOME} className="hover:text-primary-600 transition-colors">Inicio</Link>
             </li>
             <li>/</li>
             <li>
@@ -525,32 +519,39 @@ const ProductDetail = () => {
                   )}
                 </div>
                 <p className="text-sm text-gray-600">
-                  Hasta {CHECKOUT_CONFIG.PRODUCT_DETAIL_MONTHLY_INSTALLMENTS} meses de {formatPrice(getMonthlyFromApi(currentProduct))} <span className="text-xs">IVA incluido</span>
+                  Llévatelo con
+                  {currentProduct.initialPaymentCost > 0 ? (
+                    <>{' '}<span className="font-semibold text-primary-600">un pago inicial de {formatPrice(currentProduct.initialPaymentCost)}</span>{' '}</>
+                  ) : (
+                    <> pago inicial </>
+                  )}
+                  y el resto pagalo hasta a{' '}
+                  {CHECKOUT_CONFIG.PRODUCT_DETAIL_MONTHLY_INSTALLMENTS} mensualidades.{' '}
+                  <span className="text-xs">IVA incluido</span>
                 </p>
-                {currentProduct.initialPaymentCost > 0 && (
-                  <p className="text-xs text-primary-600 font-medium mt-1">
-                    Pago inicial: {formatPrice(currentProduct.initialPaymentCost)} ({Math.round((currentProduct.initialPaymentCost / currentProduct.price) * 100)}%)
-                  </p>
-                )}
               </div>
 
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <p className="text-sm text-gray-700 mb-1">
                   <span className="font-semibold text-primary-600">Llega gratis el miércoles</span> con tu carrito
                 </p>
                 <p className="text-xs text-primary-600 cursor-pointer hover:underline">
                   Suscríbete a NexoPay+ y obtén envío gratis
                 </p>
-              </div>
+              </div> */}
 
               <div className="mb-4">
-                <p className={`text-sm font-semibold mb-1 ${currentProduct.inStock ? 'text-primary-600' : 'text-red-600'}`}>
-                  {currentProduct.inStock ? 'Stock disponible' : 'Sin stock'}
-                </p>
-                {currentProduct.inStock && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} ({currentProduct.stock} disponibles)
-                  </p>
+                {currentProduct.inStock ? (
+                  <>
+                    <p className="text-sm font-semibold mb-1 text-primary-600">Stock disponible</p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} ({currentProduct.stock} disponibles)
+                    </p>
+                  </>
+                ) : (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    <p className="text-sm font-semibold text-red-600">Este producto no está disponible</p>
+                  </div>
                 )}
               </div>
 
@@ -633,16 +634,10 @@ const ProductDetail = () => {
 
             <div className={`lg:col-span-1 transition-opacity duration-300 ${isZooming ? 'lg:opacity-0 lg:pointer-events-none' : 'opacity-100'}`}>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sticky top-4">
-                <div className="mb-4">
-                  <p className="text-sm text-gray-700 mb-2">
-                    <HiOutlineCalendarDays className="w-4 h-4 inline mr-1 text-primary-600" />
-                    <span className="font-semibold text-primary-600">Llega gratis el miércoles</span>
-                  </p>
-                  <p className="text-xs text-gray-600">Con tu carrito de compras</p>
-                </div>
-
                 <div className="mb-4 pb-4 border-b border-gray-200">
-                  <p className="text-sm font-semibold text-primary-600 mb-1">Stock disponible</p>
+                  <p className={`text-sm font-semibold mb-1 ${currentProduct.inStock ? 'text-primary-600' : 'text-red-600'}`}>
+                    {currentProduct.inStock ? 'Stock disponible' : 'Sin stock'}
+                  </p>
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-semibold text-gray-700">Cantidad:</label>
                     <div className="flex items-center border border-gray-300 rounded-lg">

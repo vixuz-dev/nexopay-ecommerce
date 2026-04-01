@@ -6,7 +6,6 @@ import { ROUTES } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import { useCartApi } from '../hooks/useCartApi';
 import { useClearCart } from '../hooks/useClearCart';
-import { useAuth } from '../context/AuthContext';
 import useToastStore from '../stores/toastStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import useUserStore from '../stores/userStore';
@@ -31,16 +30,15 @@ import {
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
   const showToast = useToastStore((s) => s.showToast);
   const preOrder = usePreOrderStore((s) => s.preOrder);
   const user = useUserStore((s) => s.user);
+  const isAuthenticated = !!user;
   const { fetchCart } = useCartApi({ syncToStore: true });
   const { clearCart } = useClearCart();
   const {
     items,
     getSubtotal,
-    isEmpty,
     deferralMonths,
     getInitialPayment,
     getDeferredAmount,
@@ -69,19 +67,6 @@ const Checkout = () => {
     expiryYear: '',
     cvv: '',
   });
-
-  useEffect(() => {
-    if (user) {
-      console.log('[DEBUG] User info (userStore) - campos disponibles:', Object.keys(user));
-      console.log('[DEBUG] User completo:', user);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (preOrder) {
-      console.log('[DEBUG] PreOrder en store:', preOrder);
-    }
-  }, [preOrder]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -119,10 +104,10 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    if (isEmpty()) {
+    if (items.length === 0) {
       navigate(ROUTES.CART);
     }
-  }, [isEmpty, navigate]);
+  }, [items.length, navigate]);
 
   const subtotal = getSubtotal();
   const shipping = getShippingCost(subtotal);
@@ -241,7 +226,7 @@ const Checkout = () => {
     setIsProcessing(false);
   };
 
-  if (isEmpty()) {
+  if (items.length === 0) {
     return null;
   }
 

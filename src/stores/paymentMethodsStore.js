@@ -35,7 +35,6 @@ const usePaymentMethodsStore = create(
         }
       },
 
-      clearPaymentMethods: () => set({ paymentMethods: [], isLoaded: false, error: null }),
     }),
     {
       name: 'payment-methods-storage',

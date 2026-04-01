@@ -48,11 +48,6 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     }).format(amount);
   };
 
-  const getMonthlyFromApi = (p) => {
-    const amountToDefer = p.remainingBalance ?? p.price;
-    return amountToDefer / CHECKOUT_CONFIG.PRODUCT_CARD_MONTHLY_INSTALLMENTS;
-  };
-
   return (
     <div
       role="button"
@@ -145,7 +140,8 @@ const ProductCard = ({ product, showAddToCart = false }) => {
           
           {/* Monthly Payment */}
           <p className="text-xs text-primary-600 font-medium">
-            {product.monthlyPaymentOption || `Desde ${formatPrice(getMonthlyFromApi(product))} mensual`}
+            {product.monthlyPaymentOption ||
+              `Pago inicial y hasta ${CHECKOUT_CONFIG.PRODUCT_CARD_MONTHLY_INSTALLMENTS} mensualidades`}
           </p>
         </div>
 

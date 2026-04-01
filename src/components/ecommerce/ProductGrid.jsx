@@ -32,8 +32,8 @@ const ProductGrid = ({
       : '';
 
     return (
-      <div className="text-center py-20 px-4">
-        <div className="mx-auto max-w-lg">
+      <div className="flex items-center justify-center px-4" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        <div className="mx-auto max-w-lg text-center">
           <p className="text-gray-900 text-xl sm:text-2xl font-semibold mb-2">
             No se encontraron productos
           </p>

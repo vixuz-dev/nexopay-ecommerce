@@ -11,7 +11,7 @@ import { useCartApi } from '../hooks/useCartApi';
 import { useRemoveFromCart } from '../hooks/useRemoveFromCart';
 import { useUpdateCartQuantity } from '../hooks/useUpdateCartQuantity';
 import { useClearCart } from '../hooks/useClearCart';
-import { useAuth } from '../context/AuthContext';
+import useUserStore from '../stores/userStore';
 import { CHECKOUT_CONFIG, getShippingCost } from '../constants/checkoutConfig';
 import { orderService } from '../api/services/orderService';
 import { buildOrderPayload } from '../utils/orderPayloadBuilder';
@@ -45,7 +45,7 @@ const Cart = () => {
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = !!useUserStore((s) => s.user);
   const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
   const showToast = useToastStore((s) => s.showToast);
   const showGlobalLoader = useUIStore((s) => s.showGlobalLoader);
@@ -60,8 +60,7 @@ const Cart = () => {
   const { clearCart } = useClearCart();
   const { 
     items, 
-    getSubtotal, 
-    isEmpty,
+    getSubtotal,
     deferralMonths,
     setDeferralMonths,
     getInitialPayment,
@@ -82,6 +81,7 @@ const Cart = () => {
   const shipping = getShippingCost(subtotal);
   const total = subtotal + shipping;
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const hasOutOfStockItems = items.some((item) => item.stock != null && item.stock <= 0);
   const initialPayment = getInitialPayment();
   const deferredAmount = getDeferredAmount();
   const monthlyPayment = getMonthlyPayment();
@@ -137,7 +137,11 @@ const Cart = () => {
   };
 
   const handleCheckout = async () => {
-    if (isEmpty()) return;
+    if (items.length === 0) return;
+    if (hasOutOfStockItems) {
+      showToast('Remueve los productos sin existencias para continuar', 'error');
+      return;
+    }
     if (addresses.length === 0) {
       setIsAddAddressModalOpen(true);
       return;
@@ -209,7 +213,7 @@ const Cart = () => {
     );
   }
 
-  if (isEmpty()) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -253,19 +257,27 @@ const Cart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Lista de Productos */}
           <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-8">
+            {hasOutOfStockItems && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+                <HiOutlineInformationCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-600">
+                  Uno o más de tus productos ya no están disponibles, remuévelos para continuar.
+                </p>
+              </div>
+            )}
             {items.map((item) => {
               const paymentInfo = getItemPaymentInfo(item);
+              const isOutOfStock = item.stock != null && item.stock <= 0;
               
               return (
                 <div
                   key={`${item.id}-${item.size}`}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                  className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden ${isOutOfStock ? 'opacity-75' : ''}`}
                 >
                   <div className="flex flex-col md:flex-row gap-6">
-                    {/* Imagen del Producto - clickeable */}
                     <Link
                       to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
-                      className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block"
+                      className={`w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
                     >
                       {item.image ? (
                         <img
@@ -278,102 +290,117 @@ const Cart = () => {
                       )}
                     </Link>
 
-                    {/* Información del Producto */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                           <Link
                             to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
-                            className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+                            className={`text-lg font-semibold hover:text-primary-600 transition-colors ${isOutOfStock ? 'text-gray-400' : 'text-gray-900'}`}
                           >
                             {item.name}
                           </Link>
-                          <p className="text-sm text-gray-600 mt-1">{item.category}</p>
+                          <p className={`text-sm mt-1 ${isOutOfStock ? 'text-gray-400' : 'text-gray-600'}`}>{item.category}</p>
                           {item.attributes && item.attributes.length > 0 && (
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-gray-400 mt-1">
                               {item.attributes.map((a) => `${a.name}: ${a.value}`).join(' · ')}
                             </p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleRemoveItem(item.id, item.size);
-                          }}
-                          className="text-gray-400 hover:text-red-600 transition-colors p-2"
-                          aria-label="Remover producto"
-                        >
-                          <HiOutlineXMark className="w-5 h-5" />
-                        </button>
+                        {!isOutOfStock && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemoveItem(item.id, item.size);
+                            }}
+                            className="text-gray-400 hover:text-red-600 transition-colors p-2"
+                            aria-label="Remover producto"
+                          >
+                            <HiOutlineXMark className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-2">
-                            Cantidad
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
-                              disabled={item.quantity <= 1}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                            >
-                              -
-                            </button>
-                            <span className="w-12 text-center font-medium text-gray-900">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
-                              disabled={item.quantity >= (item.stock ?? 999)}
-                              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                            >
-                              +
-                            </button>
-                          </div>
-                          {(item.stock != null && item.stock < 999) && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Máximo: {item.stock} disponible{item.stock !== 1 ? 's' : ''}
-                            </p>
-                          )}
+                      {isOutOfStock ? (
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs font-medium text-red-500">No disponible</span>
+                          <span className="text-gray-300">·</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(item.id, item.size)}
+                            className="text-xs font-medium text-primary-600 hover:text-primary-700 underline underline-offset-2 transition-colors"
+                          >
+                            Remover del carrito
+                          </button>
                         </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-700 mb-2">
+                                Cantidad
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                >
+                                  -
+                                </button>
+                                <span className="w-12 text-center font-medium text-gray-900">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
+                                  disabled={item.quantity >= (item.stock ?? 999)}
+                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              {(item.stock != null && item.stock < 999) && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Máximo: {item.stock} disponible{item.stock !== 1 ? 's' : ''}
+                                </p>
+                              )}
+                            </div>
 
-                        {/* Precio */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-2">
-                            Precio
-                          </label>
-                          <div className="flex flex-col">
-                            {item.originalPrice && item.originalPrice > item.price && (
-                              <span className="text-xs text-gray-500 line-through">
-                                {formatPrice(item.originalPrice * item.quantity)}
-                              </span>
-                            )}
-                            <span className="text-lg font-bold text-gray-900">
-                              {formatPrice(item.total)}
-                            </span>
-                            <span className="text-xs text-gray-600">
-                              {formatPrice(item.price)} c/u
-                            </span>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-700 mb-2">
+                                Precio
+                              </label>
+                              <div className="flex flex-col">
+                                {item.originalPrice && item.originalPrice > item.price && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {formatPrice(item.originalPrice * item.quantity)}
+                                  </span>
+                                )}
+                                <span className="text-lg font-bold text-gray-900">
+                                  {formatPrice(item.total)}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  {formatPrice(item.price)} c/u
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Info de pago por producto */}
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex flex-wrap gap-4 text-sm">
-                          <div className="flex items-center gap-1 text-gray-600">
-                            <span>Inicial:</span>
-                            <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.initial)}</span>
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <div className="flex flex-wrap gap-4 text-sm">
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <span>Inicial:</span>
+                                <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.initial)}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <span>Total a diferir:</span>
+                                <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.deferred)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-gray-600">
-                            <span>Total a diferir:</span>
-                            <span className="font-semibold text-primary-600">{formatPrice(paymentInfo.deferred)}</span>
-                          </div>
-                        </div>
-                      </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -585,8 +612,8 @@ const Cart = () => {
 
               <button
                 onClick={handleCheckout}
-                disabled={addressesLoading || isProcessing}
-                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                disabled={addressesLoading || isProcessing || hasOutOfStockItems}
+                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600 disabled:hover:shadow-md"
               >
                 {isProcessing ? (
                   <>
@@ -605,9 +632,9 @@ const Cart = () => {
                 )}
               </button>
 
-              <p className="text-xs text-gray-500 text-center mt-3">
+              {/* <p className="text-xs text-gray-500 text-center mt-3">
                 Pagarás {formatPrice(initialPayment)} hoy
-              </p>
+              </p> */}
             </div>
 
             <Link

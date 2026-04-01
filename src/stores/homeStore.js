@@ -42,7 +42,6 @@ const useHomeStore = create(
         }
       },
 
-      invalidateHome: () => set({ lastFetchedAt: null }),
     }),
     {
       name: 'home-storage',

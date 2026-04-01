@@ -49,14 +49,6 @@ const useCategoriesStore = create(
         }
       },
 
-      clearCategories: () => set({
-        categories: [],
-        subcategories: [],
-        isCategoriesLoaded: false,
-        isSubcategoriesLoaded: false,
-        categoriesError: null,
-        subcategoriesError: null,
-      }),
     }),
     {
       name: 'categories-storage',

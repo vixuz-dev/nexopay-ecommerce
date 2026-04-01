@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { cartService } from '../api/services/cartService';
 import useCartStore from '../stores/cartStore';
-import { useAuth } from '../context/AuthContext';
+import useUserStore from '../stores/userStore';
 
 export const useRemoveFromCart = () => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = !!useUserStore((s) => s.user);
   const items = useCartStore((s) => s.items);
   const removeItem = useCartStore((s) => s.removeItem);
 

@@ -13,95 +13,63 @@ import {
   HiOutlineIdentification,
   HiOutlineLockClosed,
   HiOutlineCheckCircle,
+  HiOutlinePlus,
+  HiOutlineBuildingOffice,
+  HiOutlineHome,
+  HiOutlineShieldCheck,
+  HiOutlineCreditCard,
+  HiOutlineXMark,
 } from 'react-icons/hi2';
 import useUserStore from '../stores/userStore';
 import useProfileStore from '../stores/profileStore';
-import { profileService } from '../api/services/profileService';
-import { userToProfileForm, profileFormToClientPayload } from '../utils/profileMapper';
+import useAddressesStore from '../stores/addressesStore';
+import { userToProfileForm } from '../utils/profileMapper';
 import useToastStore from '../stores/toastStore';
+import AddAddressModal from '../components/common/AddAddressModal';
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
-  const setUser = useUserStore((state) => state.setUser);
   const profileInformation = useProfileStore((state) => state.profileInformation);
   const showToast = useToastStore((state) => state.showToast);
+  const addresses = useAddressesStore((s) => s.addresses);
+  const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
+  const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [profileData, setProfileData] = useState(userToProfileForm(null));
-  const [originalData, setOriginalData] = useState(profileData);
+  const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
 
-  const client = profileInformation?.client ?? user;
+  const profileClient = profileInformation?.client;
+  const client = profileClient
+    ? { ...profileClient, email: profileClient.email ?? user?.email, emailVerified: profileClient.emailVerified ?? user?.emailVerified }
+    : user;
 
   useEffect(() => {
-    const formData = userToProfileForm(client);
-    setProfileData(formData);
-    setOriginalData(formData);
+    setProfileData(userToProfileForm(client));
   }, [client]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setProfileData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value,
-        },
-      }));
-    } else {
-      setProfileData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
-  const handleSave = async () => {
-    const clientId = user?.client_id ?? profileInformation?.client?.client_id;
-    if (!clientId) {
-      showToast('No se pudo identificar el usuario', 'error');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload = profileFormToClientPayload(profileData, clientId);
-      const updated = await profileService.updateClient(payload);
-
-      const userData = {
-        client_id: clientId,
-        name: updated.name ?? payload.name,
-        paternalLastName: updated.paternalLastName ?? payload.paternalLastName,
-        maternalLastName: updated.maternalLastName ?? payload.maternalLastName,
-        phone: updated.phone ?? payload.phone,
-        birthdate: updated.birthdate ?? payload.birthdate,
-        address: updated.address ?? payload.address,
-      };
-      setUser(userData);
-      useProfileStore.getState().setClientFromLogin(userData);
-
-      setOriginalData(profileData);
-      setIsEditing(false);
-      showToast('Perfil actualizado correctamente', 'success');
-    } catch (error) {
-      showToast(error?.message || 'Error al guardar el perfil', 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setProfileData(originalData);
-    setIsEditing(false);
-  };
+  useEffect(() => {
+    fetchAddresses().catch(() => {});
+  }, [fetchAddresses]);
 
   const handleChangePassword = () => {
     showToast('Función próximamente disponible', 'info');
   };
+
+  const handleAddressSuccess = async () => {
+    invalidateAddresses();
+    await fetchAddresses();
+    showToast('Dirección agregada correctamente', 'success');
+  };
+
+  const fullName = [client?.name, client?.paternalLastName, client?.maternalLastName]
+    .filter(Boolean)
+    .join(' ') || 'Usuario';
+
+  const initials = [client?.name?.[0], client?.paternalLastName?.[0]]
+    .filter(Boolean)
+    .join('')
+    .toUpperCase() || 'U';
 
   if (!user && !client) {
     return (
@@ -117,344 +85,314 @@ const MyProfile = () => {
     );
   }
 
+  const inputClass = 'w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-default transition-colors';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <button
-            onClick={() => navigate(ROUTES.MY_ACCOUNT)}
-            className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-4 transition-colors"
-          >
-            <HiOutlineArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Volver a Mi Cuenta</span>
-          </button>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-5xl">
+        <button
+          onClick={() => navigate(ROUTES.MY_ACCOUNT)}
+          className="flex items-center gap-2 text-gray-500 hover:text-primary-600 mb-6 transition-colors text-sm"
+        >
+          <HiOutlineArrowLeft className="w-4 h-4" />
+          Volver a Mi Cuenta
+        </button>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                Mi Perfil
-              </h1>
-              <p className="text-gray-600">
-                Gestiona tu información personal
-              </p>
+        {/* Profile Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">
+              {initials}
             </div>
-
-            {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-              >
-                Editar Perfil
-              </button>
-            ) : (
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancel}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <HiOutlineCheckCircle className="w-5 h-5" />
-                      Guardar Cambios
-                    </>
-                  )}
-                </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900 truncate">{fullName}</h1>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+                {client?.phone && (
+                  <span className="text-sm text-gray-500 flex items-center gap-1.5">
+                    <HiOutlinePhone className="w-3.5 h-3.5" />
+                    {client.phone}
+                  </span>
+                )}
+                {client?.email && (
+                  <span className="text-sm text-gray-500 flex items-center gap-1.5">
+                    <HiOutlineEnvelope className="w-3.5 h-3.5" />
+                    {client.email}
+                  </span>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <HiOutlineUser className="w-6 h-6 text-primary-600" />
-                Información Personal
-              </h2>
+            {/* Personal Info */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <HiOutlineUser className="w-5 h-5 text-primary-600" />
+                <h2 className="text-base font-semibold text-gray-900">Información Personal</h2>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Nombre
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Nombre</label>
                   <input
                     type="text"
                     name="name"
                     value={profileData.name}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Apellido Paterno
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Apellido Paterno</label>
                   <input
                     type="text"
                     name="paternalLastName"
                     value={profileData.paternalLastName}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Apellido Materno
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Apellido Materno</label>
                   <input
                     type="text"
                     name="maternalLastName"
                     value={profileData.maternalLastName}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <HiOutlineEnvelope className="w-4 h-4" />
-                    Correo Electrónico
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Correo Electrónico</label>
                   <input
                     type="email"
                     name="email"
                     value={profileData.email}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="No disponible"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled
+                    placeholder="No registrado"
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <HiOutlinePhone className="w-4 h-4" />
-                    Teléfono
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Teléfono</label>
                   <input
                     type="tel"
                     name="phone"
                     value={profileData.phone}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    maxLength="10"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled
+                    className={inputClass}
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <HiOutlineCalendar className="w-4 h-4" />
-                    Fecha de Nacimiento
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Fecha de Nacimiento</label>
                   <input
                     type="date"
                     name="dateOfBirth"
                     value={profileData.dateOfBirth}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <HiOutlineIdentification className="w-4 h-4" />
-                    CURP
-                  </label>
-                  <input
-                    type="text"
-                    name="curp"
-                    value={profileData.curp}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    maxLength="18"
-                    placeholder="Opcional"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed uppercase"
+                    disabled
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <HiOutlineMapPin className="w-6 h-6 text-primary-600" />
-                Dirección
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Calle
-                  </label>
-                  <input
-                    type="text"
-                    name="address.street"
-                    value={profileData.address.street}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
+            {/* Shipping Addresses */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
+                  <h2 className="text-base font-semibold text-gray-900">Direcciones de Envío</h2>
+                  {addresses.length > 0 && (
+                    <span className="text-xs text-gray-400 font-normal">({addresses.length})</span>
+                  )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Número Exterior
-                  </label>
-                  <input
-                    type="text"
-                    name="address.number"
-                    value={profileData.address.number}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Número Interior (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    name="address.interior"
-                    value={profileData.address.interior}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Colonia
-                  </label>
-                  <input
-                    type="text"
-                    name="address.neighborhood"
-                    value={profileData.address.neighborhood}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Ciudad
-                  </label>
-                  <input
-                    type="text"
-                    name="address.city"
-                    value={profileData.address.city}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Estado
-                  </label>
-                  <input
-                    type="text"
-                    name="address.state"
-                    value={profileData.address.state}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Código Postal
-                  </label>
-                  <input
-                    type="text"
-                    name="address.zipCode"
-                    value={profileData.address.zipCode}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    maxLength="5"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Referencias de ubicación
-                  </label>
-                  <input
-                    type="text"
-                    name="address.references"
-                    value={profileData.address.references}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="Ej: Casa azul, entre calles X y Y"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddAddressModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+                >
+                  <HiOutlinePlus className="w-3.5 h-3.5" />
+                  Agregar
+                </button>
               </div>
+
+              {addresses.length === 0 ? (
+                <div className="text-center py-8">
+                  <HiOutlineMapPin className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500 mb-1">No tienes direcciones de envío</p>
+                  <p className="text-xs text-gray-400">Agrega una para agilizar tus compras</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {addresses.map((addr) => (
+                    <div
+                      key={addr.client_address_id}
+                      className={`relative p-4 rounded-xl border transition-colors ${
+                        addr.is_principal === 1
+                          ? 'border-primary-200 bg-primary-50/50'
+                          : 'border-gray-200 bg-gray-50/50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          addr.is_principal === 1
+                            ? 'bg-primary-100 text-primary-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {addr.alias?.toLowerCase().includes('oficina')
+                            ? <HiOutlineBuildingOffice className="w-4 h-4" />
+                            : <HiOutlineHome className="w-4 h-4" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-gray-900">{addr.alias || 'Dirección'}</span>
+                            {addr.is_principal === 1 && (
+                              <span className="text-[10px] font-medium text-primary-600 bg-primary-100 px-1.5 py-0.5 rounded">
+                                Principal
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            {addr.name_received}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {addr.street} {addr.external_number}
+                            {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {addr.neighborhood}, {addr.city}, {addr.state} CP {addr.zip_code}
+                          </p>
+                          {addr.phone_received && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Tel: {addr.phone_received}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Right Column - Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <HiOutlineLockClosed className="w-6 h-6 text-primary-600" />
-                Seguridad
-              </h2>
+            {/* Account Info */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <HiOutlineCreditCard className="w-5 h-5 text-primary-600" />
+                <h2 className="text-base font-semibold text-gray-900">Crédito</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Límite de crédito</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    ${(user?.limitCreditAmount ?? 0).toLocaleString('es-MX')}
+                  </p>
+                </div>
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-gray-400 mb-1">Estado</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-sm font-medium text-green-600">Cuenta activa</span>
+                  </div>
+                </div>
+                {user?.creditStatus && (
+                  <div className="border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-400 mb-1">Estatus de crédito</p>
+                    <span className="text-sm font-medium text-gray-700 capitalize">{user.creditStatus}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Security */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <HiOutlineShieldCheck className="w-5 h-5 text-primary-600" />
+                <h2 className="text-base font-semibold text-gray-900">Seguridad</h2>
+              </div>
 
               <button
                 onClick={handleChangePassword}
-                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-left flex items-center justify-between"
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
               >
-                <span>Cambiar Contraseña</span>
-                <HiOutlineLockClosed className="w-5 h-5" />
+                <div className="flex items-center gap-3">
+                  <HiOutlineLockClosed className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                  <span className="text-sm font-medium text-gray-700">Cambiar contraseña</span>
+                </div>
+                <HiOutlineArrowLeft className="w-4 h-4 text-gray-400 rotate-180" />
               </button>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Información de Cuenta
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Límite de crédito</span>
-                  <span className="font-medium text-gray-900">
-                    ${(user?.limitCreditAmount ?? 0).toLocaleString('es-MX')}
+              {user?.emailVerified != null && (
+                <div className="mt-3 flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg">
+                  <HiOutlineEnvelope className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-700">Correo verificado</span>
+                  <span className="ml-auto">
+                    {user.emailVerified ? (
+                      <HiOutlineCheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <HiOutlineXMark className="w-5 h-5 text-red-400" />
+                    )}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Estado de cuenta</span>
-                  <span className="font-medium text-green-600">Activa</span>
-                </div>
+              )}
+            </div>
+
+            {/* Quick Info */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <HiOutlineIdentification className="w-5 h-5 text-primary-600" />
+                <h2 className="text-base font-semibold text-gray-900">Datos de cuenta</h2>
+              </div>
+
+              <div className="space-y-3">
+                {client?.phone && (
+                  <div className="flex items-center gap-3">
+                    <HiOutlinePhone className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-400">Teléfono</p>
+                      <p className="text-sm text-gray-700">{client.phone}</p>
+                    </div>
+                  </div>
+                )}
+                {client?.email && (
+                  <div className="flex items-center gap-3">
+                    <HiOutlineEnvelope className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-400">Correo</p>
+                      <p className="text-sm text-gray-700 break-all">{client.email}</p>
+                    </div>
+                  </div>
+                )}
+                {client?.birthdate && (
+                  <div className="flex items-center gap-3">
+                    <HiOutlineCalendar className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-400">Fecha de nacimiento</p>
+                      <p className="text-sm text-gray-700">{client.birthdate}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      <AddAddressModal
+        isOpen={isAddAddressModalOpen}
+        onClose={() => setIsAddAddressModalOpen(false)}
+        onSuccess={handleAddressSuccess}
+      />
 
       <Footer />
     </div>

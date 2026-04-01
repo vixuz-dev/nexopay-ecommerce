@@ -128,44 +128,6 @@ const useCartStore = create(
         set({ items: updatedItems });
       },
 
-      updateSize: (itemId, oldSize, newSize) => {
-        const items = get().items;
-        const item = items.find(
-          item => item.id === itemId && item.size === oldSize
-        );
-
-        if (item) {
-          const existingItem = items.find(
-            i => i.id === itemId && i.size === newSize
-          );
-
-          if (existingItem) {
-            const mergedQty = existingItem.quantity + item.quantity;
-            const unitTotal = existingItem.price ?? 0;
-            const unitInit = existingItem.unitInitialPayment ?? unitTotal * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
-            const unitDeferred = existingItem.unitDeferredAmount ?? unitTotal - unitInit;
-            const updatedItems = items
-              .filter(i => !(i.id === itemId && i.size === oldSize))
-              .map(i =>
-                i.id === itemId && i.size === newSize
-                  ? {
-                      ...i,
-                      quantity: mergedQty,
-                      total: unitTotal * mergedQty,
-                      unitInitialPayment: unitInit,
-                      unitDeferredAmount: unitDeferred,
-                    }
-                  : i
-              );
-            set({ items: updatedItems });
-          } else {
-            set({ items: items.map(i =>
-              i.id === itemId && i.size === oldSize ? { ...i, size: newSize } : i
-            ) });
-          }
-        }
-      },
-
       // Limpiar el carrito
       clearCart: () => {
         set({ items: [], deferralMonths: CHECKOUT_CONFIG.DEFAULT_DEFERRAL_MONTHS });
@@ -229,10 +191,6 @@ const useCartStore = create(
         return get().items.reduce((sum, item) => sum + item.quantity, 0);
       },
 
-      // Verificar si el carrito está vacío
-      isEmpty: () => {
-        return get().items.length === 0;
-      },
     }),
     {
       name: 'cart-storage',

@@ -87,7 +87,7 @@ const Home = () => {
         <BannerCarousel banners={mockBanners} />
         
         {!categoriesLoading && categoriesForCarousel.length > 0 && (
-          <CategoryCarousel categories={categoriesForCarousel} viewAllPath={ROUTES.PRODUCTS} />
+          <CategoryCarousel categories={categoriesForCarousel} viewAllPath={ROUTES.CATEGORIES} />
         )}
         
         <section className="bg-white py-16 lg:py-24">

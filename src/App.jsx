@@ -3,8 +3,8 @@ import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { initMercadoPago } from "@mercadopago/sdk-react";
 import { MERCADO_PAGO_PUBLIC_KEY } from "./constants/app";
 import { SWRConfig } from "swr";
-import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { useAuthInit } from "./hooks/useAuthInit";
 import { swrConfig } from "./api/config/swrConfig";
 import CartSidebar from "./components/ecommerce/CartSidebar";
 import ScrollToTop from "./components/common/ScrollToTop";
@@ -35,6 +35,7 @@ import InvoiceDetailPage from "./pages/InvoiceDetailPage";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
 const InvoiceDetailRedirect = () => {
@@ -50,6 +51,7 @@ const InvoiceDetailRedirect = () => {
 
 function App() {
   const { isCartSidebarOpen, closeCartSidebar } = useUIStore();
+  const { loading: authLoading } = useAuthInit();
 
   useEffect(() => {
     if (MERCADO_PAGO_PUBLIC_KEY) {
@@ -57,10 +59,13 @@ function App() {
     }
   }, []);
 
+  if (authLoading) {
+    return <GlobalLoader />;
+  }
+
   return (
     <SWRConfig value={swrConfig}>
-      <AuthProvider>
-        <ThemeProvider>
+      <ThemeProvider>
           <div className="min-h-screen">
             <ScrollToTop />
             <EmailVerificationBanner />
@@ -142,6 +147,14 @@ function App() {
               <Route
                 path={ROUTES.CREDIT_REQUEST}
                 element={<Navigate to={ROUTES.MY_CREDIT} replace />}
+              />
+              <Route
+                path={ROUTES.CATEGORIES}
+                element={
+                  <ProtectedRoute>
+                    <Categories />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path={ROUTES.PRODUCTS}
@@ -267,7 +280,6 @@ function App() {
             </Routes>
           </div>
         </ThemeProvider>
-      </AuthProvider>
     </SWRConfig>
   );
 }

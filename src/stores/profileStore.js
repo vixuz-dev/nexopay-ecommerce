@@ -20,8 +20,6 @@ const useProfileStore = create(
         }
       },
 
-      setProfileInformation: (data) => set({ profileInformation: data, isProfileLoaded: true }),
-
       setClientFromLogin: (client) => {
         set((state) => ({
           profileInformation: {

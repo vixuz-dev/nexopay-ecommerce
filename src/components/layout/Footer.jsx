@@ -4,18 +4,17 @@ import { HiOutlineEnvelope, HiOutlinePhone, HiOutlineMapPin, HiOutlineShieldChec
 import { ROUTES } from '../../utils/routes';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
 
+const TERMS_URL = 'https://nexopay.mx/terminos-condiciones';
+
 const Footer = () => {
   return (
     <footer className="bg-white text-gray-800">
-      {/* Top Border - 80% width */}
       <div className="flex justify-center">
         <div className="w-4/5 border-t border-gray-200"></div>
       </div>
       
-      {/* Main Footer Content */}
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Logo and Description */}
           <div className="lg:col-span-1">
             <div className="mb-6">
               <img 
@@ -33,56 +32,60 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Enlaces */}
           <div>
-            <h4 className="text-lg font-semibold mb-6 text-gray-800">Enlaces</h4>
+            <h4 className="text-lg font-semibold mb-6 text-gray-800">Navegación</h4>
             <ul className="space-y-3">
-              <li><Link to={ROUTES.LOGIN} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Iniciar sesión</Link></li>
-              <li><Link to={ROUTES.REGISTER} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Registrarse</Link></li>
+              <li><Link to={ROUTES.HOME} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Inicio</Link></li>
+              <li><Link to={ROUTES.PRODUCTS} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Productos</Link></li>
+              <li><Link to={ROUTES.CART} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Ver carrito</Link></li>
+              <li><Link to={ROUTES.MY_ACCOUNT} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Mi cuenta</Link></li>
+              <li><Link to={ROUTES.MY_ORDERS} className="text-gray-600 hover:text-primary-600 transition-colors duration-200">Mis pedidos</Link></li>
             </ul>
           </div>
 
-          {/* Contacto y Legal */}
           <div>
             <h4 className="text-lg font-semibold mb-6 text-gray-800">Contacto</h4>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <HiOutlineEnvelope className="w-5 h-5 text-primary-600" />
-                <span className="text-gray-600">hola@nexopay.com</span>
+                <span className="text-gray-600">contacto@nexopay.mx</span>
               </div>
               <div className="flex items-center gap-3">
                 <HiOutlinePhone className="w-5 h-5 text-primary-600" />
-                <span className="text-gray-600">+52 55 1234 5678</span>
+                <span className="text-gray-600">351 145 7093</span>
               </div>
               <div className="flex items-center gap-3">
                 <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
-                <span className="text-gray-600">Ciudad de México, México</span>
+                <span className="text-gray-600">Zamora, Michoacán, México</span>
               </div>
             </div>
             
             <div className="mt-6">
               <h5 className="text-sm font-semibold mb-3 text-gray-800">Legal</h5>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200 text-sm">Términos y condiciones</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200 text-sm">Aviso de privacidad</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-primary-600 transition-colors duration-200 text-sm">Política de cookies</a></li>
+                <li>
+                  <a
+                    href={TERMS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-600 hover:text-primary-600 transition-colors duration-200 text-sm"
+                  >
+                    Términos y condiciones
+                  </a>
+                </li>
+                <li><span className="text-gray-400 text-sm">Aviso de privacidad</span></li>
+                <li><span className="text-gray-400 text-sm">Política de cookies</span></li>
               </ul>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div>
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-gray-500 text-sm">
-              © 2025 NexoPay. Todos los derechos reservados.
-            </div>
-            <div className="flex items-center gap-6">
-              {/* <span className="text-primary-200 text-sm">Regulada por CNBV</span> */}
-              {/* <div className="w-1 h-1 bg-primary-300 rounded-full"></div>
-              <span className="text-primary-200 text-sm">Seguridad SSL</span> */}
+              © {new Date().getFullYear()} Nexo Technologies. Todos los derechos reservados.
             </div>
           </div>
         </div>

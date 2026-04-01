@@ -5,7 +5,7 @@ import { useCartApi } from '../../hooks/useCartApi';
 import { useRemoveFromCart } from '../../hooks/useRemoveFromCart';
 import { useUpdateCartQuantity } from '../../hooks/useUpdateCartQuantity';
 import { useClearCart } from '../../hooks/useClearCart';
-import { useAuth } from '../../context/AuthContext';
+import useUserStore from '../../stores/userStore';
 import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG, getShippingCost } from '../../constants/checkoutConfig';
 import { productsService } from '../../api/services/productsService';
@@ -19,7 +19,7 @@ import ProductPlaceholder from '../common/ProductPlaceholder';
 
 const CartSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = !!useUserStore((s) => s.user);
   const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
   const { removeFromCart } = useRemoveFromCart();
   const { updateQuantityInCart } = useUpdateCartQuantity();
@@ -29,7 +29,6 @@ const CartSidebar = ({ isOpen, onClose }) => {
     updateItemCategoryIds,
     getSubtotal,
     getTotalItems,
-    isEmpty,
     getInitialPayment,
   } = useCartStore();
 
@@ -154,7 +153,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {isEmpty() ? (
+          {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
               <HiOutlineShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
               <p className="text-gray-600 font-medium mb-2">Tu carrito está vacío</p>
@@ -172,16 +171,16 @@ const CartSidebar = ({ isOpen, onClose }) => {
             <div className="p-6 space-y-4">
               {items.map((item) => {
                 const productDetailUrl = getProductDetailUrl(item.name, item.categoryId, item.subcategoryId);
+                const isOutOfStock = item.stock != null && item.stock <= 0;
                 return (
                 <div
                   key={`${item.id}-${item.size}`}
-                  className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  className={`flex gap-4 p-4 rounded-lg border border-gray-200 ${isOutOfStock ? 'bg-gray-50/50 opacity-75' : 'bg-gray-50'}`}
                 >
-                  {/* Imagen - clickeable */}
                   <Link
                     to={productDetailUrl}
                     onClick={onClose}
-                    className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block"
+                    className={`w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
                   >
                     {item.image ? (
                       <img
@@ -194,68 +193,82 @@ const CartSidebar = ({ isOpen, onClose }) => {
                     )}
                   </Link>
 
-                  {/* Información */}
                   <div className="flex-1 min-w-0">
                     <Link
                       to={productDetailUrl}
                       onClick={onClose}
                       className="block"
                     >
-                      <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2 hover:text-primary-600 transition-colors">
+                      <h3 className={`font-semibold text-sm mb-1 line-clamp-2 hover:text-primary-600 transition-colors ${isOutOfStock ? 'text-gray-400' : 'text-gray-900'}`}>
                         {item.name}
                       </h3>
                       {item.attributes && item.attributes.length > 0 && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-400">
                           {item.attributes.map((a) => `${a.name}: ${a.value}`).join(' · ')}
                         </p>
                       )}
                     </Link>
-                    {/* Cantidad y Precio */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.stock ?? 999)}
-                          disabled={item.quantity <= 1}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center text-sm font-medium text-gray-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.stock ?? 999)}
-                          disabled={item.quantity >= (item.stock ?? 999)}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {formatPrice(item.total)}
-                        </p>
-                        {item.originalPrice && item.originalPrice > item.price && (
-                          <p className="text-xs text-gray-500 line-through">
-                            {formatPrice(item.originalPrice * item.quantity)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Remover */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleRemoveItem(item.id, item.size);
-                      }}
-                      className="mt-2 text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
-                    >
-                      <HiOutlineTrash className="w-4 h-4" />
-                      Remover
-                    </button>
+                    {isOutOfStock ? (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-xs font-medium text-red-500">No disponible</span>
+                        <span className="text-gray-300">·</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id, item.size)}
+                          className="text-xs font-medium text-primary-600 hover:text-primary-700 underline underline-offset-2 transition-colors"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.stock ?? 999)}
+                              disabled={item.quantity <= 1}
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              -
+                            </button>
+                            <span className="w-8 text-center text-sm font-medium text-gray-900">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.stock ?? 999)}
+                              disabled={item.quantity >= (item.stock ?? 999)}
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {formatPrice(item.total)}
+                            </p>
+                            {item.originalPrice && item.originalPrice > item.price && (
+                              <p className="text-xs text-gray-500 line-through">
+                                {formatPrice(item.originalPrice * item.quantity)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRemoveItem(item.id, item.size);
+                          }}
+                          className="mt-2 text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                        >
+                          <HiOutlineTrash className="w-4 h-4" />
+                          Remover
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -265,7 +278,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer - Resumen y Acciones */}
-        {!isEmpty() && (
+        {items.length > 0 && (
           <div className="border-t border-gray-200 p-6 bg-white">
             {/* Resumen */}
             <div className="space-y-3 mb-6">

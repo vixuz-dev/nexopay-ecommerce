@@ -51,8 +51,17 @@ export const useProductsApi = (params) => {
     return [];
   })();
 
+  const totalCount =
+    data?.body?.totalCount ??
+    data?.body?.total ??
+    data?.body?.totalProducts ??
+    data?.totalCount ??
+    data?.total ??
+    null;
+
   return {
     products,
+    totalCount,
     isLoading,
     isError: !!error,
     error,

@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { HiOutlineBars3, HiOutlineXMark, HiOutlineShoppingCart, HiOutlineChevronDown } from 'react-icons/hi2';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { HiOutlineBars3, HiOutlineXMark, HiOutlineShoppingCart, HiOutlineChevronDown, HiOutlineMapPin } from 'react-icons/hi2';
 import NavItem from './NavItem';
 import CategoriesMegaMenu from './CategoriesMegaMenu';
 import CategoriesMobileMenu from './CategoriesMobileMenu';
@@ -8,6 +8,8 @@ import SearchBar from './SearchBar';
 import UserAvatar from './UserAvatar';
 import useCartStore from '../../stores/cartStore';
 import useUIStore from '../../stores/uiStore';
+import useAddressesStore from '../../stores/addressesStore';
+import useUserStore from '../../stores/userStore';
 import { useCategories } from '../../hooks/useCategories';
 import { ROUTES, getProductsByCategoryUrl } from '../../utils/routes';
 import nexoLogo from '../../assets/images/nexo-white-logo.webp';
@@ -23,10 +25,26 @@ const Navbar = ({
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const categoriesRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const isHomePage = location.pathname === '/';
   const totalItems = useCartStore((state) => state.getTotalItems());
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
+  const isAuthenticated = !!useUserStore((s) => s.user);
+  const addresses = useAddressesStore((s) => s.addresses);
+  const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
+  const addressesLoaded = useAddressesStore((s) => s.isLoaded);
   const { categories, isLoading: categoriesLoading, error: categoriesError } = useCategories();
+
+  useEffect(() => {
+    if (isAuthenticated && !addressesLoaded) {
+      fetchAddresses().catch(() => {});
+    }
+  }, [isAuthenticated, addressesLoaded, fetchAddresses]);
+
+  const primaryAddress = useMemo(() => {
+    if (!addresses || addresses.length === 0) return null;
+    return addresses.find((a) => a.is_principal === 1) || addresses[0];
+  }, [addresses]);
 
   const categoriesDropdown = useMemo(() => {
     if (!categories) {
@@ -37,7 +55,6 @@ const Navbar = ({
     const categoriesArray = Array.isArray(categories) ? categories : [];
 
     if (categoriesArray.length === 0) {
-      console.log('Categories array is empty or not an array');
       return [];
     }
 
@@ -88,10 +105,10 @@ const Navbar = ({
   };
 
   return (
-    <nav className={`relative ${isHomePage ? 'bg-primary-500' : 'bg-white shadow-md'} transition-all duration-300`}>
+    <nav className={`relative ${isHomePage ? 'bg-primary-500' : 'bg-white border-b border-gray-200'} transition-all duration-300`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-4 py-4">
-          <Link to="/" className="flex items-center flex-shrink-0 md:flex-shrink-0 mx-auto md:mx-0">
+          <Link to={ROUTES.HOME} className="flex items-center flex-shrink-0 md:flex-shrink-0 mx-auto md:mx-0">
             <img 
               src={isHomePage ? nexoLogo : nexopayLogo}
               alt="NexoPay" 
@@ -227,6 +244,27 @@ const Navbar = ({
               />
             );
           })}
+
+          <button
+            onClick={() => navigate(isAuthenticated ? ROUTES.MY_PROFILE : ROUTES.LOGIN)}
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 ${
+              isHomePage
+                ? 'bg-white/20 text-white hover:bg-white/30'
+                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+            }`}
+          >
+            <HiOutlineMapPin className="w-3.5 h-3.5" />
+            <span>
+              Enviar a{' '}
+              {isAuthenticated && primaryAddress ? (
+                <span className="font-semibold">CP {primaryAddress.zip_code}</span>
+              ) : (
+                <span className="font-semibold">
+                  {isAuthenticated ? 'Agrega dirección' : 'Tu ubicación'}
+                </span>
+              )}
+            </span>
+          </button>
         </div>
       </div>
 

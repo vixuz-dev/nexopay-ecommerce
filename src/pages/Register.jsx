@@ -8,8 +8,7 @@ import nexopayLogo from '../assets/images/NexoPay-Logo.png';
 const Register = () => {
   const navigate = useNavigate();
 
-  const handleRegisterSuccess = (data) => {
-    console.log('Registro exitoso:', data);
+  const handleRegisterSuccess = () => {
     navigate(ROUTES.LOGIN);
   };
 

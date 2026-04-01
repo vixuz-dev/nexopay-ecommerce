@@ -10,6 +10,7 @@ import { useCategories } from '../hooks/useCategories';
 import { mapApiProductToComponent, mapSimilarProductToComponent } from '../utils/productMapper';
 import { HiOutlineFunnel, HiOutlineXMark, HiOutlineArrowLeft } from 'react-icons/hi2';
 import { ROUTES } from '../utils/routes';
+import Pagination from '../components/common/Pagination';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,8 +20,9 @@ const Products = () => {
   const categoryIdParam = searchParams.get('categoryId');
   const subcategoryIdParam = searchParams.get('subcategoryId');
   const affiliateIdParam = searchParams.get('affiliateId');
+  const ITEMS_PER_PAGE = 40;
   const page = parseInt(searchParams.get('page')) || 1;
-  const totalItems = parseInt(searchParams.get('totalItems')) || 20;
+  const totalItems = ITEMS_PER_PAGE;
 
   const { categories: apiCategories, isLoading: categoriesLoading } = useCategories();
 
@@ -57,7 +59,7 @@ const Products = () => {
     totalItems,
   }), [affiliateId, categoryId, page, totalItems]);
 
-  const { products: apiProductsCatalog, isLoading: productsLoading, isError, error } = useProductsApi(
+  const { products: apiProductsCatalog, totalCount, isLoading: productsLoading, isError, error } = useProductsApi(
     isAffiliateMode ? null : apiParams
   );
 
@@ -187,6 +189,24 @@ const Products = () => {
     setSearchParams({});
   };
 
+  const hasNextPage = products.length >= ITEMS_PER_PAGE;
+  const totalPages = totalCount != null
+    ? Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE))
+    : (hasNextPage ? page + 1 : page);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === page) return;
+    setSearchParams(prev => {
+      if (newPage === 1) {
+        prev.delete('page');
+      } else {
+        prev.set('page', String(newPage));
+      }
+      return prev;
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const sortOptions = [
     { value: 'name-asc', label: 'Nombre (A-Z)' },
     { value: 'name-desc', label: 'Nombre (Z-A)' },
@@ -207,13 +227,10 @@ const Products = () => {
     isAffiliateMode;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <Header />
   
-      <div
-        className="flex flex-1 overflow-hidden"
-        style={{ height: 'calc(100vh - 4rem)' }}
-      >
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar Filters (Desktop) */}
         <aside className="hidden lg:block w-64 flex-shrink-0 bg-white border-r border-gray-200">
           <div className="h-full overflow-y-auto">
@@ -258,7 +275,8 @@ const Products = () => {
   
         {/* Main Content Area - Solo este hace scroll */}
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="min-h-full flex flex-col">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
           {isAffiliateMode && (
             <div className="mb-6 flex items-center gap-3 p-4 bg-primary-50 border border-primary-200 rounded-lg">
               <Link
@@ -337,10 +355,15 @@ const Products = () => {
           {/* Products Section */}
           <div>
             {!loading && products.length > 0 && (
-              <div className="mb-4 text-sm text-gray-600">
+              <div className="mb-4 flex items-center justify-between text-sm text-gray-600">
                 <span>
-                  {products.length} {products.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+                  {totalCount != null
+                    ? `${totalCount} producto${totalCount === 1 ? '' : 's'} encontrado${totalCount === 1 ? '' : 's'}`
+                    : `${products.length} producto${products.length === 1 ? '' : 's'} encontrado${products.length === 1 ? '' : 's'}`}
                 </span>
+                {totalPages > 1 && (
+                  <span>Página {page} de {totalPages}</span>
+                )}
               </div>
             )}
   
@@ -358,14 +381,23 @@ const Products = () => {
               searchQuery={search}
               categoryName={selectedCategories[0] || null}
             />
+
+            {!loading && products.length > 0 && totalPages > 1 && (
+              <div className="pb-8">
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
           </div>
+        </div>
+        <Footer />
         </div>
       </main>
     </div>
-  
-    <Footer />
   </div>
-  
   );
 };
 

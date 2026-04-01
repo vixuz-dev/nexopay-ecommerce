@@ -6,7 +6,6 @@ const useUIStore = create((set) => ({
 
   openCartSidebar: () => set({ isCartSidebarOpen: true }),
   closeCartSidebar: () => set({ isCartSidebarOpen: false }),
-  toggleCartSidebar: () => set((state) => ({ isCartSidebarOpen: !state.isCartSidebarOpen })),
 
   showGlobalLoader: () => set({ isGlobalLoaderOpen: true }),
   hideGlobalLoader: () => set({ isGlobalLoaderOpen: false }),

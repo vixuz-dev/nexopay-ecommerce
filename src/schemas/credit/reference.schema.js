@@ -137,8 +137,4 @@ export const referenceSchema = z.object({
     })
 });
 
-export const personalReferencesSchema = z.object({
-  reference1: referenceSchema,
-  reference2: referenceSchema
-});
 

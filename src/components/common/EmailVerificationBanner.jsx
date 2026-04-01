@@ -3,12 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineEnvelope, HiOutlineArrowRight } from 'react-icons/hi2';
 import { ROUTES } from '../../utils/routes';
 import useUserStore from '../../stores/userStore';
-import { useAuth } from '../../context/AuthContext';
 
 const EmailVerificationBanner = () => {
-  const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
   const user = useUserStore((state) => state.user);
+  const isAuthenticated = !!user;
   const emailVerified = user?.emailVerified === true;
 
   const isVerificationPage =

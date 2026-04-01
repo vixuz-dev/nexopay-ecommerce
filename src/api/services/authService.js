@@ -6,13 +6,6 @@ import { getCookie, removeCookie } from '../../utils/cookieUtils';
  */
 class AuthService {
   /**
-   * Get app version from environment or default
-   * @returns {string} - App version
-   */
-  getAppVersion() {
-    return import.meta.env.VITE_APP_VERSION || '1.0.0';
-  }
-  /**
    * Login user
    * @param {string} email - User email
    * @param {string} password - User password
@@ -39,27 +32,6 @@ class AuthService {
     }
 
     return data;
-  }
-
-  /**
-   * Register new user
-   * @param {object} userData - User registration data
-   * @returns {Promise<object>} - Registration response
-   */
-  async register(userData) {
-    const response = await fetch(ENDPOINTS.AUTH.REGISTER, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Registration failed');
-    }
-
-    return await response.json();
   }
 
   /**
@@ -93,35 +65,6 @@ class AuthService {
    */
   getToken() {
     return getCookie('authToken') || localStorage.getItem('authToken');
-  }
-
-  /**
-   * Check if user is authenticated
-   * @returns {boolean} - True if authenticated
-   */
-  isAuthenticated() {
-    return !!this.getToken();
-  }
-
-  /**
-   * Forgot password
-   * @param {string} email - User email
-   * @returns {Promise<object>} - Response
-   */
-  async forgotPassword(email) {
-    const response = await fetch(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to send reset email');
-    }
-
-    return await response.json();
   }
 
   async loginClient(phoneNumber, password) {

@@ -7,8 +7,6 @@ const usePreOrderStore = create(
       preOrder: null,
 
       setPreOrder: (data) => set({ preOrder: data }),
-
-      clearPreOrder: () => set({ preOrder: null }),
     }),
     { name: 'pre-order-storage' }
   )

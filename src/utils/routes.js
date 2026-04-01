@@ -22,6 +22,7 @@ export const ROUTES = {
   PAY_CREDIT: '/pagar-credito',
 
   // Productos
+  CATEGORIES: '/categorias',
   PRODUCTS: '/productos',
   PRODUCT_DETAIL: '/producto',
 
@@ -44,8 +45,6 @@ export const ROUTES = {
   TERMS: '/terminos',
   PRIVACY: '/privacidad',
 
-  // Favoritos
-  FAVORITES: '/favoritos',
 };
 
 /**
@@ -139,20 +138,6 @@ export const getProductsByCategoryUrl = (categoryId, subcategoryId = null, produ
   return queryString ? `${ROUTES.PRODUCTS}?${queryString}` : ROUTES.PRODUCTS;
 };
 
-/**
- * Genera la URL de productos del vendedor/afiliado
- * @param {number} affiliateId - ID del afiliado
- * @param {number} [categoryId] - ID de categoría (opcional, para filtrar por categoría)
- * @param {number} [page] - Número de página
- * @returns {string} - URL con affiliateId
- */
-export const getProductsByAffiliateUrl = (affiliateId, categoryId = null, page = 1) => {
-  const params = new URLSearchParams();
-  params.set('affiliateId', String(affiliateId));
-  if (categoryId) params.set('categoryId', String(categoryId));
-  if (page > 1) params.set('page', String(page));
-  return `${ROUTES.PRODUCTS}?${params.toString()}`;
-};
 
 export const getOrderDetailUrl = (orderId) =>
   `/mis-pedidos/${encodeURIComponent(orderId)}`;

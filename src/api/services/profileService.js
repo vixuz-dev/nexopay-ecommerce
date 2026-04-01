@@ -40,29 +40,4 @@ export const profileService = {
     return creditLineRequestService.getCreditLineRequests();
   },
 
-  /**
-   * Update client profile data
-   * @param {Object} payload - Client data to update
-   * @returns {Promise<object>} - Updated client data
-   */
-  async updateClient(payload) {
-    const response = await fetch(ENDPOINTS.ECOMMERCE_PROFILE.UPDATE_CLIENT, {
-      method: 'PUT',
-      headers: getInternalApiHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const error = new Error(data.message || data.statusMessage || 'Error al actualizar el perfil');
-      error.statusCode = response.status;
-      error.status = response.status;
-      error.statusMessage = data.statusMessage;
-      handleAuthError(error, response);
-      throw error;
-    }
-
-    return data.body ?? data.data ?? data;
-  },
 };

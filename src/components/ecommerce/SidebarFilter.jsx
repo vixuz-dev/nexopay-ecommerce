@@ -88,7 +88,7 @@ const SidebarFilter = ({
         </button>
 
         {expandedSections.categories && (
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-2">
             {categories.map((category) => (
               <label
                 key={category}
@@ -109,8 +109,8 @@ const SidebarFilter = ({
         )}
       </div>
 
-      {/* Precio */}
-      <div className="border-t border-gray-200 pt-6">
+      {/* Precio (oculto temporalmente) */}
+      <div className="hidden border-t border-gray-200 pt-6">
         <button
           onClick={() => toggleSection('price')}
           className="w-full flex items-center justify-between mb-4"
@@ -299,8 +299,8 @@ const SidebarFilter = ({
         )}
       </div>
 
-      {/* Disponibilidad */}
-      <div className="border-t border-gray-200 pt-6">
+      {/* Disponibilidad (oculto temporalmente) */}
+      <div className="hidden border-t border-gray-200 pt-6">
         <button
           onClick={() => toggleSection('availability')}
           className="w-full flex items-center justify-between mb-4"

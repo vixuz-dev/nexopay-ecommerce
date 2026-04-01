@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { cartService } from '../api/services/cartService';
 import useCartStore from '../stores/cartStore';
-import { useAuth } from '../context/AuthContext';
+import useUserStore from '../stores/userStore';
 
 export const useAddToCart = () => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = !!useUserStore((s) => s.user);
   const addItem = useCartStore((s) => s.addItem);
 
   const addToCart = useCallback(
