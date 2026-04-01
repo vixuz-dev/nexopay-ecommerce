@@ -1,0 +1,138 @@
+{
+  "token": "cy-fake-token",
+  "userStorage": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":true}},\"version\":0}",
+  "emptyCart": {
+    "statusCode": 200,
+    "succes": true,
+    "statusMessage": "Productos del carrito recuperados correctamente",
+    "body": []
+  },
+  "cartWithItems": {
+    "statusCode": 200,
+    "succes": true,
+    "statusMessage": "Productos del carrito recuperados correctamente",
+    "body": [
+      {
+        "productId": 10,
+        "productName": "iPhone 16 Pro",
+        "productDescription": "Smartphone Apple",
+        "categoryName": "Electrónica",
+        "categoryId": 2,
+        "subcategoryId": 7,
+        "affiliate": "TechStore",
+        "affiliateId": 1,
+        "productVariantId": 20,
+        "productCondition": "nuevo",
+        "stock": 5,
+        "initialPaymentCost": 15000,
+        "remainingBalance": 35000,
+        "finalPrice": 50000,
+        "variantImageUrl": "https://placehold.co/200x200?text=iPhone",
+        "attributes": [
+          { "name": "Color", "value": "Negro" },
+          { "name": "Almacenamiento", "value": "256 GB" }
+        ],
+        "quantity": 1
+      },
+      {
+        "productId": 11,
+        "productName": "Samsung Galaxy S24",
+        "productDescription": "Smartphone Samsung",
+        "categoryName": "Electrónica",
+        "categoryId": 2,
+        "subcategoryId": 6,
+        "affiliate": "TechStore",
+        "affiliateId": 1,
+        "productVariantId": 21,
+        "productCondition": "nuevo",
+        "stock": 10,
+        "initialPaymentCost": 6000,
+        "remainingBalance": 14000,
+        "finalPrice": 20000,
+        "variantImageUrl": "https://placehold.co/200x200?text=Samsung",
+        "attributes": [
+          { "name": "Color", "value": "Blanco" }
+        ],
+        "quantity": 2
+      }
+    ]
+  },
+  "cartWithOutOfStock": {
+    "statusCode": 200,
+    "succes": true,
+    "statusMessage": "Productos del carrito recuperados correctamente",
+    "body": [
+      {
+        "productId": 10,
+        "productName": "iPhone 16 Pro",
+        "categoryName": "Electrónica",
+        "categoryId": 2,
+        "subcategoryId": 7,
+        "productVariantId": 20,
+        "stock": 5,
+        "initialPaymentCost": 15000,
+        "remainingBalance": 35000,
+        "finalPrice": 50000,
+        "variantImageUrl": "https://placehold.co/200x200?text=iPhone",
+        "attributes": [],
+        "quantity": 1
+      },
+      {
+        "productId": 35,
+        "productName": "Xiaomi 18 Pro",
+        "categoryName": "Electrónica",
+        "categoryId": 2,
+        "subcategoryId": 6,
+        "productVariantId": 37,
+        "stock": 0,
+        "initialPaymentCost": 558,
+        "remainingBalance": 1301,
+        "finalPrice": 1859,
+        "variantImageUrl": "https://placehold.co/200x200?text=Xiaomi",
+        "attributes": [
+          { "name": "Color", "value": "Blanco" }
+        ],
+        "quantity": 1
+      }
+    ]
+  },
+  "addresses": {
+    "statusCode": 200,
+    "succes": true,
+    "body": [
+      {
+        "client_address_id": 1,
+        "alias": "Casa",
+        "name_received": "Cypress Test",
+        "street": "Av. Reforma",
+        "external_number": "100",
+        "internal_number": "",
+        "neighborhood": "Centro",
+        "city": "CDMX",
+        "state": "CDMX",
+        "zip_code": "06000",
+        "address_references": "Junto al parque",
+        "is_principal": 1
+      },
+      {
+        "client_address_id": 2,
+        "alias": "Oficina",
+        "name_received": "Cypress Test",
+        "street": "Calle Juárez",
+        "external_number": "50",
+        "internal_number": "3A",
+        "neighborhood": "Roma",
+        "city": "CDMX",
+        "state": "CDMX",
+        "zip_code": "06700",
+        "address_references": "",
+        "is_principal": 0
+      }
+    ]
+  },
+  "emptyAddresses": {
+    "statusCode": 200,
+    "succes": true,
+    "body": []
+  }
+}

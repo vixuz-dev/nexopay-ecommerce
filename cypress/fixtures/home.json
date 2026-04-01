@@ -1,0 +1,161 @@
+{
+  "token": "cy-fake-token",
+  "userStorage": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":true}},\"version\":0}",
+  "userStorageUnverified": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":false}},\"version\":0}",
+  "homeWithSections": {
+    "statusCode": 200,
+    "body": {
+      "sections": [
+        {
+          "key": "new",
+          "title": "Lo más nuevo",
+          "products": [
+            {
+              "productId": 1,
+              "productName": "iPhone 16 Pro",
+              "productDescription": "Smartphone Apple",
+              "categoryName": "Electrónica",
+              "categoryId": 2,
+              "subcategoryId": 7,
+              "finalPrice": 50000,
+              "initialPaymentCost": 15000,
+              "remainingBalance": 35000,
+              "stock": 5,
+              "variantImageUrl": "https://placehold.co/300x300?text=iPhone",
+              "productVariantId": 20,
+              "attributes": []
+            },
+            {
+              "productId": 2,
+              "productName": "Samsung Galaxy S24",
+              "productDescription": "Smartphone Samsung",
+              "categoryName": "Electrónica",
+              "categoryId": 2,
+              "subcategoryId": 6,
+              "finalPrice": 20000,
+              "initialPaymentCost": 6000,
+              "remainingBalance": 14000,
+              "stock": 10,
+              "variantImageUrl": "https://placehold.co/300x300?text=Samsung",
+              "productVariantId": 21,
+              "attributes": []
+            },
+            {
+              "productId": 3,
+              "productName": "MacBook Air M3",
+              "productDescription": "Laptop Apple",
+              "categoryName": "Electrónica",
+              "categoryId": 2,
+              "subcategoryId": 8,
+              "finalPrice": 30000,
+              "initialPaymentCost": 9000,
+              "remainingBalance": 21000,
+              "stock": 3,
+              "variantImageUrl": "https://placehold.co/300x300?text=MacBook",
+              "productVariantId": 22,
+              "attributes": []
+            }
+          ]
+        },
+        {
+          "key": "brands",
+          "title": "Marcas destacadas",
+          "brands": [
+            { "name": "Apple", "logo_url": "https://placehold.co/100x100?text=Apple" },
+            { "name": "Samsung", "logo_url": "https://placehold.co/100x100?text=Samsung" },
+            { "name": "Xiaomi", "logo_url": "https://placehold.co/100x100?text=Xiaomi" }
+          ]
+        }
+      ]
+    }
+  },
+  "homeEmpty": {
+    "statusCode": 200,
+    "body": {
+      "sections": []
+    }
+  },
+  "categories": {
+    "statusCode": 200,
+    "body": [
+      { "id": 1, "name": "Moda", "category_id": 1 },
+      { "id": 2, "name": "Electrónica", "category_id": 2 },
+      { "id": 3, "name": "Hogar", "category_id": 3 },
+      { "id": 4, "name": "Belleza", "category_id": 4 }
+    ]
+  },
+  "categoriesEmpty": {
+    "statusCode": 200,
+    "body": []
+  },
+  "creditLineShow": {
+    "statusCode": 200,
+    "body": { "showButton": 1, "requestStatus": null }
+  },
+  "creditLineHide": {
+    "statusCode": 200,
+    "body": { "showButton": 0, "requestStatus": "approved" }
+  },
+  "addresses": {
+    "statusCode": 200,
+    "body": [
+      {
+        "client_address_id": 1,
+        "alias": "Casa",
+        "street": "Av. Reforma",
+        "zip_code": "06000",
+        "is_principal": 1
+      }
+    ]
+  },
+  "addressesEmpty": {
+    "statusCode": 200,
+    "body": []
+  },
+  "searchResults": {
+    "statusCode": 200,
+    "body": {
+      "products": [
+        {
+          "productId": 1,
+          "productName": "iPhone 16 Pro",
+          "categoryName": "Electrónica",
+          "categoryId": 2,
+          "subcategoryId": 7,
+          "finalPrice": 50000,
+          "stock": 5,
+          "variantImageUrl": "https://placehold.co/300x300?text=iPhone"
+        },
+        {
+          "productId": 4,
+          "productName": "iPhone 15",
+          "categoryName": "Electrónica",
+          "categoryId": 2,
+          "subcategoryId": 7,
+          "finalPrice": 35000,
+          "stock": 8,
+          "variantImageUrl": "https://placehold.co/300x300?text=iPhone15"
+        }
+      ],
+      "totalCount": 2
+    }
+  },
+  "searchEmpty": {
+    "statusCode": 200,
+    "body": {
+      "products": [],
+      "totalCount": 0
+    }
+  },
+  "profile": {
+    "statusCode": 200,
+    "body": {
+      "client": {
+        "client_id": 1,
+        "name": "Cypress",
+        "email": "cy@test.com",
+        "emailVerified": true
+      }
+    }
+  }
+}
