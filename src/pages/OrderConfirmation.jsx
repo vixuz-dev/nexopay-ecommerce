@@ -28,7 +28,6 @@ const OrderConfirmation = () => {
     deferralMonths,
     getInitialPayment,
     getDeferredAmount,
-    getMonthlyPayment,
     getPaymentSchedule,
   } = useCartStore();
 
@@ -40,7 +39,8 @@ const OrderConfirmation = () => {
     if (items.length > 0) {
       const subtotal = getSubtotal();
       const shipping = subtotal > 5000 ? 0 : 200;
-      
+      const plan = useCartStore.getState().getDeferredInstallmentPlan();
+
       setOrderData({
         items: [...items],
         subtotal,
@@ -48,7 +48,10 @@ const OrderConfirmation = () => {
         total: subtotal + shipping,
         initialPayment: getInitialPayment(),
         deferredAmount: getDeferredAmount(),
-        monthlyPayment: getMonthlyPayment(),
+        monthlyPayment: plan.baseInstallment,
+        lastInstallmentAmount: plan.lastInstallment,
+        hasUnequalLastPayment: plan.hasUnequalLastPayment,
+        equalInstallmentMonths: plan.equalInstallmentMonths,
         deferralMonths,
         paymentSchedule: getPaymentSchedule(),
         orderDate: new Date(),
@@ -191,7 +194,22 @@ const OrderConfirmation = () => {
                   </div>
                   <div>
                     <h2 className="font-semibold text-gray-900">Calendario de Pagos</h2>
-                    <p className="text-sm text-gray-600">{orderData.deferralMonths} pagos mensuales de {formatPrice(orderData.monthlyPayment)}</p>
+                    <p className="text-sm text-gray-600">
+                      {orderData.hasUnequalLastPayment && orderData.deferralMonths > 1 ? (
+                        <>
+                          Pago mensual durante {orderData.equalInstallmentMonths}{' '}
+                          {orderData.equalInstallmentMonths === 1 ? 'mes' : 'meses'} de{' '}
+                          {formatPrice(orderData.monthlyPayment)} y un último pago de{' '}
+                          {formatPrice(orderData.lastInstallmentAmount ?? orderData.monthlyPayment)}.
+                        </>
+                      ) : (
+                        <>
+                          {orderData.deferralMonths}{' '}
+                          {orderData.deferralMonths === 1 ? 'pago mensual' : 'pagos mensuales'} de{' '}
+                          {formatPrice(orderData.monthlyPayment)}
+                        </>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -219,7 +237,7 @@ const OrderConfirmation = () => {
                             {formatMonthYear(payment.date)}
                           </td>
                           <td className="py-3 text-right font-medium text-gray-900">
-                            {formatPrice(orderData.monthlyPayment)}
+                            {formatPrice(payment.amount ?? orderData.monthlyPayment)}
                           </td>
                           <td className="py-3 text-center">
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">

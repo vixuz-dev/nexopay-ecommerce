@@ -1,7 +1,10 @@
 import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
 
 /**
- * Maps API cart item to cartStore item format
+ * Maps API cart item to cartStore item format.
+ * When the API sends `selectedProductVariantId` with a `productVariants` list, root fields may
+ * describe a catalog default variant; pricing, stock, image and attributes are taken from the
+ * matching variant entry.
  * @param {Object} apiItem - Cart item from get_cart API
  * @returns {Object} - Item for cartStore
  */
@@ -16,37 +19,84 @@ export const mapApiCartItemToStore = (apiItem) => {
   const id = apiItem.productId ?? apiItem.product_id ?? apiItem.id;
   const name = apiItem.productName ?? apiItem.product_name ?? apiItem.name ?? '';
   const quantity = Number(apiItem.quantity ?? apiItem.qty ?? 1) || 1;
-  const unitPrice = Number(apiItem.price ?? apiItem.unitPrice ?? apiItem.finalPrice ?? apiItem.remainingBalance ?? 0) || 0;
+
+  const selectedVariantId =
+    apiItem.selectedProductVariantId ?? apiItem.selected_product_variant_id ?? null;
+  const variantsList = Array.isArray(apiItem.productVariants) ? apiItem.productVariants : [];
+  const selectedVariant =
+    selectedVariantId != null
+      ? variantsList.find((v) => Number(v.productVariantId) === Number(selectedVariantId))
+      : null;
+
+  const pricingSource = selectedVariant || apiItem;
+
+  const unitPrice =
+    Number(
+      pricingSource.finalPrice ??
+        pricingSource.price ??
+        pricingSource.unitPrice ??
+        apiItem.finalPrice ??
+        0
+    ) || 0;
   const total = unitPrice * quantity;
 
-  const unitInitialPayment = apiItem.initialPaymentCost != null && apiItem.remainingBalance != null
-    ? apiItem.initialPaymentCost
-    : unitPrice * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
-  const unitDeferredAmount = apiItem.remainingBalance != null
-    ? apiItem.remainingBalance
-    : unitPrice - unitInitialPayment;
+  const unitInitialPayment =
+    pricingSource.initialPaymentCost != null && pricingSource.remainingBalance != null
+      ? pricingSource.initialPaymentCost
+      : unitPrice * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
+  const unitDeferredAmount =
+    pricingSource.remainingBalance != null
+      ? pricingSource.remainingBalance
+      : unitPrice - unitInitialPayment;
 
-  const image = getImageUrl(apiItem.image ?? apiItem.imageUrl ?? apiItem.variantImageUrl ?? apiItem.images?.[0]);
+  const image = selectedVariant
+    ? getImageUrl(
+        selectedVariant.variantImageUrl ??
+          (Array.isArray(selectedVariant.images) ? selectedVariant.images[0] : null) ??
+          apiItem.variantImageUrl ??
+          apiItem.images?.[0]
+      )
+    : getImageUrl(apiItem.image ?? apiItem.imageUrl ?? apiItem.variantImageUrl ?? apiItem.images?.[0]);
+
   const size = apiItem.size ?? apiItem.variant ?? 'Estándar';
+
+  const attributes =
+    selectedVariant?.attributes?.length > 0
+      ? selectedVariant.attributes
+      : apiItem.attributes ?? [];
+
+  const stock = selectedVariant?.stock ?? apiItem.stock ?? 999;
+
+  const originalPriceFallback =
+    pricingSource.initialPaymentCost != null && pricingSource.remainingBalance != null
+      ? pricingSource.initialPaymentCost + pricingSource.remainingBalance
+      : apiItem.initialPaymentCost != null && apiItem.remainingBalance != null
+        ? apiItem.initialPaymentCost + apiItem.remainingBalance
+        : null;
+
+  const effectiveProductVariantId =
+    selectedVariantId != null
+      ? selectedVariantId
+      : apiItem.productVariantId ?? apiItem.product_variant_id ?? null;
 
   return {
     id,
     name,
     image,
     price: unitPrice,
-    originalPrice: apiItem.originalPrice ?? (apiItem.initialPaymentCost != null && apiItem.remainingBalance != null ? apiItem.initialPaymentCost + apiItem.remainingBalance : null),
+    originalPrice: pricingSource.originalPrice ?? originalPriceFallback,
     discount: apiItem.discount ?? null,
     category: apiItem.categoryName ?? apiItem.category ?? null,
     categoryId: apiItem.categoryId ?? apiItem.category_id ?? null,
     subcategoryId: apiItem.subcategoryId ?? apiItem.subcategory_id ?? null,
     size,
-    stock: apiItem.stock ?? 999,
+    stock,
     quantity,
     total,
     unitInitialPayment,
     unitDeferredAmount,
-    productVariantId: apiItem.productVariantId ?? apiItem.product_variant_id ?? null,
-    attributes: apiItem.attributes ?? [],
+    productVariantId: effectiveProductVariantId,
+    attributes,
   };
 };
 

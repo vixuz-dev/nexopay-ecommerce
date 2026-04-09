@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import ProductPlaceholder from '../common/ProductPlaceholder';
 import { getProductDetailUrl } from '../../utils/routes';
+import { formatProductCardPrice } from '../../utils/format';
 
 const ProductCardHorizontal = ({ product }) => {
   const {
@@ -16,15 +17,6 @@ const ProductCardHorizontal = ({ product }) => {
   } = product;
 
   const productDetailUrl = getProductDetailUrl(name, product.categoryId, product.subcategoryId);
-
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   return (
     <Link
@@ -65,11 +57,11 @@ const ProductCardHorizontal = ({ product }) => {
           
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-lg font-bold text-gray-900 whitespace-nowrap">
-              {formatPrice(price)}
+              {formatProductCardPrice(price)}
             </span>
             {originalPrice && originalPrice > price && (
               <span className="text-xs text-gray-500 line-through whitespace-nowrap">
-                {formatPrice(originalPrice)}
+                {formatProductCardPrice(originalPrice)}
               </span>
             )}
           </div>

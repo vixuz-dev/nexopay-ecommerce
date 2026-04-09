@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -25,12 +25,18 @@ import {
   HiOutlineBanknotes,
   HiOutlineInformationCircle,
   HiOutlineMapPin,
+  HiOutlinePencilSquare,
   HiOutlinePlus,
 } from 'react-icons/hi2';
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import AddAddressModal from '../components/common/AddAddressModal';
+import CartCreditGateModal from '../components/common/CartCreditGateModal';
 import useAddressesStore from '../stores/addressesStore';
+import useCreditLineStatusStore from '../stores/creditLineStatusStore';
+import { getCartCreditAccessState } from '../utils/creditLinePurchaseAccess';
+import { isSameCartLine } from '../utils/cartLineUtils';
+import { isPrincipalAddress } from '../utils/addressForm';
 
 const formatAddressLine = (addr) => {
   const parts = [
@@ -43,9 +49,15 @@ const formatAddressLine = (addr) => {
 const Cart = () => {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [creditGateVariant, setCreditGateVariant] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const isAuthenticated = !!useUserStore((s) => s.user);
+  const showButton = useCreditLineStatusStore((s) => s.showButton);
+  const requestStatus = useCreditLineStatusStore((s) => s.requestStatus);
+  const isCreditStatusLoaded = useCreditLineStatusStore((s) => s.isStatusLoaded);
+  const fetchCreditLineStatus = useCreditLineStatusStore((s) => s.fetchCreditLineStatus);
   const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
   const showToast = useToastStore((s) => s.showToast);
   const showGlobalLoader = useUIStore((s) => s.showGlobalLoader);
@@ -65,7 +77,7 @@ const Cart = () => {
     setDeferralMonths,
     getInitialPayment,
     getDeferredAmount,
-    getMonthlyPayment,
+    getDeferredInstallmentPlan,
   } = useCartStore();
 
   const formatPrice = (amount) => {
@@ -84,7 +96,20 @@ const Cart = () => {
   const hasOutOfStockItems = items.some((item) => item.stock != null && item.stock <= 0);
   const initialPayment = getInitialPayment();
   const deferredAmount = getDeferredAmount();
-  const monthlyPayment = getMonthlyPayment();
+  const installmentPlan = getDeferredInstallmentPlan();
+
+  const cartCreditAccess = useMemo(() => {
+    if (!isAuthenticated) {
+      return { kind: 'allowed' };
+    }
+    return getCartCreditAccessState({
+      showButton,
+      requestStatus,
+      isStatusLoaded: isCreditStatusLoaded,
+    });
+  }, [isAuthenticated, showButton, requestStatus, isCreditStatusLoaded]);
+
+  const isCartCreditStatusLoading = isAuthenticated && cartCreditAccess.kind === 'loading';
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -93,8 +118,20 @@ const Cart = () => {
   }, [isAuthenticated, fetchCart]);
 
   useEffect(() => {
-    fetchAddresses();
-  }, [fetchAddresses]);
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        await fetchCreditLineStatus();
+      } catch {
+        // El estado persistido o un reintento posterior define si se puede comprar
+      }
+    })();
+  }, [isAuthenticated, fetchCreditLineStatus]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchAddresses({ force: true });
+  }, [isAuthenticated, fetchAddresses]);
 
   useEffect(() => {
     if (addresses.length === 0) {
@@ -122,18 +159,48 @@ const Cart = () => {
 
   const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
-  const handleQuantityChange = (itemId, size, newQuantity) => {
+  const handleQuantityChange = (itemId, size, newQuantity, productVariantId) => {
     if (newQuantity < 1) {
-      removeFromCart(itemId, size);
+      removeFromCart(itemId, size, productVariantId);
       return;
     }
-    const item = items.find(i => i.id === itemId && i.size === size);
+    const item = items.find((i) =>
+      isSameCartLine(i, { productId: itemId, size, productVariantId })
+    );
     const maxQty = item?.stock ?? 999;
-    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxQty));
+    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxQty), productVariantId);
   };
 
-  const handleRemoveItem = (itemId, size) => {
-    removeFromCart(itemId, size);
+  const handleRemoveItem = (itemId, size, productVariantId) => {
+    removeFromCart(itemId, size, productVariantId);
+  };
+
+  const closeAddressModal = () => {
+    setIsAddAddressModalOpen(false);
+    setEditingAddress(null);
+  };
+
+  const openEditAddressModal = (addr) => {
+    if (!addr || isPrincipalAddress(addr)) return;
+    setEditingAddress(addr);
+    setIsAddAddressModalOpen(true);
+  };
+
+  const openAddAddressModalIfCreditAllows = () => {
+    setEditingAddress(null);
+    if (!isAuthenticated) {
+      setIsAddAddressModalOpen(true);
+      return;
+    }
+    if (isCartCreditStatusLoading) {
+      showToast('Verificando tu línea de crédito…', 'info');
+      return;
+    }
+    if (cartCreditAccess.kind !== 'allowed') {
+      setCreditGateVariant(cartCreditAccess.kind);
+      return;
+    }
+    setIsAddAddressModalOpen(true);
   };
 
   const handleCheckout = async () => {
@@ -142,8 +209,18 @@ const Cart = () => {
       showToast('Remueve los productos sin existencias para continuar', 'error');
       return;
     }
+    if (isAuthenticated) {
+      if (isCartCreditStatusLoading) {
+        showToast('Verificando tu línea de crédito…', 'info');
+        return;
+      }
+      if (cartCreditAccess.kind !== 'allowed') {
+        setCreditGateVariant(cartCreditAccess.kind);
+        return;
+      }
+    }
     if (addresses.length === 0) {
-      setIsAddAddressModalOpen(true);
+      openAddAddressModalIfCreditAllows();
       return;
     }
 
@@ -271,7 +348,7 @@ const Cart = () => {
               
               return (
                 <div
-                  key={`${item.id}-${item.size}`}
+                  key={`${item.id}-${item.productVariantId ?? 'nv'}-${item.size}`}
                   className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden ${isOutOfStock ? 'opacity-75' : ''}`}
                 >
                   <div className="flex flex-col md:flex-row gap-6">
@@ -312,7 +389,7 @@ const Cart = () => {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleRemoveItem(item.id, item.size);
+                              handleRemoveItem(item.id, item.size, item.productVariantId);
                             }}
                             className="text-gray-400 hover:text-red-600 transition-colors p-2"
                             aria-label="Remover producto"
@@ -328,7 +405,7 @@ const Cart = () => {
                           <span className="text-gray-300">·</span>
                           <button
                             type="button"
-                            onClick={() => handleRemoveItem(item.id, item.size)}
+                            onClick={() => handleRemoveItem(item.id, item.size, item.productVariantId)}
                             className="text-xs font-medium text-primary-600 hover:text-primary-700 underline underline-offset-2 transition-colors"
                           >
                             Remover del carrito
@@ -343,7 +420,7 @@ const Cart = () => {
                               </label>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
+                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.productVariantId)}
                                   disabled={item.quantity <= 1}
                                   className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 >
@@ -353,7 +430,7 @@ const Cart = () => {
                                   {item.quantity}
                                 </span>
                                 <button
-                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
+                                  onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.productVariantId)}
                                   disabled={item.quantity >= (item.stock ?? 999)}
                                   className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 >
@@ -434,7 +511,7 @@ const Cart = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setIsAddAddressModalOpen(true)}
+                      onClick={openAddAddressModalIfCreditAllows}
                       className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors text-sm"
                     >
                       <HiOutlinePlus className="w-5 h-5" />
@@ -457,44 +534,68 @@ const Cart = () => {
                       <p className="text-xs text-gray-600">Aquí se enviarán tus productos</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddAddressModalOpen(true)}
-                    className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
-                    aria-label="Agregar otra dirección"
-                  >
-                    <HiOutlinePlus className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {selectedAddress && !isPrincipalAddress(selectedAddress) && (
+                      <button
+                        type="button"
+                        onClick={() => openEditAddressModal(selectedAddress)}
+                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                        aria-label="Editar dirección seleccionada"
+                      >
+                        <HiOutlinePencilSquare className="w-5 h-5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={openAddAddressModalIfCreditAllows}
+                      className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors"
+                      aria-label="Agregar otra dirección"
+                    >
+                      <HiOutlinePlus className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
                 {addresses.length > 1 ? (
                   <div className="space-y-2 mb-4">
                     {addresses.map((addr) => (
-                      <label
+                      <div
                         key={addr.client_address_id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                        className={`flex items-stretch gap-2 p-3 rounded-lg border-2 transition-colors ${
                           selectedAddressId === addr.client_address_id
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <input
-                          type="radio"
-                          name="deliveryAddress"
-                          checked={selectedAddressId === addr.client_address_id}
-                          onChange={() => setSelectedAddressId(addr.client_address_id)}
-                          className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
-                          <p className="text-xs text-gray-600">
-                            {addr.name_received} · {addr.street} {addr.external_number}
-                            {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
-                          </p>
-                        </div>
-                      </label>
+                        <label className="flex flex-1 min-w-0 items-start gap-3 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="deliveryAddress"
+                            checked={selectedAddressId === addr.client_address_id}
+                            onChange={() => setSelectedAddressId(addr.client_address_id)}
+                            className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
+                            <p className="text-xs text-gray-600">
+                              {addr.name_received} · {addr.street} {addr.external_number}
+                              {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
+                            </p>
+                          </div>
+                        </label>
+                        {!isPrincipalAddress(addr) && (
+                          <button
+                            type="button"
+                            onClick={() => openEditAddressModal(addr)}
+                            className="self-start shrink-0 p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                            aria-label={`Editar dirección ${addr.alias || ''}`}
+                          >
+                            <HiOutlinePencilSquare className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 ) : selectedAddress && (
@@ -597,37 +698,68 @@ const Cart = () => {
 
                   {/* Separador */}
                   <div className="border-t border-primary-200 pt-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="text-sm text-gray-700">Pago mensual:</span>
-                        <p className="text-xs text-gray-500">Durante {deferralMonths} meses</p>
+                    {installmentPlan.hasUnequalLastPayment && installmentPlan.totalMonths > 1 ? (
+                      <p className="text-sm text-gray-700 leading-snug">
+                        {installmentPlan.equalInstallmentMonths}{' '}
+                        {installmentPlan.equalInstallmentMonths === 1 ? 'mensualidad' : 'mensualidades'} de{' '}
+                        {formatPrice(installmentPlan.baseInstallment)} y un último pago de{' '}
+                        {formatPrice(installmentPlan.lastInstallment)}.
+                      </p>
+                    ) : (
+                      <div className="flex justify-between items-center gap-2">
+                        <div>
+                          <span className="text-sm text-gray-700">Pago mensual:</span>
+                          <p className="text-xs text-gray-500">
+                            Durante {deferralMonths} {deferralMonths === 1 ? 'mes' : 'meses'}
+                          </p>
+                        </div>
+                        <span className="text-xl font-bold text-primary-600 shrink-0 text-right">
+                          {formatPrice(installmentPlan.baseInstallment)}
+                        </span>
                       </div>
-                      <span className="text-xl font-bold text-primary-600">
-                        {formatPrice(monthlyPayment)}
-                      </span>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={handleCheckout}
-                disabled={addressesLoading || isProcessing || hasOutOfStockItems}
-                className="w-full py-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600 disabled:hover:shadow-md"
+                disabled={
+                  addressesLoading ||
+                  isProcessing ||
+                  hasOutOfStockItems ||
+                  isCartCreditStatusLoading
+                }
+                className="w-full min-h-[3.25rem] py-3 px-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600 disabled:hover:shadow-md"
               >
                 {isProcessing ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creando orden...
+                    <div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"
+                      aria-hidden
+                    />
+                    <span>Creando orden...</span>
+                  </>
+                ) : addressesLoading || isCartCreditStatusLoading ? (
+                  <>
+                    <div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"
+                      aria-hidden
+                    />
+                    <span>{isCartCreditStatusLoading ? 'Verificando crédito…' : 'Cargando...'}</span>
+                  </>
+                ) : addresses.length === 0 ? (
+                  <>
+                    <HiOutlineMapPin className="w-6 h-6 shrink-0" aria-hidden />
+                    <span className="text-left sm:text-center leading-snug">
+                      Agregar dirección para continuar
+                    </span>
                   </>
                 ) : (
                   <>
-                    <HiOutlineCreditCard className="w-5 h-5" />
-                    {addressesLoading
-                      ? 'Cargando...'
-                      : addresses.length === 0
-                        ? 'Agregar dirección para continuar'
-                        : 'Proceder al Pago'}
+                    <HiOutlineCreditCard className="w-5 h-5 shrink-0" aria-hidden />
+                    <span>Proceder al pago</span>
                   </>
                 )}
               </button>
@@ -650,8 +782,15 @@ const Cart = () => {
 
       <AddAddressModal
         isOpen={isAddAddressModalOpen}
-        onClose={() => setIsAddAddressModalOpen(false)}
+        editAddress={editingAddress}
+        onClose={closeAddressModal}
         onSuccess={handleAddressSuccess}
+      />
+
+      <CartCreditGateModal
+        isOpen={creditGateVariant != null}
+        variant={creditGateVariant}
+        onClose={() => setCreditGateVariant(null)}
       />
 
       <Footer />

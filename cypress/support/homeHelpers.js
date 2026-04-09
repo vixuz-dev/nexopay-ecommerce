@@ -34,6 +34,8 @@ export function visitHomeAuthenticated(options = {}) {
       onBeforeLoad(win) {
         win.document.cookie = `authToken=${data.token}; path=/;`;
         win.localStorage.setItem('user-storage', userStorage);
+        win.localStorage.removeItem('credit-storage');
+        win.localStorage.removeItem('addresses-storage');
         win.localStorage.setItem('home-storage', JSON.stringify({
           state: { sections: [], lastFetchedAt: 0, isLoading: false, error: null },
           version: 0,

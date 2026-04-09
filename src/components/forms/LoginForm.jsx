@@ -8,7 +8,12 @@ import { hashPassword } from '../../utils/passwordUtils';
 import { setCookie } from '../../utils/cookieUtils';
 import useUserStore from '../../stores/userStore';
 import useProfileStore from '../../stores/profileStore';
+import useCreditStore from '../../stores/creditStore';
 import { ROUTES } from '../../utils/routes';
+import {
+  getCreditShowButtonFromApiBody,
+  getCreditRequestStatusFromApiBody
+} from '../../utils/creditLineShowButton';
 
 const LoginForm = ({ onLoginSuccess, onBack }) => {
   const setUser = useUserStore((state) => state.setUser);
@@ -81,6 +86,11 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
         
         setUser(userData);
         useProfileStore.getState().setClientFromLogin(userData);
+
+        const showButtonNum = getCreditShowButtonFromApiBody(userData);
+        const requestStatusStr = getCreditRequestStatusFromApiBody(userData);
+        useCreditStore.getState().setCreditLineStatus(showButtonNum, requestStatusStr);
+
         onLoginSuccess(response.body);
       }
 

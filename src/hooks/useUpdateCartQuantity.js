@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { cartService } from '../api/services/cartService';
 import useCartStore from '../stores/cartStore';
 import useUserStore from '../stores/userStore';
+import { isSameCartLine } from '../utils/cartLineUtils';
 
 export const useUpdateCartQuantity = () => {
   const isAuthenticated = !!useUserStore((s) => s.user);
@@ -9,17 +10,16 @@ export const useUpdateCartQuantity = () => {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
 
   const updateQuantityInCart = useCallback(
-    (itemId, size, newQuantity) => {
-      const normalizedSize = size || 'Estándar';
-      const item = items.find(
-        (i) => String(i.id) === String(itemId) && i.size === normalizedSize
+    (itemId, size, newQuantity, productVariantId) => {
+      const item = items.find((i) =>
+        isSameCartLine(i, { productId: itemId, size, productVariantId })
       );
-      const productVariantId = item?.productVariantId;
+      const variantIdForApi = item?.productVariantId;
 
-      updateQuantity(itemId, newQuantity, size);
+      updateQuantity(itemId, newQuantity, size, productVariantId);
 
-      if (isAuthenticated && productVariantId >= 1 && newQuantity >= 1) {
-        const variantId = Math.floor(Number(productVariantId));
+      if (isAuthenticated && variantIdForApi >= 1 && newQuantity >= 1) {
+        const variantId = Math.floor(Number(variantIdForApi));
         const qty = Math.floor(Number(newQuantity) || 1);
         cartService
           .updateProductQuantity({

@@ -4,7 +4,11 @@ import { useCreditForm } from '../../stores/creditFormStore';
 import useToastStore from '../../stores/toastStore';
 import { mapCreditRequestToBackend } from '../../utils/creditRequestMapper';
 import { creditLineRequestService } from '../../api/services/creditLineRequestService';
-import { ROUTES } from '../../utils/routes';
+import { ROUTES, EMAIL_VERIFY_FROM_QUERY, EMAIL_VERIFY_FROM } from '../../utils/routes';
+import {
+  getCreditShowButtonFromApiBody,
+  getCreditRequestStatusFromApiBody
+} from '../../utils/creditLineShowButton';
 import StepIndicator from './StepIndicator';
 import NavigationButtons from './NavigationButtons';
 import PersonalAddressStep from './steps/PersonalAddressStep';
@@ -115,20 +119,50 @@ const CreditWizard = () => {
         return;
       }
       const body = response?.body || response?.data || response;
-      if (body && (body.approvedRequest !== undefined || body.creditLineAmount !== undefined || body.showButton !== undefined)) {
+      const approvedRaw = body?.approvedRequest;
+      const isApprovedRequest =
+        approvedRaw === true ||
+        approvedRaw === 'true' ||
+        String(approvedRaw ?? '').toLowerCase() === 'true';
+
+      if (
+        body &&
+        (body.approvedRequest !== undefined ||
+          body.creditLineAmount !== undefined ||
+          body.showButton !== undefined ||
+          body.showButtonCreditLineRequest !== undefined)
+      ) {
         setLastCreditRequestResult({
           approvedRequest: body.approvedRequest ?? null,
           creditLineAmount: body.creditLineAmount ?? 0,
-          showButton: body.showButton,
+          showButton: getCreditShowButtonFromApiBody(body),
         });
-        if (body.showButton !== undefined) {
-          setCreditLineStatus(body.showButton, body.requestStatus ?? '');
+        if (body.showButton !== undefined || body.showButtonCreditLineRequest !== undefined) {
+          setCreditLineStatus(
+            getCreditShowButtonFromApiBody(body),
+            getCreditRequestStatusFromApiBody(body)
+          );
         }
       }
-      showToast('Solicitud enviada correctamente. Te contactaremos pronto.', 'success');
+      showToast(
+        isApprovedRequest
+          ? 'Tu solicitud fue aprobada. Verifica tu correo para poder comprar en la tienda.'
+          : 'Solicitud enviada correctamente. Te contactaremos pronto.',
+        'success'
+      );
       resetForm();
       await Promise.all([fetchCreditLineStatus({ forceRefresh: true }), fetchCreditLineRequests()]);
-      navigate(ROUTES.MY_CREDIT);
+      if (isApprovedRequest) {
+        navigate(
+          `${ROUTES.EMAIL_VERIFICATION}?${EMAIL_VERIFY_FROM_QUERY}=${EMAIL_VERIFY_FROM.CREDIT_REQUEST}`,
+          {
+            replace: true,
+            state: { fromApprovedCreditRequest: true },
+          }
+        );
+      } else {
+        navigate(ROUTES.MY_CREDIT);
+      }
     } catch (error) {
       const message = error.message || error.statusMessage || 'No se pudo enviar la solicitud. Intenta de nuevo.';
       showToast(message, 'error');

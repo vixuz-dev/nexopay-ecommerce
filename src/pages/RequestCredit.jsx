@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
+import { HiOutlineXMark } from 'react-icons/hi2';
 import CreditWizard from '../components/credit/CreditWizard';
 import ExitWarningModal from '../components/credit/ExitWarningModal';
 import { useCreditFormStore } from '../stores/creditFormStore';
@@ -146,10 +145,28 @@ const RequestCredit = () => {
     setPendingNavigation(null);
   };
 
+  const handleCancelProcess = () => {
+    if (hasFormData.current && !isNavigatingAway.current) {
+      setPendingNavigation(ROUTES.HOME);
+      setShowExitModal(true);
+      return;
+    }
+    navigate(ROUTES.HOME);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto px-4 pt-[3rem] md:pt-[5rem] pb-[10rem] md:pb-[15rem]">
+      <div className="container mx-auto px-4 pt-8 md:pt-12 pb-[10rem] md:pb-[15rem]">
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={handleCancelProcess}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <HiOutlineXMark className="w-4 h-4" />
+            Cancelar y volver al inicio
+          </button>
+        </div>
         <div className="mb-8 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
             Solicitud de Crédito
@@ -160,7 +177,6 @@ const RequestCredit = () => {
         </div>
         <CreditWizard />
       </div>
-      <Footer />
       <ExitWarningModal
         isOpen={showExitModal}
         onConfirm={handleConfirmExit}

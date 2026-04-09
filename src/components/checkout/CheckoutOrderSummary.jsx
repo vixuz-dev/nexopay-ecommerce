@@ -19,6 +19,14 @@ export const CheckoutOrderSummary = ({
   deferredAmount,
   paymentSchedule,
 }) => {
+  const firstAmt = paymentSchedule[0]?.amount;
+  const lastAmt = paymentSchedule[paymentSchedule.length - 1]?.amount;
+  const hasUnequalInstallments =
+    paymentSchedule.length > 1 &&
+    firstAmt != null &&
+    lastAmt != null &&
+    firstAmt !== lastAmt;
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -101,6 +109,13 @@ export const CheckoutOrderSummary = ({
           <p className="text-sm font-medium text-gray-700 mb-4">
             Pagos mensuales restantes ({formatPriceMXN(deferredAmount)} en {deferralMonths} meses):
           </p>
+          {hasUnequalInstallments && (
+            <p className="text-xs text-gray-600 mb-3">
+              Pago mensual durante {deferralMonths - 1}{' '}
+              {deferralMonths - 1 === 1 ? 'mes' : 'meses'} de {formatPriceMXN(firstAmt)} y un último
+              pago de {formatPriceMXN(lastAmt)}.
+            </p>
+          )}
           <p className="text-xs text-gray-500 mb-3">
             Mes de corte. La fecha exacta dependerá de tu ciclo.
           </p>

@@ -6,6 +6,7 @@ import { useAddToCart } from '../../hooks/useAddToCart';
 import useUIStore from '../../stores/uiStore';
 import { ROUTES, getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG } from '../../constants/checkoutConfig';
+import { formatProductCardPrice, formatProductCardMonthlyPaymentText } from '../../utils/format';
 
 const ProductCard = ({ product, showAddToCart = false }) => {
   const navigate = useNavigate();
@@ -39,13 +40,6 @@ const ProductCard = ({ product, showAddToCart = false }) => {
       attributes: product.attributes || [],
     });
     openCartSidebar();
-  };
-
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN'
-    }).format(amount);
   };
 
   return (
@@ -129,19 +123,20 @@ const ProductCard = ({ product, showAddToCart = false }) => {
         <div className="mt-auto">
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-xl font-bold text-gray-900">
-              {formatPrice(price)}
+              {formatProductCardPrice(price)}
             </span>
             {originalPrice && originalPrice > price && (
               <span className="text-xs text-gray-500 line-through">
-                {formatPrice(originalPrice)}
+                {formatProductCardPrice(originalPrice)}
               </span>
             )}
           </div>
           
           {/* Monthly Payment */}
           <p className="text-xs text-primary-600 font-medium">
-            {product.monthlyPaymentOption ||
-              `Pago inicial y hasta ${CHECKOUT_CONFIG.PRODUCT_CARD_MONTHLY_INSTALLMENTS} mensualidades`}
+            {product.monthlyPaymentOption
+              ? formatProductCardMonthlyPaymentText(product.monthlyPaymentOption)
+              : `Pago inicial y hasta ${CHECKOUT_CONFIG.PRODUCT_CARD_MONTHLY_INSTALLMENTS} mensualidades`}
           </p>
         </div>
 

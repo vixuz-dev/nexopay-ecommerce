@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { HiOutlineCalendarDays, HiOutlineBanknotes, HiOutlineCheckCircle, HiOutlineArrowRight } from 'react-icons/hi2';
+import { HiOutlineCalendarDays, HiOutlineBanknotes, HiOutlineArrowRight } from 'react-icons/hi2';
 import { useCredit } from '../../hooks/useCredit';
 import { useCreditTransactions } from '../../hooks/useCreditTransactions';
 import { usePendingPayments } from '../../hooks/usePendingPayments';
-import { formatPrice, isAfterCutoffDate } from '../../utils/creditUtils';
+import { isAfterCutoffDate } from '../../utils/creditUtils';
 import { ROUTES } from '../../utils/routes';
 import CreditCard from './CreditCard';
 import CreditInfoCard from './CreditInfoCard';
@@ -47,7 +47,7 @@ const CreditSection = ({ hasApproved = true }) => {
       <div className="mb-8">
         <CreditCard creditInfo={creditInfo} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <CreditInfoCard
             icon={HiOutlineCalendarDays}
             iconBg="bg-blue-100"
@@ -61,13 +61,6 @@ const CreditSection = ({ hasApproved = true }) => {
             iconColor="text-orange-600"
             label="Límite de Pago"
             value={creditInfo.paymentDueDate}
-          />
-          <CreditInfoCard
-            icon={HiOutlineCheckCircle}
-            iconBg="bg-green-100"
-            iconColor="text-green-600"
-            label="Crédito usado"
-            value={formatPrice(creditInfo.creditUsed)}
           />
         </div>
       </div>

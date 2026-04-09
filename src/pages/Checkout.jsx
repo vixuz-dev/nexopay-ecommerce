@@ -17,6 +17,7 @@ import usePaymentMethodsStore from '../stores/paymentMethodsStore';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
 import {
   HiOutlineMapPin,
+  HiOutlinePencilSquare,
   HiOutlinePlus,
 } from 'react-icons/hi2';
 import AddAddressModal from '../components/common/AddAddressModal';
@@ -26,6 +27,7 @@ import {
   CheckoutPaymentMethods,
   PaymentErrorModal,
 } from '../components/checkout';
+import { isPrincipalAddress } from '../utils/addressForm';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -43,10 +45,12 @@ const Checkout = () => {
     getInitialPayment,
     getDeferredAmount,
     getPaymentSchedule,
+    getDeferredInstallmentPlan,
   } = useCartStore();
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
   const [showAllAddresses, setShowAllAddresses] = useState(false);
   const addresses = useAddressesStore((s) => s.addresses);
   const addressesLoading = useAddressesStore((s) => s.isLoading);
@@ -79,7 +83,7 @@ const Checkout = () => {
   }, [fetchPaymentMethods]);
 
   useEffect(() => {
-    fetchAddresses();
+    fetchAddresses({ force: true });
   }, [fetchAddresses]);
 
   useEffect(() => {
@@ -101,6 +105,22 @@ const Checkout = () => {
       const principal = list.find((a) => a.is_principal === 1) || list[0];
       return principal?.client_address_id ?? null;
     });
+  };
+
+  const closeAddressModal = () => {
+    setIsAddAddressModalOpen(false);
+    setEditingAddress(null);
+  };
+
+  const openAddAddressModal = () => {
+    setEditingAddress(null);
+    setIsAddAddressModalOpen(true);
+  };
+
+  const openEditAddressModal = (addr) => {
+    if (!addr || isPrincipalAddress(addr)) return;
+    setEditingAddress(addr);
+    setIsAddAddressModalOpen(true);
   };
 
   useEffect(() => {
@@ -193,14 +213,8 @@ const Checkout = () => {
       }
     }
 
-    const monthlyPayment = deferralMonths > 0 ? deferredAmount / deferralMonths : 0;
-    const today = new Date();
-    const paymentSchedule = Array.from({ length: deferralMonths }, (_, i) => ({
-      number: i + 1,
-      date: new Date(today.getFullYear(), today.getMonth() + i + 1, 1),
-      amount: monthlyPayment,
-      status: 'pending',
-    }));
+    const paymentSchedule = getPaymentSchedule();
+    const plan = getDeferredInstallmentPlan();
 
     const orderState = {
       items: [...items],
@@ -209,7 +223,10 @@ const Checkout = () => {
       total,
       initialPayment,
       deferredAmount,
-      monthlyPayment,
+      monthlyPayment: plan.baseInstallment,
+      lastInstallmentAmount: plan.lastInstallment,
+      hasUnequalLastPayment: plan.hasUnequalLastPayment,
+      equalInstallmentMonths: plan.equalInstallmentMonths,
       deferralMonths,
       paymentSchedule,
       orderDate: new Date(),
@@ -285,7 +302,7 @@ const Checkout = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setIsAddAddressModalOpen(true)}
+                      onClick={openAddAddressModal}
                       className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors text-sm"
                     >
                       <HiOutlinePlus className="w-5 h-5" />
@@ -318,53 +335,113 @@ const Checkout = () => {
                     </button>
                   )}
                   {showAllAddresses && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddAddressModalOpen(true)}
-                      className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
-                      aria-label="Agregar otra dirección"
-                    >
-                      <HiOutlinePlus className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {selectedAddress && !isPrincipalAddress(selectedAddress) && (
+                        <button
+                          type="button"
+                          onClick={() => openEditAddressModal(selectedAddress)}
+                          className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                          aria-label="Editar dirección seleccionada"
+                        >
+                          <HiOutlinePencilSquare className="w-5 h-5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={openAddAddressModal}
+                        className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors flex-shrink-0"
+                        aria-label="Agregar otra dirección"
+                      >
+                        <HiOutlinePlus className="w-5 h-5" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {showAllAddresses || !location.state?.selectedAddressId || !selectedAddress ? (
                   addresses.length > 1 ? (
                     <div className="space-y-2">
                       {addresses.map((addr) => (
-                        <label
+                        <div
                           key={addr.client_address_id}
-                          className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                          className={`flex items-stretch gap-2 p-3 rounded-lg border-2 transition-colors ${
                             selectedAddressId === addr.client_address_id
                               ? 'border-primary-500 bg-primary-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <input
-                            type="radio"
-                            name="deliveryAddress"
-                            checked={selectedAddressId === addr.client_address_id}
-                            onChange={() => {
-                              setSelectedAddressId(addr.client_address_id);
-                              setShowAllAddresses(false);
-                            }}
-                            className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
-                            <p className="text-xs text-gray-600">
-                              {addr.name_received} · {addr.street} {addr.external_number}
-                              {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
-                            </p>
-                          </div>
-                        </label>
+                          <label className="flex flex-1 min-w-0 items-start gap-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="deliveryAddress"
+                              checked={selectedAddressId === addr.client_address_id}
+                              onChange={() => {
+                                setSelectedAddressId(addr.client_address_id);
+                                setShowAllAddresses(false);
+                              }}
+                              className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm">{addr.alias}</p>
+                              <p className="text-xs text-gray-600">
+                                {addr.name_received} · {addr.street} {addr.external_number}
+                                {addr.internal_number ? ` Int. ${addr.internal_number}` : ''}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {addr.neighborhood}, {addr.city}, {addr.state} {addr.zip_code}
+                              </p>
+                            </div>
+                          </label>
+                          {!isPrincipalAddress(addr) && (
+                            <button
+                              type="button"
+                              onClick={() => openEditAddressModal(addr)}
+                              className="self-start shrink-0 p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                              aria-label={`Editar dirección ${addr.alias || ''}`}
+                            >
+                              <HiOutlinePencilSquare className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   ) : selectedAddress && (
-                    <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
+                    <div className="p-4 bg-primary-50 rounded-lg border border-primary-100 relative">
+                      {!isPrincipalAddress(selectedAddress) && (
+                        <button
+                          type="button"
+                          onClick={() => openEditAddressModal(selectedAddress)}
+                          className="absolute top-3 right-3 p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                          aria-label="Editar dirección"
+                        >
+                          <HiOutlinePencilSquare className="w-5 h-5" />
+                        </button>
+                      )}
+                      <div className={!isPrincipalAddress(selectedAddress) ? 'pr-12' : ''}>
+                        <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
+                        <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
+                        <p className="text-sm text-gray-600">
+                          {selectedAddress.street} {selectedAddress.external_number}
+                          {selectedAddress.internal_number ? ` Int. ${selectedAddress.internal_number}` : ''}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-100 relative">
+                    {!isPrincipalAddress(selectedAddress) && (
+                      <button
+                        type="button"
+                        onClick={() => openEditAddressModal(selectedAddress)}
+                        className="absolute top-3 right-3 p-2 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors"
+                        aria-label="Editar dirección"
+                      >
+                        <HiOutlinePencilSquare className="w-5 h-5" />
+                      </button>
+                    )}
+                    <div className={!isPrincipalAddress(selectedAddress) ? 'pr-12' : ''}>
                       <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
                       <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
                       <p className="text-sm text-gray-600">
@@ -375,18 +452,6 @@ const Checkout = () => {
                         {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
                       </p>
                     </div>
-                  )
-                ) : (
-                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-100">
-                    <p className="font-semibold text-gray-900 text-sm">{selectedAddress.alias}</p>
-                    <p className="text-sm text-gray-700 mt-1">{selectedAddress.name_received}</p>
-                    <p className="text-sm text-gray-600">
-                      {selectedAddress.street} {selectedAddress.external_number}
-                      {selectedAddress.internal_number ? ` Int. ${selectedAddress.internal_number}` : ''}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {selectedAddress.neighborhood}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zip_code}
-                    </p>
                   </div>
                 )}
               </div>
@@ -418,7 +483,8 @@ const Checkout = () => {
 
       <AddAddressModal
         isOpen={isAddAddressModalOpen}
-        onClose={() => setIsAddAddressModalOpen(false)}
+        editAddress={editingAddress}
+        onClose={closeAddressModal}
         onSuccess={handleAddressSuccess}
       />
 

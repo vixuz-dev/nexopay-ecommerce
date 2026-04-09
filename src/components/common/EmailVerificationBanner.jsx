@@ -1,20 +1,40 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineEnvelope, HiOutlineArrowRight } from 'react-icons/hi2';
-import { ROUTES } from '../../utils/routes';
+import { ROUTES, EMAIL_VERIFY_FROM_QUERY, EMAIL_VERIFY_FROM } from '../../utils/routes';
 import useUserStore from '../../stores/userStore';
+import useCreditLineStatusStore from '../../stores/creditLineStatusStore';
+import { shouldShowEmailVerificationBanner } from '../../utils/emailVerification';
 
 const EmailVerificationBanner = () => {
   const { pathname } = useLocation();
   const user = useUserStore((state) => state.user);
-  const isAuthenticated = !!user;
-  const emailVerified = user?.emailVerified === true;
+  const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
+  const showButton = useCreditLineStatusStore((state) => state.showButton);
+  const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
+  const isCreditStatusLoaded = useCreditLineStatusStore((state) => state.isLoaded);
 
   const isVerificationPage =
     pathname === ROUTES.EMAIL_VERIFICATION ||
     pathname === ROUTES.EMAIL_VERIFICATION_ENTER_CODE;
 
-  if (!isAuthenticated || !user || emailVerified || isVerificationPage) {
+  useEffect(() => {
+    if (!user || user.emailVerified === true || isVerificationPage) return;
+    fetchCreditLineStatus().catch(() => {});
+  }, [user, isVerificationPage, fetchCreditLineStatus]);
+
+  if (!user || isVerificationPage) {
+    return null;
+  }
+
+  const show = shouldShowEmailVerificationBanner({
+    emailVerified: user.emailVerified,
+    showButton,
+    requestStatus,
+    isCreditStatusLoaded,
+  });
+
+  if (!show) {
     return null;
   }
 
@@ -29,7 +49,7 @@ const EmailVerificationBanner = () => {
             </p>
           </div>
           <Link
-            to={ROUTES.EMAIL_VERIFICATION}
+            to={`${ROUTES.EMAIL_VERIFICATION}?${EMAIL_VERIFY_FROM_QUERY}=${EMAIL_VERIFY_FROM.BANNER}`}
             className="flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-lg font-semibold text-xs md:text-sm transition-colors duration-200 whitespace-nowrap flex-shrink-0 w-full md:w-auto"
           >
             Verificar correo

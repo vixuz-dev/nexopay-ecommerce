@@ -10,9 +10,7 @@ import {
   HiOutlineClock,
   HiOutlineCheckCircle,
   HiOutlineShoppingBag,
-  HiOutlineCreditCard
 } from 'react-icons/hi2';
-import { formatPrice } from '../utils/creditUtils';
 
 const StatCardSkeleton = () => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
@@ -50,10 +48,6 @@ const MyAccount = () => {
     totalOrders: orders.total_orders ?? 0,
     pendingOrders: orders.pending_orders ?? 0,
     completedOrders: orders.completed_orders ?? 0,
-    canceledOrders: orders.canceled_orders ?? 0,
-    creditLimit: creditLineInfo.limit_credit_amount ?? 0,
-    creditUsed: creditLineInfo.credit_used ?? 0,
-    creditAvailable: creditLineInfo.remaining_credit_amount ?? 0,
   };
 
   return (
@@ -81,7 +75,7 @@ const MyAccount = () => {
             <StatCardSkeleton />
           </div>
         ) : (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 ${hasApprovedCreditRequest ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-blue-100 rounded-lg">
@@ -111,18 +105,6 @@ const MyAccount = () => {
               </div>
               <p className="text-sm text-gray-600">Pedidos completados</p>
             </div>
-
-            {hasApprovedCreditRequest && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <HiOutlineCreditCard className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <span className="text-2xl font-bold text-gray-900">{formatPrice(dashboardStats.creditAvailable)}</span>
-                </div>
-                <p className="text-sm text-gray-600">Crédito disponible</p>
-              </div>
-            )}
           </div>
         )}
 

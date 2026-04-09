@@ -125,6 +125,7 @@ export const ENDPOINTS = {
   ADDRESSES: {
     GET_ADDRESSES: `${API_BASE_URL}/ecommerce/addresses/get_addresses`,
     CREATE_DELIVERY_ADDRESS: `${API_BASE_URL}/ecommerce/addresses/create_delivery_address`,
+    UPDATE_DELIVERY_ADDRESS: `${API_BASE_URL}/ecommerce/addresses/update_delivery_address`,
   },
 
   // Mercado Pago (AWS)
@@ -143,6 +144,7 @@ export const ENDPOINTS = {
   // Ecommerce profile
   ECOMMERCE_PROFILE: {
     GET_PROFILE_INFORMATION: `${API_BASE_URL}/ecommerce/profile/get_profile_information`,
+    GET_PERSONAL_INFORMATION: `${API_BASE_URL}/ecommerce/profile/get_personal_information`,
     UPDATE_CLIENT: `${API_BASE_URL}/ecommerce/profile/update_client`,
   },
 

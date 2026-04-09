@@ -6,7 +6,9 @@ const useProfileStore = create(
   persist(
     (set) => ({
       profileInformation: null,
+      personalInformation: null,
       isProfileLoaded: false,
+      isPersonalInformationLoaded: false,
 
       fetchProfileInformation: async () => {
         set({ isProfileLoaded: false });
@@ -16,6 +18,18 @@ const useProfileStore = create(
           return data;
         } catch (err) {
           set({ profileInformation: null, isProfileLoaded: true });
+          throw err;
+        }
+      },
+
+      fetchPersonalInformation: async () => {
+        set({ isPersonalInformationLoaded: false });
+        try {
+          const data = await profileService.getPersonalInformation();
+          set({ personalInformation: data, isPersonalInformationLoaded: true });
+          return data;
+        } catch (err) {
+          set({ personalInformation: null, isPersonalInformationLoaded: true });
           throw err;
         }
       },
@@ -40,7 +54,8 @@ const useProfileStore = create(
         }));
       },
 
-      clearProfileInformation: () => set({ profileInformation: null }),
+      clearProfileInformation: () =>
+        set({ profileInformation: null, personalInformation: null, isPersonalInformationLoaded: false }),
     }),
     {
       name: 'profile-storage',

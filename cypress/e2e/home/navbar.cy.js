@@ -36,15 +36,17 @@ describe('Home — Navbar', () => {
 
   it('shows delivery address with zip code when user has address', () => {
     visitHomeAuthenticated();
+    cy.wait('@getAddresses');
     cy.get('nav').contains('Enviar a').should('exist');
     cy.get('nav').contains('CP 06000').should('exist');
   });
 
-  it('shows "Agrega dirección" when user has no addresses', () => {
+  it('hides delivery address button when get_addresses returns empty', () => {
     cy.fixture('home').then((data) => {
       visitHomeAuthenticated({ addressesFixture: data.addressesEmpty });
     });
-    cy.get('nav').contains('Agrega dirección').should('exist');
+    cy.wait('@getAddresses');
+    cy.get('nav').contains('Enviar a').should('not.exist');
   });
 
   it('navigates to products page from nav link', () => {

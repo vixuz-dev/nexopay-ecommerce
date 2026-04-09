@@ -3,6 +3,12 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiOutlineEnvelope, HiOutlineCheckCircle, HiOutlineArrowLeft } from 'react-icons/hi2';
 import { ROUTES } from '../utils/routes';
+import { getPostEmailVerificationDestination } from '../utils/emailVerification';
+
+const postVerifyDestinationPhrase = (search) =>
+  getPostEmailVerificationDestination(search) === ROUTES.MY_CREDIT
+    ? 'a Mis solicitudes'
+    : 'al inicio';
 import { emailVerificationService } from '../api/services/emailVerificationService';
 import useUserStore from '../stores/userStore';
 import useToastStore from '../stores/toastStore';
@@ -29,10 +35,10 @@ const VerificacionCorreoIngresarCodigo = () => {
 
   useEffect(() => {
     if (!email) {
-      navigate(ROUTES.EMAIL_VERIFICATION, { replace: true });
+      navigate(`${ROUTES.EMAIL_VERIFICATION}${location.search || ''}`, { replace: true });
       return;
     }
-  }, [email, navigate]);
+  }, [email, navigate, location.search]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -50,11 +56,11 @@ const VerificacionCorreoIngresarCodigo = () => {
   useEffect(() => {
     if (showSuccessModal) {
       const t = setTimeout(() => {
-        navigate(ROUTES.HOME, { replace: true });
+        navigate(getPostEmailVerificationDestination(location.search), { replace: true });
       }, 5000);
       return () => clearTimeout(t);
     }
-  }, [showSuccessModal, navigate]);
+  }, [showSuccessModal, navigate, location.search]);
 
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -109,7 +115,7 @@ const VerificacionCorreoIngresarCodigo = () => {
       return;
     }
     if (!email) {
-      navigate(ROUTES.EMAIL_VERIFICATION, { replace: true });
+      navigate(`${ROUTES.EMAIL_VERIFICATION}${location.search || ''}`, { replace: true });
       return;
     }
 
@@ -258,7 +264,8 @@ const VerificacionCorreoIngresarCodigo = () => {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">¡Correo verificado!</h2>
             <p className="text-gray-600 mb-6">
-              Tu correo electrónico ha sido verificado correctamente. Serás redirigido en 5 segundos.
+              Tu correo electrónico ha sido verificado correctamente. Serás redirigido{' '}
+              {postVerifyDestinationPhrase(location.search)} en unos segundos.
             </p>
             <p className="text-sm text-gray-500">Redirigiendo...</p>
           </motion.div>

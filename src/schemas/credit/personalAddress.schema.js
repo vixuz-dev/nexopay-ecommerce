@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { isValidPostalCode } from '../../utils/validation';
 import { ESTADOS_MEXICO, CIUDADES_MEXICO } from '../../constants/app';
 
 export const personalAddressSchema = z.object({
@@ -16,7 +15,10 @@ export const personalAddressSchema = z.object({
     .string()
     .min(1, 'Ingresa un número exterior válido')
     .max(20, 'Ingresa un número exterior válido')
-    .regex(/^[a-zA-Z0-9\s\-/]+$/, 'Ingresa un número exterior válido'),
+    .regex(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/, 'Solo letras y números, sin espacios ni símbolos')
+    .refine((val) => /\d/.test(val), {
+      message: 'El número exterior debe incluir al menos un dígito'
+    }),
 
   numeroInterior: z
     .string()
@@ -52,10 +54,7 @@ export const personalAddressSchema = z.object({
   codigoPostal: z
     .string()
     .min(1, 'Ingresa un código postal válido')
-    .length(5, 'Ingresa un código postal válido')
-    .refine((val) => isValidPostalCode(val), {
-      message: 'Ingresa un código postal válido'
-    }),
+    .regex(/^\d{5}$/, 'El código postal debe tener exactamente 5 dígitos numéricos'),
 
   referencias: z
     .string()

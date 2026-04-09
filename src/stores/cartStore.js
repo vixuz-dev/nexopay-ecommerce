@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
+import { isSameCartLine } from '../utils/cartLineUtils';
+import { splitDeferredIntoInstallments } from '../utils/deferredInstallments';
 
 const resolvePaymentPerUnit = (product) => {
   const unitTotalPrice = product.finalPrice ?? product.price ?? 0;
@@ -28,8 +30,13 @@ const useCartStore = create(
         const { productVariantId, attributes = [] } = options;
         const items = get().items;
         const normalizedSize = size || 'Estándar';
-        const existingItemIndex = items.findIndex(
-          item => item.id === product.id && item.size === normalizedSize
+        const resolvedVariantId = productVariantId ?? product.productVariantId ?? null;
+        const existingItemIndex = items.findIndex((item) =>
+          isSameCartLine(item, {
+            productId: product.id,
+            size: normalizedSize,
+            productVariantId: resolvedVariantId,
+          })
         );
 
         const { unitTotalPrice, unitInitialPayment, unitDeferredAmount } = resolvePaymentPerUnit(product);
@@ -81,25 +88,35 @@ const useCartStore = create(
       },
 
       // Remover producto del carrito
-      removeItem: (itemId, size = null) => {
+      removeItem: (itemId, size = null, productVariantId) => {
         const items = get().items;
-        const normalizedSize = size || 'Estándar';
         const filteredItems = items.filter(
-          (item) => !(String(item.id) === String(itemId) && item.size === normalizedSize)
+          (item) =>
+            !isSameCartLine(item, {
+              productId: itemId,
+              size,
+              productVariantId,
+            })
         );
         set({ items: filteredItems });
       },
 
-      updateQuantity: (itemId, quantity, size = null) => {
+      updateQuantity: (itemId, quantity, size = null, productVariantId) => {
         if (quantity < 1) {
-          get().removeItem(itemId, size);
+          get().removeItem(itemId, size, productVariantId);
           return;
         }
 
         const items = get().items;
         const maxStock = 999;
         const updatedItems = items.map(item => {
-          if (item.id === itemId && item.size === (size || 'Estándar')) {
+          if (
+            isSameCartLine(item, {
+              productId: itemId,
+              size,
+              productVariantId,
+            })
+          ) {
             const cappedQuantity = Math.min(quantity, item.stock ?? maxStock);
             const unitTotal = item.price ?? 0;
             const unitInit = item.unitInitialPayment ?? unitTotal * CHECKOUT_CONFIG.INITIAL_PAYMENT_PERCENT;
@@ -117,11 +134,15 @@ const useCartStore = create(
         set({ items: updatedItems });
       },
 
-      updateItemCategoryIds: (itemId, size, categoryId, subcategoryId) => {
+      updateItemCategoryIds: (itemId, size, categoryId, subcategoryId, productVariantId) => {
         const items = get().items;
         const normalizedSize = size || 'Estándar';
         const updatedItems = items.map((item) =>
-          item.id === itemId && item.size === normalizedSize
+          isSameCartLine(item, {
+            productId: itemId,
+            size: normalizedSize,
+            productVariantId,
+          })
             ? { ...item, categoryId: categoryId ?? item.categoryId, subcategoryId: subcategoryId ?? item.subcategoryId }
             : item
         );
@@ -156,29 +177,35 @@ const useCartStore = create(
         }, 0);
       },
 
-      // Calcular pago mensual
-      getMonthlyPayment: () => {
+      getDeferredInstallmentPlan: () => {
         const deferredAmount = get().getDeferredAmount();
         const months = get().deferralMonths;
-        return months > 0 ? deferredAmount / months : 0;
+        return splitDeferredIntoInstallments(deferredAmount, months);
       },
 
-      // Generar calendario de pagos (total restante / total de meses)
+      getMonthlyPayment: () => {
+        const plan = get().getDeferredInstallmentPlan();
+        return plan.baseInstallment;
+      },
+
       getPaymentSchedule: () => {
         const deferredAmount = get().getDeferredAmount();
         const months = get().deferralMonths;
-        const monthlyAmount = months > 0 ? deferredAmount / months : 0;
+        const plan = splitDeferredIntoInstallments(deferredAmount, months);
         const schedule = [];
         const today = new Date();
 
-        for (let i = 1; i <= months; i++) {
+        for (let i = 1; i <= plan.totalMonths; i++) {
           const paymentDate = new Date(today);
           paymentDate.setMonth(paymentDate.getMonth() + i);
+
+          const amount =
+            i < plan.totalMonths ? plan.baseInstallment : plan.lastInstallment;
 
           schedule.push({
             number: i,
             date: paymentDate,
-            amount: monthlyAmount,
+            amount,
             status: 'pending',
           });
         }

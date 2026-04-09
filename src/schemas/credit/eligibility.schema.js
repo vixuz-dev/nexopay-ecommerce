@@ -85,22 +85,26 @@ export const eligibilitySchema = z.object({
     .string()
     .optional(),
 
-  total_compra: z
-    .union([z.number(), z.string(), z.undefined()])
-    .transform((val) => {
-      if (val === '' || val === null || val === undefined) return undefined;
-      const num = typeof val === 'string' ? parseInt(val, 10) : val;
-      return isNaN(num) ? undefined : num;
-    })
-    .pipe(
-      z
-        .number({
-          required_error: 'Ingresa el total de la compra que deseas realizar',
-          invalid_type_error: 'El total de la compra debe ser un número'
-        })
-        .int('El total debe ser un número entero (sin decimales)')
-        .min(1, 'El total de la compra debe ser mayor a 0')
-    )
+  total_compra: z.preprocess(
+    (val) => {
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'number' && Number.isFinite(val)) {
+        return String(Math.trunc(Math.abs(val)));
+      }
+      return String(val);
+    },
+    z
+      .string()
+      .min(1, 'Ingresa el total de la compra que deseas realizar')
+      .regex(/^\d+$/, 'Solo se permiten números (sin letras ni símbolos)')
+      .transform((s) => parseInt(s, 10))
+      .pipe(
+        z
+          .number()
+          .int('El total debe ser un número entero (sin decimales)')
+          .min(1, 'El total de la compra debe ser mayor a 0')
+      )
+  )
 }).superRefine((data, ctx) => {
   // Validación condicional: si solicitud_aprobada es true, periodo debe estar presente y válido
   if (data.solicitud_aprobada === true) {

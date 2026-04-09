@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiOutlineEnvelope, HiOutlineArrowLeft } from 'react-icons/hi2';
-import { ROUTES } from '../utils/routes';
+import { ROUTES, EMAIL_VERIFY_FROM_QUERY, EMAIL_VERIFY_FROM } from '../utils/routes';
 import { emailVerificationService } from '../api/services/emailVerificationService';
 import useUserStore from '../stores/userStore';
 import useToastStore from '../stores/toastStore';
@@ -10,6 +10,11 @@ import ProtectedRoute from '../components/common/ProtectedRoute';
 
 const VerificacionCorreo = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const fromApprovedCreditRequest =
+    location.state?.fromApprovedCreditRequest === true ||
+    searchParams.get(EMAIL_VERIFY_FROM_QUERY) === EMAIL_VERIFY_FROM.CREDIT_REQUEST;
   const user = useUserStore((state) => state.user);
   const showToast = useToastStore((state) => state.showToast);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +35,9 @@ const VerificacionCorreo = () => {
     try {
       await emailVerificationService.addEmailVerification(user.client_id);
       showToast('Código enviado a tu correo', 'success', 3000);
-      navigate(ROUTES.EMAIL_VERIFICATION_ENTER_CODE, {
+      navigate({
+        pathname: ROUTES.EMAIL_VERIFICATION_ENTER_CODE,
+        search: location.search,
         state: { email },
       });
     } catch (err) {
@@ -58,6 +65,14 @@ const VerificacionCorreo = () => {
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">
                   Verifica tu correo electrónico
                 </h1>
+                {fromApprovedCreditRequest && (
+                  <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4 text-left">
+                    <p className="text-sm text-gray-800">
+                      Tu solicitud de crédito fue aprobada. Para realizar compras en la tienda necesitas verificar tu correo
+                      electrónico.
+                    </p>
+                  </div>
+                )}
                 <p className="text-gray-600 mb-4">
                   Enviaremos un código de verificación a tu correo para confirmar tu identidad.
                 </p>

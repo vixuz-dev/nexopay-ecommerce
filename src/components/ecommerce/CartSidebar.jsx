@@ -71,7 +71,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
             const catId = match.categoryId ?? match.category_id;
             const subId = match.subcategoryId ?? match.subcategory_id;
             if (catId != null || subId != null) {
-              updateItemCategoryIds(item.id, item.size, catId, subId);
+              updateItemCategoryIds(item.id, item.size, catId, subId, item.productVariantId);
             }
           }
         } catch {
@@ -98,16 +98,16 @@ const CartSidebar = ({ isOpen, onClose }) => {
   const totalItems = getTotalItems();
   const initialPayment = getInitialPayment();
 
-  const handleQuantityChange = (itemId, size, newQuantity, maxStock = 999) => {
+  const handleQuantityChange = (itemId, size, newQuantity, maxStock = 999, productVariantId) => {
     if (newQuantity < 1) {
-      removeFromCart(itemId, size);
+      removeFromCart(itemId, size, productVariantId);
       return;
     }
-    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxStock));
+    updateQuantityInCart(itemId, size, Math.min(newQuantity, maxStock), productVariantId);
   };
 
-  const handleRemoveItem = (itemId, size) => {
-    removeFromCart(itemId, size);
+  const handleRemoveItem = (itemId, size, productVariantId) => {
+    removeFromCart(itemId, size, productVariantId);
   };
 
   const handleViewCart = () => {
@@ -136,7 +136,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-3">
             <HiOutlineShoppingCart className="w-6 h-6 text-primary-600" />
             <h2 className="text-xl font-bold text-gray-900">
-              Carrito ({totalItems})
+              Carrito
             </h2>
             {cartLoading && (
               <div className="w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -174,7 +174,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                 const isOutOfStock = item.stock != null && item.stock <= 0;
                 return (
                 <div
-                  key={`${item.id}-${item.size}`}
+                  key={`${item.id}-${item.productVariantId ?? 'nv'}-${item.size}`}
                   className={`flex gap-4 p-4 rounded-lg border border-gray-200 ${isOutOfStock ? 'bg-gray-50/50 opacity-75' : 'bg-gray-50'}`}
                 >
                   <Link
@@ -215,7 +215,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                         <span className="text-gray-300">·</span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveItem(item.id, item.size)}
+                          onClick={() => handleRemoveItem(item.id, item.size, item.productVariantId)}
                           className="text-xs font-medium text-primary-600 hover:text-primary-700 underline underline-offset-2 transition-colors"
                         >
                           Remover
@@ -226,7 +226,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.stock ?? 999)}
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.stock ?? 999, item.productVariantId)}
                               disabled={item.quantity <= 1}
                               className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
@@ -236,7 +236,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.stock ?? 999)}
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.stock ?? 999, item.productVariantId)}
                               disabled={item.quantity >= (item.stock ?? 999)}
                               className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
@@ -260,7 +260,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleRemoveItem(item.id, item.size);
+                            handleRemoveItem(item.id, item.size, item.productVariantId);
                           }}
                           className="mt-2 text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
                         >

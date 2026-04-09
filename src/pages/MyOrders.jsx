@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -18,6 +18,7 @@ import { useOrders } from '../hooks/useOrders';
 import { mapOrderFromApi } from '../utils/orderMapper';
 import { orderService } from '../api/services/orderService';
 import AccountMovementsPagination from '../components/credit/AccountMovementsPagination';
+import Dropdown from '../components/common/Dropdown';
 import useToastStore from '../stores/toastStore';
 
 const LIMIT = 10;
@@ -55,7 +56,6 @@ const getStatusInfo = (status) => {
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'pending', label: 'Pendientes' },
-  { value: 'shipping', label: 'En envío' },
   { value: 'completed', label: 'Completados' },
   { value: 'cancelled', label: 'Cancelados' },
 ];
@@ -78,6 +78,12 @@ const MyOrders = () => {
     goToPage,
     changeStatus,
   } = useOrders({ limit: LIMIT });
+
+  useEffect(() => {
+    if (statusFilter === 'shipping') {
+      changeStatus('all');
+    }
+  }, [statusFilter, changeStatus]);
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -166,18 +172,15 @@ const MyOrders = () => {
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
-            <div className="md:w-64">
-              <select
+            <div className="md:w-64 md:flex-shrink-0">
+              <Dropdown
+                id="orders-status-filter"
+                name="status"
                 value={statusFilter}
                 onChange={(e) => changeStatus(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                options={STATUS_OPTIONS}
+                placeholder="Todos los estados"
+              />
             </div>
           </div>
         </div>

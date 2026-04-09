@@ -4,7 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreditForm } from '../../../stores/creditFormStore';
 import { personalAddressSchema } from '../../../schemas/credit';
 import { CIUDADES_MEXICO } from '../../../constants/app';
+import AddressAutocomplete from '../../common/AddressAutocomplete';
 import Dropdown from '../../common/Dropdown';
+import { getGoogleMapsBrowserKey } from '../../../utils/loadGoogleMapsPlaces';
 
 const PersonalAddressStep = ({ setCustomNextHandler }) => {
   const { formData, updateFormData, goToNextStep, setIsCurrentStepValid } = useCreditForm();
@@ -109,6 +111,8 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
     label: ciudad,
   }));
 
+  const hasGoogleMapsKey = Boolean(getGoogleMapsBrowserKey());
+
   return (
     <div>
       <div className="mb-6">
@@ -121,6 +125,23 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
       </div>
 
       <form onSubmit={handleSubmit(() => {})} className="space-y-6">
+        {hasGoogleMapsKey ? (
+          <AddressAutocomplete
+            onResolved={(patch) => {
+              Object.entries(patch).forEach(([key, val]) => {
+                if (val === undefined || val === null) return;
+                setValue(key, val, { shouldValidate: true, shouldDirty: true });
+              });
+              trigger();
+            }}
+            hint="Escribe y elige una sugerencia para llenar calle, números, colonia y código postal. Ciudad y estado deben coincidir con el catálogo; si no, elígelos manualmente abajo."
+          />
+        ) : (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            Configura <code className="text-xs">VITE_GOOGLE_MAP_KEY</code> para habilitar la búsqueda de direcciones. Mientras tanto, completa los campos manualmente.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="calle" className="block text-sm font-semibold text-gray-700 mb-2">

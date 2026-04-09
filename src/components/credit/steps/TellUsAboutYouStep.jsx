@@ -1,9 +1,16 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HiOutlineInformationCircle, HiOutlineUser, HiOutlineCreditCard, HiOutlineDocumentText, HiOutlineShoppingBag } from 'react-icons/hi2';
 import { useCreditForm } from '../../../stores/creditFormStore';
 import { eligibilitySchema } from '../../../schemas/credit';
+
+const NON_DIGIT_REGEX = /\D/g;
+
+function totalCompraDigitsOnly(value) {
+  if (value === undefined || value === null) return '';
+  return String(value).replace(NON_DIGIT_REGEX, '');
+}
 
 const mensajeErrorEspanol = (message, campo) => {
   if (!message || typeof message !== 'string') return 'Revisa este campo';
@@ -22,6 +29,7 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isValid },
     watch,
@@ -457,15 +465,28 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
               <label htmlFor="total_compra" className="block text-sm font-semibold text-gray-700 mb-2">
                 ¿Cuál es el total del producto que deseas comprar en NexoPay? (MXN) <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                id="total_compra"
-                min="0"
-                {...register('total_compra')}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
-                  errors.total_compra ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Ingresa el total de tu compra"
+              <Controller
+                name="total_compra"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    type="text"
+                    id="total_compra"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    name={field.name}
+                    ref={field.ref}
+                    value={totalCompraDigitsOnly(field.value)}
+                    onBlur={field.onBlur}
+                    onChange={(e) => {
+                      field.onChange(e.target.value.replace(NON_DIGIT_REGEX, ''));
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
+                      errors.total_compra ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Ingresa el total de tu compra"
+                  />
+                )}
               />
               {errors.total_compra && (
                 <p className="mt-1 text-sm text-red-600">{mensajeErrorEspanol(errors.total_compra.message, 'total_compra')}</p>

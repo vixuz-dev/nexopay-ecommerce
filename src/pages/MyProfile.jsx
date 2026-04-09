@@ -23,14 +23,17 @@ import {
 import useUserStore from '../stores/userStore';
 import useProfileStore from '../stores/profileStore';
 import useAddressesStore from '../stores/addressesStore';
-import { userToProfileForm } from '../utils/profileMapper';
+import { userToProfileForm, clientFromPersonalInformation } from '../utils/profileMapper';
 import useToastStore from '../stores/toastStore';
 import AddAddressModal from '../components/common/AddAddressModal';
+import { isPrincipalAddress } from '../utils/addressForm';
 
 const MyProfile = () => {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const profileInformation = useProfileStore((state) => state.profileInformation);
+  const personalInformation = useProfileStore((state) => state.personalInformation);
+  const fetchPersonalInformation = useProfileStore((state) => state.fetchPersonalInformation);
   const showToast = useToastStore((state) => state.showToast);
   const addresses = useAddressesStore((s) => s.addresses);
   const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
@@ -38,15 +41,33 @@ const MyProfile = () => {
 
   const [profileData, setProfileData] = useState(userToProfileForm(null));
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
 
   const profileClient = profileInformation?.client;
-  const client = profileClient
-    ? { ...profileClient, email: profileClient.email ?? user?.email, emailVerified: profileClient.emailVerified ?? user?.emailVerified }
-    : user;
+  const personalClient = clientFromPersonalInformation(personalInformation);
+  const client = personalClient
+    ? {
+        ...profileClient,
+        ...personalClient,
+        email: personalClient.email || profileClient?.email || user?.email,
+        emailVerified:
+          personalClient.emailVerified ?? profileClient?.emailVerified ?? user?.emailVerified,
+      }
+    : profileClient
+      ? {
+          ...profileClient,
+          email: profileClient.email ?? user?.email,
+          emailVerified: profileClient.emailVerified ?? user?.emailVerified,
+        }
+      : user;
 
   useEffect(() => {
     setProfileData(userToProfileForm(client));
   }, [client]);
+
+  useEffect(() => {
+    fetchPersonalInformation().catch(() => {});
+  }, [fetchPersonalInformation]);
 
   useEffect(() => {
     fetchAddresses().catch(() => {});
@@ -56,10 +77,19 @@ const MyProfile = () => {
     showToast('Función próximamente disponible', 'info');
   };
 
+  const closeAddressModal = () => {
+    setIsAddAddressModalOpen(false);
+    setEditingAddress(null);
+  };
+
+  const openAddAddressModal = () => {
+    setEditingAddress(null);
+    setIsAddAddressModalOpen(true);
+  };
+
   const handleAddressSuccess = async () => {
     invalidateAddresses();
     await fetchAddresses();
-    showToast('Dirección agregada correctamente', 'success');
   };
 
   const fullName = [client?.name, client?.paternalLastName, client?.maternalLastName]
@@ -198,8 +228,123 @@ const MyProfile = () => {
                     className={inputClass}
                   />
                 </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">CURP</label>
+                  <input
+                    type="text"
+                    name="curp"
+                    value={profileData.curp}
+                    disabled
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
+
+            {(profileData.address?.street ||
+              profileData.address?.city ||
+              profileData.address?.neighborhood) && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <HiOutlineMapPin className="w-5 h-5 text-primary-600" />
+                  <h2 className="text-base font-semibold text-gray-900">Dirección principal</h2>
+                </div>
+                <p className="text-xs text-gray-500 mb-5">
+                  Corresponde a tu domicilio registrado. Solo lectura; no se edita aquí (usa la
+                  dirección principal de tu cuenta).
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Calle</label>
+                    <input
+                      type="text"
+                      value={profileData.address.street}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Número exterior
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.address.number}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Número interior
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.address.interior}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Colonia</label>
+                    <input
+                      type="text"
+                      value={profileData.address.neighborhood}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Ciudad</label>
+                    <input
+                      type="text"
+                      value={profileData.address.city}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Estado</label>
+                    <input
+                      type="text"
+                      value={profileData.address.state}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Código postal
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.address.zipCode}
+                      disabled
+                      readOnly
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Referencias
+                    </label>
+                    <textarea
+                      value={profileData.address.references}
+                      disabled
+                      readOnly
+                      rows={2}
+                      className={`${inputClass} resize-none`}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Shipping Addresses */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
@@ -213,7 +358,7 @@ const MyProfile = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsAddAddressModalOpen(true)}
+                  onClick={openAddAddressModal}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
                 >
                   <HiOutlinePlus className="w-3.5 h-3.5" />
@@ -238,7 +383,8 @@ const MyProfile = () => {
                           : 'border-gray-200 bg-gray-50/50'
                       }`}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           addr.is_principal === 1
                             ? 'bg-primary-100 text-primary-600'
@@ -274,6 +420,19 @@ const MyProfile = () => {
                             </p>
                           )}
                         </div>
+                        </div>
+                        {!isPrincipalAddress(addr) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAddress(addr);
+                              setIsAddAddressModalOpen(true);
+                            }}
+                            className="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700 px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"
+                          >
+                            Editar
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -390,7 +549,8 @@ const MyProfile = () => {
 
       <AddAddressModal
         isOpen={isAddAddressModalOpen}
-        onClose={() => setIsAddAddressModalOpen(false)}
+        editAddress={editingAddress}
+        onClose={closeAddressModal}
         onSuccess={handleAddressSuccess}
       />
 

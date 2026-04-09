@@ -46,6 +46,9 @@ const Navbar = ({
     return addresses.find((a) => a.is_principal === 1) || addresses[0];
   }, [addresses]);
 
+  const showDeliveryAddressButton =
+    !isAuthenticated || (addressesLoaded && addresses.length > 0);
+
   const categoriesDropdown = useMemo(() => {
     if (!categories) {
       return [];
@@ -245,26 +248,27 @@ const Navbar = ({
             );
           })}
 
-          <button
-            onClick={() => navigate(isAuthenticated ? ROUTES.MY_PROFILE : ROUTES.LOGIN)}
-            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 ${
-              isHomePage
-                ? 'bg-white/20 text-white hover:bg-white/30'
-                : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
-            }`}
-          >
-            <HiOutlineMapPin className="w-3.5 h-3.5" />
-            <span>
-              Enviar a{' '}
-              {isAuthenticated && primaryAddress ? (
-                <span className="font-semibold">CP {primaryAddress.zip_code}</span>
-              ) : (
-                <span className="font-semibold">
-                  {isAuthenticated ? 'Agrega dirección' : 'Tu ubicación'}
-                </span>
-              )}
-            </span>
-          </button>
+          {showDeliveryAddressButton && (
+            <button
+              type="button"
+              onClick={() => navigate(isAuthenticated ? ROUTES.MY_PROFILE : ROUTES.LOGIN)}
+              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 ${
+                isHomePage
+                  ? 'bg-white/20 text-white hover:bg-white/30'
+                  : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+              }`}
+            >
+              <HiOutlineMapPin className="w-3.5 h-3.5" />
+              <span>
+                Enviar a{' '}
+                {isAuthenticated && primaryAddress ? (
+                  <span className="font-semibold">CP {primaryAddress.zip_code}</span>
+                ) : (
+                  <span className="font-semibold">Tu ubicación</span>
+                )}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

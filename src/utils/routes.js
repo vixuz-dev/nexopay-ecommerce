@@ -47,6 +47,13 @@ export const ROUTES = {
 
 };
 
+/** Origen del flujo de verificación de correo: `?from=credit-request` | `?from=banner` */
+export const EMAIL_VERIFY_FROM_QUERY = 'from';
+export const EMAIL_VERIFY_FROM = {
+  CREDIT_REQUEST: 'credit-request',
+  BANNER: 'banner',
+};
+
 /**
  * Genera la URL del detalle de un producto con query params
  * @param {string} productName - Nombre del producto

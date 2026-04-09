@@ -1,5 +1,6 @@
 import { ENDPOINTS } from '../endpoints';
 import { getInternalApiHeaders } from '../utils/apiHeaders';
+import { parseResponseJsonSafe } from '../utils/parseResponseJson';
 import { handleAuthError } from '../../utils/authInterceptor';
 
 /**
@@ -17,7 +18,7 @@ export const addressService = {
       headers: getInternalApiHeaders(),
     });
 
-    const data = await response.json();
+    const data = await parseResponseJsonSafe(response);
 
     if (!response.ok) {
       const error = new Error(data.message || data.statusMessage || 'Error al obtener las direcciones');
@@ -65,7 +66,7 @@ export const addressService = {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
+    const data = await parseResponseJsonSafe(response);
 
     if (!response.ok) {
       const error = new Error(data.message || data.statusMessage || 'Error al crear la dirección');
@@ -89,5 +90,43 @@ export const addressService = {
       return data.body;
     }
     return data.body || data;
+  },
+
+  /**
+   * Update an existing delivery address (requires auth token in header)
+   * @param {Object} payload - Same shape as create plus address identifier (e.g. clientAddressId)
+   * @returns {Promise<Object>} - Parsed response body from the API
+   */
+  async updateDeliveryAddress(payload) {
+    const response = await fetch(ENDPOINTS.ADDRESSES.UPDATE_DELIVERY_ADDRESS, {
+      method: 'PUT',
+      headers: getInternalApiHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await parseResponseJsonSafe(response);
+
+    if (!response.ok) {
+      const error = new Error(data.message || data.statusMessage || 'Error al actualizar la dirección');
+      error.statusCode = response.status;
+      error.status = response.status;
+      error.statusMessage = data.statusMessage;
+      error.details = data.error;
+      handleAuthError(error, response);
+      throw error;
+    }
+
+    if (data.success === false) {
+      const error = new Error(data.statusMessage || 'Error al actualizar la dirección');
+      error.statusCode = data.statusCode || 200;
+      error.status = data.statusCode || 200;
+      error.statusMessage = data.statusMessage;
+      throw error;
+    }
+
+    if (data.body != null) {
+      return data.body;
+    }
+    return data;
   },
 };

@@ -1,15 +1,41 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { HiOutlineUser, HiOutlinePhone, HiOutlineMapPin, HiOutlineCheckCircle, HiOutlineArrowRight } from 'react-icons/hi2';
 import Dropdown from '../../common/Dropdown';
+import { ESTADOS_MEXICO } from '../../../constants/app';
 import { useCreditForm } from '../../../stores/creditFormStore';
 import { referenceSchema } from '../../../schemas/credit';
+
+const REFERENCE_ESTADO_OPTIONS = ESTADOS_MEXICO.map((label) => ({
+  value: label,
+  label
+}));
+
+/**
+ * Same field defaults as `goToNextStep` in the credit store so Zod checks match submit.
+ */
+function normalizeReferenceForSchema(ref) {
+  return {
+    nombres: ref.nombres ?? '',
+    apellidoPaterno: ref.apellidoPaterno ?? '',
+    apellidoMaterno: ref.apellidoMaterno ?? '',
+    telefono: ref.telefono ?? '',
+    calle: ref.calle ?? '',
+    numeroExterior: ref.numeroExterior ?? '',
+    numeroInterior: ref.numeroInterior ?? '',
+    colonia: ref.colonia ?? '',
+    ciudad: ref.ciudad ?? '',
+    estado: ref.estado ?? '',
+    codigoPostal: ref.codigoPostal ?? '',
+    referenciaUbicacion: ref.referenciaUbicacion ?? '',
+  };
+}
 
 const PersonalReferencesStep = ({ setCustomNextHandler }) => {
   const { formData, updateFormData, goToNextStep, setIsCurrentStepValid, referenceValidationErrors } = useCreditForm();
   const [currentReference, setCurrentReference] = useState(1);
-  
+
   const reference1Data = formData.personalReferences?.reference1 || {};
   const reference2Data = formData.personalReferences?.reference2 || {};
 
@@ -51,12 +77,18 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
     }
   });
 
-  const currentForm = currentReference === 1 ? form1 : form2;
-  const { register, handleSubmit, formState: { errors, isValid }, watch, setValue, trigger } = currentForm;
-  const form1Valid = form1.formState.isValid;
-  const form2Valid = form2.formState.isValid;
+  const watchedRef1 = useWatch({ control: form1.control });
+  const watchedRef2 = useWatch({ control: form2.control });
 
-  const isStepValid = currentReference === 1 ? form1Valid : (form1Valid && form2Valid);
+  const isStepValid = useMemo(() => {
+    const r1 = referenceSchema.safeParse(normalizeReferenceForSchema(form1.getValues()));
+    const r2 = referenceSchema.safeParse(normalizeReferenceForSchema(form2.getValues()));
+    if (currentReference === 1) return r1.success;
+    return r1.success && r2.success;
+  }, [currentReference, watchedRef1, watchedRef2]);
+
+  const currentForm = currentReference === 1 ? form1 : form2;
+  const { handleSubmit, trigger } = currentForm;
   useEffect(() => {
     setIsCurrentStepValid(isStepValid);
   }, [isStepValid, setIsCurrentStepValid]);
@@ -96,20 +128,12 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
         referenciaUbicacion: reference2Data.referenciaUbicacion ?? ''
       });
     }
-    let cancelled = false;
     const triggers = [];
     if (hasPersistedRef1) triggers.push(form1.trigger());
     if (hasPersistedRef2) triggers.push(form2.trigger());
     if (triggers.length > 0) {
-      Promise.all(triggers).then((results) => {
-        if (!cancelled && setIsCurrentStepValid) {
-          const r1 = hasPersistedRef1 ? results[0] : form1.formState.isValid;
-          const r2 = hasPersistedRef2 ? results[hasPersistedRef1 ? 1 : 0] : form2.formState.isValid;
-          setIsCurrentStepValid(currentReference === 1 ? r1 : (r1 && r2));
-        }
-      });
+      void Promise.all(triggers);
     }
-    return () => { cancelled = true; };
   }, [formData.personalReferences]);
 
   const saveCurrentReference = useCallback((referenceNum) => {
@@ -162,66 +186,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
         )();
       });
     }
-  }, [currentReference, isValid, handleSubmit, goToNextStep, setCustomNextHandler, trigger, saveCurrentReference, handleNextReference]);
-
-  const estados = [
-    { value: 'Aguascalientes', label: 'Aguascalientes' },
-    { value: 'Baja California', label: 'Baja California' },
-    { value: 'Baja California Sur', label: 'Baja California Sur' },
-    { value: 'Campeche', label: 'Campeche' },
-    { value: 'Chiapas', label: 'Chiapas' },
-    { value: 'Chihuahua', label: 'Chihuahua' },
-    { value: 'Ciudad de México', label: 'Ciudad de México' },
-    { value: 'Coahuila', label: 'Coahuila' },
-    { value: 'Colima', label: 'Colima' },
-    { value: 'Durango', label: 'Durango' },
-    { value: 'Estado de México', label: 'Estado de México' },
-    { value: 'Guanajuato', label: 'Guanajuato' },
-    { value: 'Guerrero', label: 'Guerrero' },
-    { value: 'Hidalgo', label: 'Hidalgo' },
-    { value: 'Jalisco', label: 'Jalisco' },
-    { value: 'Michoacán', label: 'Michoacán' },
-    { value: 'Morelos', label: 'Morelos' },
-    { value: 'Nayarit', label: 'Nayarit' },
-    { value: 'Nuevo León', label: 'Nuevo León' },
-    { value: 'Oaxaca', label: 'Oaxaca' },
-    { value: 'Puebla', label: 'Puebla' },
-    { value: 'Querétaro', label: 'Querétaro' },
-    { value: 'Quintana Roo', label: 'Quintana Roo' },
-    { value: 'San Luis Potosí', label: 'San Luis Potosí' },
-    { value: 'Sinaloa', label: 'Sinaloa' },
-    { value: 'Sonora', label: 'Sonora' },
-    { value: 'Tabasco', label: 'Tabasco' },
-    { value: 'Tamaulipas', label: 'Tamaulipas' },
-    { value: 'Tlaxcala', label: 'Tlaxcala' },
-    { value: 'Veracruz', label: 'Veracruz' },
-    { value: 'Yucatán', label: 'Yucatán' },
-    { value: 'Zacatecas', label: 'Zacatecas' }
-  ];
-
-  const ciudades = [
-    { value: 'Ciudad de México', label: 'Ciudad de México' },
-    { value: 'Guadalajara', label: 'Guadalajara' },
-    { value: 'Monterrey', label: 'Monterrey' },
-    { value: 'Puebla', label: 'Puebla' },
-    { value: 'Tijuana', label: 'Tijuana' },
-    { value: 'León', label: 'León' },
-    { value: 'Juárez', label: 'Juárez' },
-    { value: 'Torreón', label: 'Torreón' },
-    { value: 'Querétaro', label: 'Querétaro' },
-    { value: 'San Luis Potosí', label: 'San Luis Potosí' },
-    { value: 'Mérida', label: 'Mérida' },
-    { value: 'Mexicali', label: 'Mexicali' },
-    { value: 'Aguascalientes', label: 'Aguascalientes' },
-    { value: 'Tampico', label: 'Tampico' },
-    { value: 'Culiacán', label: 'Culiacán' },
-    { value: 'Zamora', label: 'Zamora' },
-    { value: 'Morelia', label: 'Morelia' },
-    { value: 'Chihuahua', label: 'Chihuahua' },
-    { value: 'Saltillo', label: 'Saltillo' },
-    { value: 'Hermosillo', label: 'Hermosillo' },
-    { value: 'Jacona', label: 'Jacona' }
-  ];
+  }, [currentReference, isStepValid, handleSubmit, goToNextStep, setCustomNextHandler, trigger, saveCurrentReference, handleNextReference]);
 
   const isReference1Complete = reference1Data.nombres && 
     reference1Data.apellidoPaterno && 
@@ -453,7 +418,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
                     onChange={(e) => {
                       formSetValue('estado', e.target.value, { shouldValidate: true });
                     }}
-                    options={estados}
+                    options={REFERENCE_ESTADO_OPTIONS}
                     placeholder="Selecciona un estado"
                     error={formErrors.estado?.message || (Array.isArray(extErrors.estado) ? extErrors.estado[0] : extErrors.estado)}
                 />

@@ -10,10 +10,14 @@ const useAddressesStore = create(
       isLoading: false,
       error: null,
 
-      fetchAddresses: async () => {
+      /**
+       * @param {{ force?: boolean }} [options] - force: true ignora caché y vuelve a llamar al API
+       */
+      fetchAddresses: async (options = {}) => {
+        const force = options.force === true;
         const { isLoaded, isLoading } = get();
         if (isLoading) return get().addresses;
-        if (isLoaded) return get().addresses;
+        if (!force && isLoaded) return get().addresses;
 
         set({ error: null, isLoading: true });
         try {

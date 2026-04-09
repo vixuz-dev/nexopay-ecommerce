@@ -94,7 +94,7 @@
   },
   "creditLineHide": {
     "statusCode": 200,
-    "body": { "showButton": 0, "requestStatus": "approved" }
+    "body": { "showButton": 0, "requestStatus": "aprobado" }
   },
   "addresses": {
     "statusCode": 200,

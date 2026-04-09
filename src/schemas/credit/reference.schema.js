@@ -70,7 +70,10 @@ export const referenceSchema = z.object({
     })
     .min(1, 'El número exterior es requerido')
     .max(20, 'El número exterior no puede tener más de 20 caracteres')
-    .regex(/^[a-zA-Z0-9\s\-/]+$/, 'El número exterior contiene caracteres inválidos'),
+    .regex(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/, 'Solo letras y números, sin espacios ni símbolos')
+    .refine((val) => /\d/.test(val), {
+      message: 'El número exterior debe incluir al menos un dígito'
+    }),
 
   numeroInterior: z
     .string()
@@ -121,8 +124,7 @@ export const referenceSchema = z.object({
       invalid_type_error: 'El código postal debe ser un texto'
     })
     .min(1, 'El código postal es requerido')
-    .length(5, 'El código postal debe tener exactamente 5 dígitos')
-    .regex(/^\d{5}$/, 'El código postal debe contener solo números'),
+    .regex(/^\d{5}$/, 'El código postal debe tener exactamente 5 dígitos numéricos'),
 
   referenciaUbicacion: z
     .string({

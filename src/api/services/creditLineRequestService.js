@@ -1,6 +1,10 @@
 import { ENDPOINTS } from '../endpoints';
 import { getInternalApiHeaders } from '../utils/apiHeaders';
 import { handleAuthError } from '../../utils/authInterceptor';
+import {
+  getCreditShowButtonFromApiBody,
+  getCreditRequestStatusFromApiBody
+} from '../../utils/creditLineShowButton';
 
 /**
  * Service for credit line request API calls
@@ -68,7 +72,7 @@ class CreditLineRequestService {
 
   /**
    * Check if user has already made a credit line request
-   * @returns {Promise<{ showButton: number, requestStatus: string }>} - showButton 1 = can request, 0 = already requested
+   * @returns {Promise<{ showButton: number, requestStatus: string }>} - showButton 1 = can request; body puede usar showButtonCreditLineRequest (boolean) o showButton (legacy)
    */
   async haveCreditLineRequest() {
     const response = await fetch(ENDPOINTS.CREDIT_LINE_REQUEST.HAVE_CREDIT_LINE_REQUEST, {
@@ -89,8 +93,8 @@ class CreditLineRequestService {
 
     const body = data.body || data.data || data;
     return {
-      showButton: body.showButton !== undefined ? Number(body.showButton) : 1,
-      requestStatus: body.requestStatus != null ? String(body.requestStatus) : '',
+      showButton: getCreditShowButtonFromApiBody(body),
+      requestStatus: getCreditRequestStatusFromApiBody(body),
     };
   }
 }

@@ -1,5 +1,6 @@
 import { ENDPOINTS } from '../endpoints';
 import { getInternalApiHeaders } from '../utils/apiHeaders';
+import { parseResponseJsonSafe } from '../utils/parseResponseJson';
 import { handleAuthError } from '../../utils/authInterceptor';
 import { creditLineRequestService } from './creditLineRequestService';
 
@@ -18,7 +19,7 @@ export const profileService = {
       headers: getInternalApiHeaders(),
     });
 
-    const data = await response.json();
+    const data = await parseResponseJsonSafe(response);
 
     if (!response.ok) {
       const error = new Error(data.message || data.statusMessage || 'Error al obtener la información del perfil');
@@ -30,6 +31,36 @@ export const profileService = {
     }
 
     return data.body ?? data.data ?? data;
+  },
+
+  /**
+   * Get personal information for the current user (requires auth token in header)
+   * @returns {Promise<object>} - Parsed `body` or `data` from the API response
+   */
+  async getPersonalInformation() {
+    const response = await fetch(ENDPOINTS.ECOMMERCE_PROFILE.GET_PERSONAL_INFORMATION, {
+      method: 'GET',
+      headers: getInternalApiHeaders(),
+    });
+
+    const data = await parseResponseJsonSafe(response);
+
+    if (!response.ok) {
+      const error = new Error(
+        data.message || data.statusMessage || 'Error al obtener la información personal'
+      );
+      error.statusCode = response.status;
+      error.status = response.status;
+      error.statusMessage = data.statusMessage;
+      handleAuthError(error, response);
+      throw error;
+    }
+
+    const payload = data.body ?? data.data ?? data;
+    if (Array.isArray(payload)) {
+      return payload[0] ?? null;
+    }
+    return payload ?? null;
   },
 
   /**

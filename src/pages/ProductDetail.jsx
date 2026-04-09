@@ -25,6 +25,7 @@ import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import { SimilarProducts, SellerProducts } from '../components/ecommerce';
 import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
 import { getColorValue } from '../utils/colorUtils';
+import { formatProductCardPrice } from '../utils/format';
 
 const MAX_VISIBLE_THUMBNAILS = 4;
 
@@ -57,24 +58,111 @@ const ProductDetail = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [modalImageIndex, setModalImageIndex] = useState(0);
   const imageRef = React.useRef(null);
+  /** Evita reinicializar la variante seleccionada al mismo productId (p. ej. refetch de SWR). */
+  const initializedVariantForProductIdRef = React.useRef(null);
 
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN'
-    }).format(amount);
+  const extractImageUrl = (img) => {
+    if (!img) return null;
+    if (typeof img === 'string') return img;
+    return img.url || img.image || null;
   };
 
+  const buildImagesList = (source) => {
+    const list = [];
+    if (!source) return list;
+
+    const mainImage = extractImageUrl(source.variantImageUrl);
+    if (mainImage && !list.includes(mainImage)) {
+      list.push(mainImage);
+    }
+
+    if (Array.isArray(source.images)) {
+      source.images.forEach((img) => {
+        const imgUrl = extractImageUrl(img);
+        if (imgUrl && !list.includes(imgUrl)) {
+          list.push(imgUrl);
+        }
+      });
+    }
+
+    if (Array.isArray(source.imagesVariant)) {
+      source.imagesVariant.forEach((img) => {
+        const imgUrl = extractImageUrl(img);
+        if (imgUrl && !list.includes(imgUrl)) {
+          list.push(imgUrl);
+        }
+      });
+    }
+
+    return list;
+  };
+
+  const getAllProductVariants = (p = product) => {
+    if (!p) return [];
+
+    const baseVariant = {
+      productVariantId: p.productVariantId,
+      productCondition: p.productCondition,
+      stock: p.stock,
+      initialPaymentCost: p.initialPaymentCost,
+      remainingBalance: p.remainingBalance,
+      finalPrice: p.price,
+      variantImageUrl: p.variantImageUrl,
+      attributes: Array.isArray(p.attributes) ? p.attributes : [],
+      images: Array.isArray(p.images) ? p.images : [],
+      imagesVariant: Array.isArray(p.imagesVariant) ? p.imagesVariant : [],
+    };
+
+    const extraVariants = Array.isArray(p.productVariants) ? p.productVariants : [];
+    const seen = new Set();
+
+    return [baseVariant, ...extraVariants].filter((variant) => {
+      const id = variant?.productVariantId;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  };
+
+  useEffect(() => {
+    if (!product?.id) return;
+    if (initializedVariantForProductIdRef.current === product.id) return;
+
+    initializedVariantForProductIdRef.current = product.id;
+
+    const allVariants = getAllProductVariants(product);
+    const first = allVariants[0];
+    if (!first?.productVariantId) return;
+
+    setSelectedVariantId(first.productVariantId);
+
+    const next = { color: null, size: null };
+    (first.attributes || []).forEach((attr) => {
+      if (!attr?.name || attr.value == null) return;
+      const n = attr.name.toLowerCase();
+      if (n === 'color' || n === 'colores') {
+        next.color = attr.value;
+      } else if (n === 'talla' || n === 'almacenamiento' || n === 'size') {
+        next.size = attr.value;
+      }
+    });
+    setSelectedVariants(next);
+    setSelectedImage(0);
+    setModalImageIndex(0);
+  }, [product?.id]);
+
   const getCurrentProductData = () => {
-    if (selectedVariantId && product && product.productVariants) {
-      const variant = product.productVariants.find(v => v.productVariantId === selectedVariantId);
+    const allVariants = getAllProductVariants();
+    if (selectedVariantId && allVariants.length > 0) {
+      const variant = allVariants.find(v => v.productVariantId === selectedVariantId);
       if (variant) {
         return {
           ...product,
           price: variant.finalPrice || variant.price || product.price,
           initialPaymentCost: variant.initialPaymentCost || product.initialPaymentCost,
           remainingBalance: variant.remainingBalance || product.remainingBalance,
-          stock: variant.stock || product.stock,
+          stock: variant.stock ?? product.stock,
+          inStock: (variant.stock ?? 0) > 0,
           variantImageUrl: variant.variantImageUrl || product.variantImageUrl,
           productVariantId: variant.productVariantId,
         };
@@ -86,8 +174,8 @@ const ProductDetail = () => {
   const currentProduct = getCurrentProductData();
 
   const buildAttributes = () => {
-    if (product?.productVariants && currentProduct?.productVariantId) {
-      const variant = product.productVariants.find(
+    if (currentProduct?.productVariantId) {
+      const variant = getAllProductVariants().find(
         (v) => v.productVariantId === currentProduct.productVariantId
       );
       if (variant?.attributes && Array.isArray(variant.attributes) && variant.attributes.length > 0) {
@@ -104,7 +192,7 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = () => {
-    if (!product || !product.inStock) return;
+    if (!product || !currentProduct?.inStock) return;
     const variantSize = selectedVariants.size || null;
     const attrs = buildAttributes();
     addToCart(currentProduct, quantity, variantSize, {
@@ -115,7 +203,7 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = () => {
-    if (!product || !product.inStock) return;
+    if (!product || !currentProduct?.inStock) return;
     const variantSize = selectedVariants.size || null;
     const attrs = buildAttributes();
     addToCart(currentProduct, quantity, variantSize, {
@@ -219,76 +307,70 @@ const ProductDetail = () => {
     return null;
   }
 
-  const images = product.images && product.images.length > 0
-    ? product.images
-    : (product.image ? [product.image] : [null]);
+  const baseImages = buildImagesList(product);
+  const selectedVariant = selectedVariantId
+    ? getAllProductVariants().find((v) => v.productVariantId === selectedVariantId)
+    : null;
+  const variantImages = buildImagesList(selectedVariant);
+  const images = variantImages.length > 0
+    ? variantImages
+    : (baseImages.length > 0 ? baseImages : (product.image ? [product.image] : [null]));
   
   const variants = product.variants || {};
   const colors = variants.colors || [];
   const sizes = variants.sizes || [];
 
   const handleVariantSelection = (variantType, value) => {
-    setSelectedVariants(prev => ({
-      ...prev,
-      [variantType]: value
-    }));
+    const nextSelected = {
+      ...selectedVariants,
+      [variantType]: value,
+    };
+    setSelectedVariants(nextSelected);
 
-    if (product.productVariants && product.productVariants.length > 0) {
-      const matchingVariant = product.productVariants.find(variant => {
-        if (!variant.attributes || !Array.isArray(variant.attributes)) return false;
-        
-        const variantAttrs = {};
-        variant.attributes.forEach(attr => {
-          variantAttrs[attr.name] = attr.value;
-        });
+    const allVariants = getAllProductVariants();
+    if (allVariants.length === 0) return;
 
-        let matches = true;
-        if (variantType === 'color') {
-          const colorAttr = product.allAttributes.find(a => 
-            a.toLowerCase() === 'color' || a.toLowerCase() === 'colores'
-          );
-          if (colorAttr) {
-            matches = variantAttrs[colorAttr] === value;
-          }
-          if (matches && selectedVariants.size) {
-            const sizeAttr = product.allAttributes.find(a => 
-              a.toLowerCase() === 'talla' || a.toLowerCase() === 'almacenamiento' || a.toLowerCase() === 'size'
-            );
-            if (sizeAttr) {
-              matches = variantAttrs[sizeAttr] === selectedVariants.size;
-            }
-          }
-        } else if (variantType === 'size') {
-          const sizeAttr = product.allAttributes.find(a => 
-            a.toLowerCase() === 'talla' || a.toLowerCase() === 'almacenamiento' || a.toLowerCase() === 'size'
-          );
-          if (sizeAttr) {
-            matches = variantAttrs[sizeAttr] === value;
-          }
-          if (matches && selectedVariants.color) {
-            const colorAttr = product.allAttributes.find(a => 
-              a.toLowerCase() === 'color' || a.toLowerCase() === 'colores'
-            );
-            if (colorAttr) {
-              matches = variantAttrs[colorAttr] === selectedVariants.color;
-            }
-          }
-        }
-        
-        return matches;
+    const colorAttrName = product.allAttributes?.find(
+      (a) => a.toLowerCase() === 'color' || a.toLowerCase() === 'colores'
+    );
+    const sizeAttrName = product.allAttributes?.find(
+      (a) =>
+        a.toLowerCase() === 'talla' ||
+        a.toLowerCase() === 'almacenamiento' ||
+        a.toLowerCase() === 'size'
+    );
+
+    let matchingVariant = allVariants.find((variant) => {
+      if (!variant.attributes || !Array.isArray(variant.attributes)) return false;
+      const variantAttrs = {};
+      variant.attributes.forEach((attr) => {
+        variantAttrs[attr.name] = attr.value;
       });
 
-      if (matchingVariant) {
-        setSelectedVariantId(matchingVariant.productVariantId);
-        if (matchingVariant.variantImageUrl && matchingVariant.variantImageUrl.image) {
-          const imageIndex = images.findIndex(img => img === matchingVariant.variantImageUrl.image);
-          if (imageIndex >= 0) {
-            setSelectedImage(imageIndex);
-          } else {
-            setSelectedImage(0);
-          }
-        }
+      if (colorAttrName && nextSelected.color != null) {
+        if (variantAttrs[colorAttrName] !== nextSelected.color) return false;
       }
+      if (sizeAttrName && nextSelected.size != null && nextSelected.size !== '') {
+        if (variantAttrs[sizeAttrName] !== nextSelected.size) return false;
+      }
+      return true;
+    });
+
+    if (!matchingVariant && variantType === 'color' && colorAttrName) {
+      matchingVariant = allVariants.find((v) =>
+        v.attributes?.some((a) => a.name === colorAttrName && a.value === value)
+      );
+    }
+    if (!matchingVariant && variantType === 'size' && sizeAttrName) {
+      matchingVariant = allVariants.find((v) =>
+        v.attributes?.some((a) => a.name === sizeAttrName && a.value === value)
+      );
+    }
+
+    if (matchingVariant) {
+      setSelectedVariantId(matchingVariant.productVariantId);
+      setSelectedImage(0);
+      setModalImageIndex(0);
     }
   };
 
@@ -503,12 +585,12 @@ const ProductDetail = () => {
               <div className="mb-4">
                 <div className="flex items-baseline gap-3 mb-1">
                   <span className="text-3xl font-bold text-gray-900">
-                    {formatPrice(currentProduct.price)}
+                    {formatProductCardPrice(currentProduct.price)}
                   </span>
                   {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                     <>
                       <span className="text-lg text-gray-500 line-through">
-                        {formatPrice(currentProduct.originalPrice)}
+                        {formatProductCardPrice(currentProduct.originalPrice)}
                       </span>
                       {product.discount && (
                         <span className="text-sm font-semibold text-primary-600">
@@ -521,7 +603,7 @@ const ProductDetail = () => {
                 <p className="text-sm text-gray-600">
                   Llévatelo con
                   {currentProduct.initialPaymentCost > 0 ? (
-                    <>{' '}<span className="font-semibold text-primary-600">un pago inicial de {formatPrice(currentProduct.initialPaymentCost)}</span>{' '}</>
+                    <>{' '}<span className="font-semibold text-primary-600">un pago inicial de {formatProductCardPrice(currentProduct.initialPaymentCost)}</span>{' '}</>
                   ) : (
                     <> pago inicial </>
                   )}
@@ -550,12 +632,16 @@ const ProductDetail = () => {
                   </>
                 ) : (
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-                    <p className="text-sm font-semibold text-red-600">Este producto no está disponible</p>
+                    <p className="text-sm font-semibold text-red-600">
+                      {(colors.length > 0 || sizes.length > 0)
+                        ? 'No disponible'
+                        : 'Este producto no está disponible'}
+                    </p>
                   </div>
                 )}
               </div>
 
-              {currentProduct.inStock && (colors.length > 0 || sizes.length > 0) && (
+              {(colors.length > 0 || sizes.length > 0) && (
                 <div className="space-y-3 mb-4">
                   {colors.length > 0 && (
                     <div>
@@ -638,27 +724,31 @@ const ProductDetail = () => {
                   <p className={`text-sm font-semibold mb-1 ${currentProduct.inStock ? 'text-primary-600' : 'text-red-600'}`}>
                     {currentProduct.inStock ? 'Stock disponible' : 'Sin stock'}
                   </p>
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-semibold text-gray-700">Cantidad:</label>
-                    <div className="flex items-center border border-gray-300 rounded-lg">
-                      <button
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="px-3 py-1.5 hover:bg-gray-100 transition-colors text-sm"
-                        disabled={quantity <= 1}
-                      >
-                        -
-                      </button>
-                      <span className="px-4 py-1.5 border-x border-gray-300 font-medium text-sm">{quantity}</span>
-                      <button
-                        onClick={() => setQuantity(Math.min(currentProduct.stock, quantity + 1))}
-                        className="px-3 py-1.5 hover:bg-gray-100 transition-colors text-sm"
-                        disabled={quantity >= currentProduct.stock}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">({currentProduct.stock} disponibles)</p>
+                  {(currentProduct.stock ?? 0) > 0 && (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-semibold text-gray-700">Cantidad:</label>
+                        <div className="flex items-center border border-gray-300 rounded-lg">
+                          <button
+                            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                            className="px-3 py-1.5 hover:bg-gray-100 transition-colors text-sm"
+                            disabled={quantity <= 1}
+                          >
+                            -
+                          </button>
+                          <span className="px-4 py-1.5 border-x border-gray-300 font-medium text-sm">{quantity}</span>
+                          <button
+                            onClick={() => setQuantity(Math.min(currentProduct.stock, quantity + 1))}
+                            className="px-3 py-1.5 hover:bg-gray-100 transition-colors text-sm"
+                            disabled={quantity >= currentProduct.stock}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2">({currentProduct.stock} disponibles)</p>
+                    </>
+                  )}
                 </div>
 
                 {currentProduct.inStock && (

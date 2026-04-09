@@ -4,6 +4,7 @@ export { useCreditTransactions } from './useCreditTransactions';
 export { useInvoices } from './useInvoices';
 export { useOrderDetail } from './useOrderDetail';
 export { useDebounce } from './useDebounce';
+export { usePlacesAutocomplete } from './usePlacesAutocomplete';
 export { useProducts } from './useProducts';
 export { useSimilarProducts } from './useSimilarProducts';
 export { useAffiliateProducts } from './useAffiliateProducts';
