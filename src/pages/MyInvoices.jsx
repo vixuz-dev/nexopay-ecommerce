@@ -6,6 +6,7 @@ import { HiOutlineArrowLeft } from 'react-icons/hi2';
 import { useInvoices } from '../hooks/useInvoices';
 import useCreditLineStatusStore from '../stores/creditLineStatusStore';
 import { ROUTES } from '../utils/routes';
+import { isApprovedCreditLineStatus } from '../utils/emailVerification';
 import InvoiceSummary from '../components/invoices/InvoiceSummary';
 import InvoiceFilters from '../components/invoices/InvoiceFilters';
 import InvoiceCard from '../components/invoices/InvoiceCard';
@@ -17,31 +18,22 @@ const MyInvoices = () => {
 
   const showButton = useCreditLineStatusStore((state) => state.showButton);
   const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
-  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const isStatusLoaded = useCreditLineStatusStore((state) => state.isStatusLoaded);
   const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
 
   const hasApprovedCreditRequest =
-    isLoaded &&
-    showButton === 0 &&
-    requestStatus &&
-    String(requestStatus).toLowerCase() === 'aprobado';
+    isStatusLoaded && isApprovedCreditLineStatus(showButton, requestStatus);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!isLoaded) {
-      fetchCreditLineStatus().catch(() => {
-        if (!cancelled) void 0;
-      });
-    }
-    return () => { cancelled = true; };
-  }, [isLoaded, fetchCreditLineStatus]);
+    void fetchCreditLineStatus();
+  }, [fetchCreditLineStatus]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isStatusLoaded) return;
     if (!hasApprovedCreditRequest) {
       navigate(ROUTES.MY_ACCOUNT, { replace: true });
     }
-  }, [isLoaded, hasApprovedCreditRequest, navigate]);
+  }, [isStatusLoaded, hasApprovedCreditRequest, navigate]);
 
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
@@ -88,7 +80,7 @@ const MyInvoices = () => {
           </p>
         </div>
 
-        {!isLoaded ? (
+        {!isStatusLoaded ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
           </div>

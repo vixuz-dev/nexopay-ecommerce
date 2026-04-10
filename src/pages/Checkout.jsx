@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -67,8 +67,7 @@ const Checkout = () => {
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
-    expiryMonth: '',
-    expiryYear: '',
+    expiry: '',
     cvv: '',
   });
 

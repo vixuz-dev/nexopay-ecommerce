@@ -7,6 +7,8 @@ import { removeCookie } from '../../utils/cookieUtils';
 import useUserStore from '../../stores/userStore';
 import { useCreditFormStore } from '../../stores/creditFormStore';
 import useCreditLineStatusStore from '../../stores/creditLineStatusStore';
+import useCreditStore from '../../stores/creditStore';
+import { isApprovedCreditLineStatus } from '../../utils/emailVerification';
 
 const UserAvatar = ({ isHomePage = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,20 +19,17 @@ const UserAvatar = ({ isHomePage = false }) => {
   const resetCreditForm = useCreditFormStore((state) => state.resetForm);
   const showButton = useCreditLineStatusStore((state) => state.showButton);
   const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
-  const isLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const isStatusLoaded = useCreditLineStatusStore((state) => state.isStatusLoaded);
   const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
 
   useEffect(() => {
-    if (isOpen && !isLoaded) {
-      fetchCreditLineStatus().catch(() => {});
+    if (user) {
+      void fetchCreditLineStatus();
     }
-  }, [isOpen, isLoaded, fetchCreditLineStatus]);
+  }, [user, fetchCreditLineStatus]);
 
   const hasApprovedCreditRequest =
-    isLoaded &&
-    showButton === 0 &&
-    requestStatus &&
-    String(requestStatus).toLowerCase() === 'aprobado';
+    isStatusLoaded && isApprovedCreditLineStatus(showButton, requestStatus);
 
   const handleMouseEnter = () => setIsOpen(true);
   const handleMouseLeave = () => setIsOpen(false);
@@ -55,6 +54,8 @@ const UserAvatar = ({ isHomePage = false }) => {
     removeCookie('authToken');
     clearUser();
     resetCreditForm();
+    useCreditStore.getState().resetStatus();
+    useCreditStore.getState().clearCreditData();
     
     mutate(
       (key) => typeof key === 'string',

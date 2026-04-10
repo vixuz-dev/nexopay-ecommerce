@@ -12,7 +12,7 @@ const EmailVerificationBanner = () => {
   const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
   const showButton = useCreditLineStatusStore((state) => state.showButton);
   const requestStatus = useCreditLineStatusStore((state) => state.requestStatus);
-  const isCreditStatusLoaded = useCreditLineStatusStore((state) => state.isLoaded);
+  const isCreditStatusLoaded = useCreditLineStatusStore((state) => state.isStatusLoaded);
 
   const isVerificationPage =
     pathname === ROUTES.EMAIL_VERIFICATION ||
@@ -20,7 +20,7 @@ const EmailVerificationBanner = () => {
 
   useEffect(() => {
     if (!user || user.emailVerified === true || isVerificationPage) return;
-    fetchCreditLineStatus().catch(() => {});
+    void fetchCreditLineStatus();
   }, [user, isVerificationPage, fetchCreditLineStatus]);
 
   if (!user || isVerificationPage) {
@@ -39,7 +39,7 @@ const EmailVerificationBanner = () => {
   }
 
   return (
-    <div className="sticky top-0 z-40 bg-amber-50 border-b border-amber-200 shadow-sm">
+    <div className="bg-amber-50 border-b border-amber-200 shadow-sm">
       <div className="container mx-auto px-4 md:px-6 py-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
           <div className="flex items-start gap-2 md:gap-3 flex-1">

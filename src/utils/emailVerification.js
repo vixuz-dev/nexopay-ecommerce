@@ -17,7 +17,7 @@ export function getPostEmailVerificationDestination(search) {
 
 /**
  * Crédito aprobado: ya no puede solicitar (showButton 0; API: showButtonCreditLineRequest false) y el estado es aprobado.
- * Alineado con UserAvatar (pedidos/facturas) y have_credit_line_request.
+ * Alineado con login y userStore (showButtonCreditLineRequest / creditRequest).
  */
 export function isApprovedCreditLineStatus(showButton, requestStatus) {
   if (showButton !== 0) return false;

@@ -8,6 +8,60 @@ import { getMercadoPagoErrorMessage } from '../../utils/mercadoPagoErrors';
  */
 export const mercadoPagoService = {
   /**
+   * Token de tarjeta vía Lambda (server-side); el body debe coincidir con la función create-token.
+   *
+   * @param {Object} body
+   * @param {string} body.cardNumber
+   * @param {number|string} body.expirationMonth
+   * @param {number} body.expirationYear - Año en 4 dígitos
+   * @param {string} body.securityCode
+   * @param {string} body.cardholderName
+   * @returns {Promise<{ token: string }>}
+   */
+  async createCardToken(body) {
+    const response = await fetch(ENDPOINTS.MERCADO_PAGO.CREATE_CARD_TOKEN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      const error = new Error('Respuesta inválida al generar el token de tarjeta');
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    let inner = data.body;
+    if (typeof inner === 'string') {
+      try {
+        inner = JSON.parse(inner);
+      } catch {
+        inner = null;
+      }
+    }
+
+    const token = inner?.token ?? data.token;
+    const httpOk = response.ok && (data.statusCode == null || data.statusCode === 200);
+
+    if (!httpOk || !token) {
+      const message =
+        inner?.message ??
+        data.message ??
+        (typeof inner?.error === 'string' ? inner.error : null) ??
+        'No se pudo generar el token de la tarjeta';
+      const error = new Error(message);
+      error.statusCode = data.statusCode ?? response.status;
+      error.details = inner?.error ?? data.error ?? data.details;
+      throw error;
+    }
+
+    return { token };
+  },
+
+  /**
    * Get payment methods from Mercado Pago
    * @returns {Promise<object|Array>} - Payment methods data
    */
@@ -42,7 +96,7 @@ export const mercadoPagoService = {
    * @param {string} body.id - Payment method id (e.g. "master")
    * @param {string} body.payment_type_id - e.g. "credit_card"
    * @param {Object} body.payer - { email }
-   * @param {string} body.token - Card token from Mercado Pago SDK
+   * @param {string} body.token - Card token (p. ej. desde createCardToken en backend)
    * @param {number} body.transaction_amount - Amount in cents
    * @param {string} body.description - Payment description
    * @param {number} body.installments - Number of installments

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { HiOutlineXMark, HiOutlineCreditCard } from 'react-icons/hi2';
 import { CheckoutPaymentMethods, PaymentErrorModal } from '../checkout';
 import usePaymentMethodsStore from '../../stores/paymentMethodsStore';
@@ -16,8 +16,7 @@ const PaymentModal = ({ isOpen, onClose, amount, onSuccess }) => {
   const [cardData, setCardData] = useState({
     cardNumber: '',
     cardHolder: '',
-    expiryMonth: '',
-    expiryYear: '',
+    expiry: '',
     cvv: '',
   });
 

@@ -47,3 +47,20 @@ export const isAfterCutoffDate = (cutOffDate) => {
   return today > cutoff;
 };
 
+/**
+ * Límite autorizado desde `get_credit_line` (`credit_amount`) o campos equivalentes del perfil.
+ * @param {Record<string, unknown>|null|undefined} line
+ * @returns {number|null} null si no hay monto numérico
+ */
+export const parseCreditLineLimitAmount = (line) => {
+  if (!line || typeof line !== 'object') return null;
+  const raw =
+    line.credit_amount ??
+    line.creditAmount ??
+    line.limit_credit_amount ??
+    line.limitCreditAmount;
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isNaN(n) ? null : n;
+};
+

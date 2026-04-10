@@ -1,7 +1,8 @@
 {
   "token": "cy-fake-token",
-  "userStorage": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":true}},\"version\":0}",
-  "userStorageUnverified": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":false}},\"version\":0}",
+  "userStorage": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":true,\"showButtonCreditLineRequest\":false,\"creditRequest\":\"aprobado\"}},\"version\":0}",
+  "userStorageUnverified": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":false,\"showButtonCreditLineRequest\":false,\"creditRequest\":\"aprobado\"}},\"version\":0}",
+  "userStorageUnverifiedCanRequest": "{\"state\":{\"user\":{\"client_id\":1,\"name\":\"Cypress\",\"email\":\"cy@test.com\",\"emailVerified\":false,\"showButtonCreditLineRequest\":true,\"creditRequest\":\"\"}},\"version\":0}",
   "homeWithSections": {
     "statusCode": 200,
     "body": {

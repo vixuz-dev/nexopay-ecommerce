@@ -17,8 +17,6 @@ export const APP_CONFIG = {
   WEBSITE: 'https://nexopay.mx',
 };
 
-export const MERCADO_PAGO_PUBLIC_KEY = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY || '';
-
 export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
   'visa',
   'master',
@@ -84,4 +82,20 @@ export const CIUDADES_MEXICO = [
   'Saltillo',
   'Hermosillo',
   'Jacona'
+];
+
+/** Valor interno de la opción “Otro motivo” en baja de cuenta (no se envía al API). */
+export const DELETE_ACCOUNT_REASON_OTHER = '__other__';
+
+/**
+ * Catálogo de motivos de baja; `value` es el texto enviado en `reasonDelete` (salvo “Otro”).
+ * @type {{ value: string, label: string }[]}
+ */
+export const DELETE_ACCOUNT_REASON_OPTIONS = [
+  { value: 'Las comisiones o el costo no me convencen', label: 'Las comisiones o el costo no me convencen' },
+  { value: 'Ya no uso el servicio', label: 'Ya no uso el servicio' },
+  { value: 'Tuve problemas técnicos o errores en la app', label: 'Tuve problemas técnicos o errores en la app' },
+  { value: 'Preocupaciones de privacidad o datos', label: 'Preocupaciones de privacidad o datos' },
+  { value: 'Encontré otra alternativa', label: 'Encontré otra alternativa' },
+  { value: DELETE_ACCOUNT_REASON_OTHER, label: 'Otro motivo' },
 ];

@@ -1,5 +1,5 @@
 /**
- * @param {Record<string, unknown>} body - Respuesta de login, have-credit-line o creación de solicitud
+ * @param {Record<string, unknown>} body - Login, perfil o body de creación de solicitud (p. ej. approvedRequest)
  * @returns {number} 1 = puede mostrar solicitud de línea de crédito, 0 = no
  */
 export function getCreditShowButtonFromApiBody(body) {
@@ -14,10 +14,21 @@ export function getCreditShowButtonFromApiBody(body) {
   if (raw === true || raw === 1) return 1;
   if (raw === false || raw === 0) return 0;
   if (raw !== undefined && raw !== null) return Number(raw) === 1 ? 1 : 0;
+
+  const approvedRaw = body.approvedRequest;
+  if (
+    approvedRaw === true ||
+    approvedRaw === 'true' ||
+    String(approvedRaw ?? '').toLowerCase() === 'true'
+  ) {
+    return 0;
+  }
+
   return 1;
 }
 
 /**
+ * Texto de estado de solicitud para alinear con isApprovedCreditLineStatus (p. ej. approvedRequest → "Aprobado").
  * @param {Record<string, unknown>} body
  * @returns {string}
  */
@@ -33,5 +44,15 @@ export function getCreditRequestStatusFromApiBody(body) {
     return String(body.creditStatus);
   }
   if (body.creditStatus === true) return 'aprobado';
+
+  const approvedRaw = body.approvedRequest;
+  if (
+    approvedRaw === true ||
+    approvedRaw === 'true' ||
+    String(approvedRaw ?? '').toLowerCase() === 'true'
+  ) {
+    return 'Aprobado';
+  }
+
   return '';
 }

@@ -54,6 +54,7 @@ export const clientFromPersonalInformation = (data) => {
     address,
     limitCreditAmount: raw.limitCreditAmount ?? raw.limit_credit_amount,
     creditStatus: raw.creditStatus ?? raw.credit_status,
+    hasCreditLine: raw.hasCreditLine ?? raw.has_credit_line,
   };
 };
 

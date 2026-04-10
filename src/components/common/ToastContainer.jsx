@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineInformationCircle, HiOutlineExclamationTriangle, HiOutlineXMark } from 'react-icons/hi2';
 import useToastStore from '../../stores/toastStore';
@@ -42,7 +41,7 @@ const ToastContainer = () => {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full sm:w-auto pointer-events-none px-4 sm:px-0">
+    <div className="fixed top-4 right-4 z-[11000] flex flex-col gap-2 max-w-md w-full sm:w-auto pointer-events-none px-4 sm:px-0">
       <AnimatePresence>
         {toasts.map((toast) => {
           const config = getToastConfig(toast.type);

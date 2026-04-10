@@ -51,3 +51,43 @@ export const formatPhoneNumber = (value) => {
   const limitedNumbers = numbers.slice(0, 10);
   return limitedNumbers;
 };
+
+/**
+ * Formatea entrada de vencimiento de tarjeta como MM/AA (solo dígitos, máx. 4).
+ * @param {string} value
+ * @returns {string}
+ */
+export const formatCardExpiryInput = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+};
+
+/**
+ * Interpreta MM/AA y valida mes, no vencida y año razonable (20YY).
+ * @param {string} display
+ * @returns {{ ok: true, expirationMonth: number, expirationYear: number } | { ok: false, message: string }}
+ */
+export const parseCardExpiry = (display) => {
+  const trimmed = (display ?? '').trim();
+  const match = /^(\d{2})\/(\d{2})$/.exec(trimmed);
+  if (!match) {
+    return { ok: false, message: 'Ingresa la fecha en formato MM/AA' };
+  }
+  const month = Number.parseInt(match[1], 10);
+  const yy = Number.parseInt(match[2], 10);
+  if (month < 1 || month > 12) {
+    return { ok: false, message: 'El mes debe ser entre 01 y 12' };
+  }
+  const expirationYear = 2000 + yy;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  if (expirationYear < currentYear || (expirationYear === currentYear && month < currentMonth)) {
+    return { ok: false, message: 'La tarjeta está vencida' };
+  }
+  if (expirationYear > currentYear + 20) {
+    return { ok: false, message: 'Año de vencimiento no válido' };
+  }
+  return { ok: true, expirationMonth: month, expirationYear };
+};

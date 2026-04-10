@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -26,6 +26,7 @@ import useAddressesStore from '../stores/addressesStore';
 import { userToProfileForm, clientFromPersonalInformation } from '../utils/profileMapper';
 import useToastStore from '../stores/toastStore';
 import AddAddressModal from '../components/common/AddAddressModal';
+import { DangerZoneAccountSection } from '../components/account/DangerZoneAccountSection';
 import { isPrincipalAddress } from '../utils/addressForm';
 
 const MyProfile = () => {
@@ -36,6 +37,7 @@ const MyProfile = () => {
   const fetchPersonalInformation = useProfileStore((state) => state.fetchPersonalInformation);
   const showToast = useToastStore((state) => state.showToast);
   const addresses = useAddressesStore((s) => s.addresses);
+  const addressesLoading = useAddressesStore((s) => s.isLoading);
   const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
   const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
 
@@ -43,23 +45,27 @@ const MyProfile = () => {
   const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
 
-  const profileClient = profileInformation?.client;
-  const personalClient = clientFromPersonalInformation(personalInformation);
-  const client = personalClient
-    ? {
+  const client = useMemo(() => {
+    const profileClient = profileInformation?.client;
+    const personalClient = clientFromPersonalInformation(personalInformation);
+    if (personalClient) {
+      return {
         ...profileClient,
         ...personalClient,
         email: personalClient.email || profileClient?.email || user?.email,
         emailVerified:
           personalClient.emailVerified ?? profileClient?.emailVerified ?? user?.emailVerified,
-      }
-    : profileClient
-      ? {
-          ...profileClient,
-          email: profileClient.email ?? user?.email,
-          emailVerified: profileClient.emailVerified ?? user?.emailVerified,
-        }
-      : user;
+      };
+    }
+    if (profileClient) {
+      return {
+        ...profileClient,
+        email: profileClient.email ?? user?.email,
+        emailVerified: profileClient.emailVerified ?? user?.emailVerified,
+      };
+    }
+    return user;
+  }, [profileInformation, personalInformation, user]);
 
   useEffect(() => {
     setProfileData(userToProfileForm(client));
@@ -70,7 +76,7 @@ const MyProfile = () => {
   }, [fetchPersonalInformation]);
 
   useEffect(() => {
-    fetchAddresses().catch(() => {});
+    fetchAddresses({ force: true }).catch(() => {});
   }, [fetchAddresses]);
 
   const handleChangePassword = () => {
@@ -89,7 +95,7 @@ const MyProfile = () => {
 
   const handleAddressSuccess = async () => {
     invalidateAddresses();
-    await fetchAddresses();
+    await fetchAddresses({ force: true });
   };
 
   const fullName = [client?.name, client?.paternalLastName, client?.maternalLastName]
@@ -366,7 +372,11 @@ const MyProfile = () => {
                 </button>
               </div>
 
-              {addresses.length === 0 ? (
+              {addressesLoading && addresses.length === 0 ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-500 border-t-transparent" />
+                </div>
+              ) : addresses.length === 0 ? (
                 <div className="text-center py-8">
                   <HiOutlineMapPin className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-sm text-gray-500 mb-1">No tienes direcciones de envío</p>
@@ -439,6 +449,8 @@ const MyProfile = () => {
                 </div>
               )}
             </div>
+
+            <DangerZoneAccountSection />
           </div>
 
           {/* Right Column - Sidebar */}

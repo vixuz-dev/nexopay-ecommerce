@@ -20,6 +20,7 @@ export const ENDPOINTS = {
   ECOMMERCE_AUTH: {
     LOGIN_CLIENT_WEB: `${API_BASE_URL}/ecommerce/auth/login_client_web`,
     REGISTER_CLIENT: `${API_BASE_URL}/ecommerce/auth/register_client`,
+    DELETE_CLIENT_ACCOUNT: `${API_BASE_URL}/ecommerce/auth/delete_client_account`,
   },
 
   // OTP
@@ -131,6 +132,7 @@ export const ENDPOINTS = {
   // Mercado Pago (AWS)
   MERCADO_PAGO: {
     GET_PAYMENT_METHODS: `${API_BASE_URL_AWS}/mercado-pago/get-payment-methods-mp`,
+    CREATE_CARD_TOKEN: `${API_BASE_URL_AWS}/mercado-pago/create-token`,
     GENERATE_PAYMENT: `${API_BASE_URL_AWS}/mercado-pago/mp-generate-payment`,
   },
 

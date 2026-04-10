@@ -6,6 +6,7 @@ import useUserStore from '../stores/userStore';
 import useCreditStore from '../stores/creditStore';
 import { ROUTES } from '../utils/routes';
 import { formatPriceMXN } from '../utils/format';
+import { parseCreditLineLimitAmount } from '../utils/creditUtils';
 import {
   HiOutlineCheckCircle,
   HiOutlineClock,
@@ -37,11 +38,17 @@ const MyCredit = () => {
   const creditLineRequests = useCreditStore((state) => state.creditLineRequests);
   const isRequestsLoaded = useCreditStore((state) => state.isRequestsLoaded);
   const fetchCreditLineRequests = useCreditStore((state) => state.fetchCreditLineRequests);
+  const fetchCreditLine = useCreditStore((state) => state.fetchCreditLine);
+  const creditLine = useCreditStore((state) => state.creditLine);
   const lastCreditRequestResult = useCreditStore((state) => state.lastCreditRequestResult);
   const [error, setError] = useState(null);
   const firstName = user?.name?.trim() || '';
+  const creditAmountFromApi = parseCreditLineLimitAmount(creditLine);
   const creditAmountFromUser = user?.limitCreditAmount ?? 0;
-  const creditAmount = lastCreditRequestResult?.creditLineAmount ?? creditAmountFromUser;
+  const creditAmount =
+    creditAmountFromApi ??
+    lastCreditRequestResult?.creditLineAmount ??
+    creditAmountFromUser;
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +60,10 @@ const MyCredit = () => {
     });
     return () => { cancelled = true; };
   }, [fetchCreditLineRequests]);
+
+  useEffect(() => {
+    fetchCreditLine().catch(() => {});
+  }, [fetchCreditLine]);
 
   const loading = !isRequestsLoaded;
   const requests = creditLineRequests;

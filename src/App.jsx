@@ -1,7 +1,4 @@
-import React, { useEffect } from "react";
 import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
-import { initMercadoPago } from "@mercadopago/sdk-react";
-import { MERCADO_PAGO_PUBLIC_KEY } from "./constants/app";
 import { SWRConfig } from "swr";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useAuthInit } from "./hooks/useAuthInit";
@@ -10,6 +7,7 @@ import CartSidebar from "./components/ecommerce/CartSidebar";
 import ScrollToTop from "./components/common/ScrollToTop";
 import ToastContainer from "./components/common/ToastContainer";
 import EmailVerificationBanner from "./components/common/EmailVerificationBanner";
+import CreditLineBlockedBanner from "./components/common/CreditLineBlockedBanner";
 import GlobalLoader from "./components/common/GlobalLoader";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PublicRoute from "./components/common/PublicRoute";
@@ -53,14 +51,8 @@ function App() {
   const { isCartSidebarOpen, closeCartSidebar } = useUIStore();
   const { loading: authLoading } = useAuthInit();
 
-  useEffect(() => {
-    if (MERCADO_PAGO_PUBLIC_KEY) {
-      initMercadoPago(MERCADO_PAGO_PUBLIC_KEY, { locale: "es-MX" });
-    }
-  }, []);
-
   if (authLoading) {
-    return <GlobalLoader />;
+    return <GlobalLoader forceVisible />;
   }
 
   return (
@@ -68,7 +60,10 @@ function App() {
       <ThemeProvider>
           <div className="min-h-screen">
             <ScrollToTop />
-            <EmailVerificationBanner />
+            <div className="sticky top-0 z-40">
+              <CreditLineBlockedBanner />
+              <EmailVerificationBanner />
+            </div>
             <CartSidebar
               isOpen={isCartSidebarOpen}
               onClose={closeCartSidebar}

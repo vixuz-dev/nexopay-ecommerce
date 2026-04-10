@@ -6,7 +6,7 @@ import { ROUTES } from '../../utils/routes';
 /**
  * @param {Object} props
  * @param {boolean} props.isOpen
- * @param {'need_request' | 'rejected' | 'no_active_line' | null} props.variant
+ * @param {'need_request' | 'rejected' | 'pending' | 'no_active_line' | null} props.variant
  * @param {() => void} props.onClose
  */
 const CartCreditGateModal = ({ isOpen, variant, onClose }) => {
@@ -27,12 +27,19 @@ const CartCreditGateModal = ({ isOpen, variant, onClose }) => {
             primaryTo: null,
             primaryLabel: null,
           }
-        : {
-            title: 'Compra no disponible aún',
-            body: 'Tu solicitud de crédito aún no ha sido aprobada. No puedes completar compras hasta contar con una línea activa. Te notificaremos cuando haya novedades.',
-            primaryTo: ROUTES.MY_CREDIT,
-            primaryLabel: 'Ver mis solicitudes',
-          };
+        : variant === 'pending'
+          ? {
+              title: 'Solicitud en revisión',
+              body: 'Tu solicitud de crédito está en proceso de revisión. No puedes completar compras hasta que sea aprobada. Te notificaremos cuando haya novedades.',
+              primaryTo: ROUTES.MY_CREDIT,
+              primaryLabel: 'Ver mis solicitudes',
+            }
+          : {
+              title: 'Compra no disponible aún',
+              body: 'Tu solicitud de crédito aún no ha sido aprobada. No puedes completar compras hasta contar con una línea activa. Te notificaremos cuando haya novedades.',
+              primaryTo: ROUTES.MY_CREDIT,
+              primaryLabel: 'Ver mis solicitudes',
+            };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

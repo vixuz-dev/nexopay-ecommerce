@@ -116,9 +116,7 @@ export const CheckoutOrderSummary = ({
               pago de {formatPriceMXN(lastAmt)}.
             </p>
           )}
-          <p className="text-xs text-gray-500 mb-3">
-            Mes de corte. La fecha exacta dependerá de tu ciclo.
-          </p>
+          
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {paymentSchedule.map((payment) => (
               <div

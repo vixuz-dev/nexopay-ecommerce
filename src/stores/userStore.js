@@ -6,6 +6,12 @@ const useUserStore = create(
     (set, get) => ({
       user: null,
 
+      patchUser: (partial) => {
+        const user = get().user;
+        if (!user) return;
+        set({ user: { ...user, ...partial } });
+      },
+
       setUser: (userData) => {
         const email = userData.email ?? userData.personal_email ?? userData.client_email;
         const emailVerified = userData.emailVerified ?? userData.verifiedEmail ?? false;
@@ -19,9 +25,17 @@ const useUserStore = create(
             maternalLastName: userData.maternalLastName ?? userData.maternal_lastname,
             phone: userData.phone,
             birthdate: userData.birthdate,
-            creditApproved: userData.creditApproved,
-            limitCreditAmount: userData.limitCreditAmount,
-            creditStatus: userData.creditStatus,
+            creditApproved: userData.creditApproved ?? userData.credit_approved,
+            limitCreditAmount: userData.limitCreditAmount ?? userData.limit_credit_amount,
+            creditStatus: userData.creditStatus ?? userData.credit_status,
+            hasCreditLine: userData.hasCreditLine ?? userData.has_credit_line,
+            showButtonCreditLineRequest:
+              userData.showButtonCreditLineRequest ?? userData.show_button_credit_line_request,
+            creditRequest:
+              (userData.creditRequest ?? userData.credit_request) != null &&
+              String(userData.creditRequest ?? userData.credit_request).trim() !== ''
+                ? String(userData.creditRequest ?? userData.credit_request)
+                : undefined,
             address: userData.address || {
               street: '',
               externalNumber: '',

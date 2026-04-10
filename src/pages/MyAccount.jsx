@@ -6,6 +6,7 @@ import ShopCTABanner from '../components/account/ShopCTABanner';
 import useCreditStore from '../stores/creditStore';
 import useUserStore from '../stores/userStore';
 import useProfileStore from '../stores/profileStore';
+import { isApprovedCreditLineStatus } from '../utils/emailVerification';
 import {
   HiOutlineClock,
   HiOutlineCheckCircle,
@@ -25,12 +26,20 @@ const StatCardSkeleton = () => (
 const MyAccount = () => {
   const user = useUserStore((state) => state.user);
   const fetchCreditLineHistory = useCreditStore((state) => state.fetchCreditLineHistory);
+  const fetchCreditLineStatus = useCreditStore((state) => state.fetchCreditLineStatus);
+  const showButton = useCreditStore((state) => state.showButton);
+  const requestStatus = useCreditStore((state) => state.requestStatus);
+  const isCreditStatusLoaded = useCreditStore((state) => state.isStatusLoaded);
   const fetchProfileInformation = useProfileStore((state) => state.fetchProfileInformation);
   const profileInformation = useProfileStore((state) => state.profileInformation);
   const isProfileLoaded = useProfileStore((state) => state.isProfileLoaded);
 
-  const creditLineInfo = profileInformation?.credit_line_information ?? {};
-  const hasApprovedCreditRequest = creditLineInfo.has_line_credit === true;
+  const hasApprovedCreditRequest =
+    isCreditStatusLoaded && isApprovedCreditLineStatus(showButton, requestStatus);
+
+  useEffect(() => {
+    void fetchCreditLineStatus();
+  }, [fetchCreditLineStatus]);
 
   useEffect(() => {
     fetchProfileInformation().catch(() => {});

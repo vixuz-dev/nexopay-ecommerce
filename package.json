@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@mercadopago/sdk-react": "^1.0.7",
     "@react-google-maps/api": "^2.20.7",
     "axios": "^1.13.5",
     "colornames": "^1.1.1",

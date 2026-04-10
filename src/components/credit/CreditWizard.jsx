@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreditForm } from '../../stores/creditFormStore';
+import useUserStore from '../../stores/userStore';
 import useToastStore from '../../stores/toastStore';
 import { mapCreditRequestToBackend } from '../../utils/creditRequestMapper';
 import { creditLineRequestService } from '../../api/services/creditLineRequestService';
@@ -132,17 +133,22 @@ const CreditWizard = () => {
           body.showButton !== undefined ||
           body.showButtonCreditLineRequest !== undefined)
       ) {
+        const sbNum = getCreditShowButtonFromApiBody(body);
+        const statusStr = getCreditRequestStatusFromApiBody(body);
         setLastCreditRequestResult({
           approvedRequest: body.approvedRequest ?? null,
           creditLineAmount: body.creditLineAmount ?? 0,
-          showButton: getCreditShowButtonFromApiBody(body),
+          showButton: sbNum,
         });
-        if (body.showButton !== undefined || body.showButtonCreditLineRequest !== undefined) {
-          setCreditLineStatus(
-            getCreditShowButtonFromApiBody(body),
-            getCreditRequestStatusFromApiBody(body)
-          );
-        }
+        setCreditLineStatus(sbNum, statusStr);
+        useUserStore.getState().patchUser({
+          showButtonCreditLineRequest: sbNum === 1,
+          ...(statusStr !== '' ? { creditRequest: statusStr } : {}),
+          ...(body.creditLineAmount != null && !Number.isNaN(Number(body.creditLineAmount))
+            ? { limitCreditAmount: Number(body.creditLineAmount) }
+            : {}),
+          ...(isApprovedRequest ? { creditApproved: true } : {}),
+        });
       }
       showToast(
         isApprovedRequest
@@ -151,7 +157,7 @@ const CreditWizard = () => {
         'success'
       );
       resetForm();
-      await Promise.all([fetchCreditLineStatus({ forceRefresh: true }), fetchCreditLineRequests()]);
+      await Promise.all([fetchCreditLineStatus(), fetchCreditLineRequests()]);
       if (isApprovedRequest) {
         navigate(
           `${ROUTES.EMAIL_VERIFICATION}?${EMAIL_VERIFY_FROM_QUERY}=${EMAIL_VERIFY_FROM.CREDIT_REQUEST}`,

@@ -65,31 +65,18 @@ describe('Home — Layout & Rendering', () => {
   });
 
   it('shows email verification banner when credit is approved and email is not verified', () => {
-    cy.fixture('home').then((data) => {
-      visitHomeAuthenticated({
-        userStorageKey: 'userStorageUnverified',
-        creditFixture: data.creditLineHide,
-      });
-    });
-    cy.wait('@getCreditLine');
+    visitHomeAuthenticated({ userStorageKey: 'userStorageUnverified' });
     cy.contains('Verifica tu correo electrónico').should('exist');
     cy.contains('Verificar correo').should('exist');
   });
 
   it('does not show email verification banner when user can still request credit (no approved line)', () => {
-    cy.fixture('home').then((data) => {
-      visitHomeAuthenticated({
-        userStorageKey: 'userStorageUnverified',
-        creditFixture: data.creditLineShow,
-      });
-    });
-    cy.wait('@getCreditLine');
+    visitHomeAuthenticated({ userStorageKey: 'userStorageUnverifiedCanRequest' });
     cy.contains('Verifica tu correo electrónico').should('not.exist');
   });
 
   it('does not show email verification banner for verified user', () => {
     visitHomeAuthenticated();
-    cy.wait('@getCreditLine');
     cy.contains('Verifica tu correo electrónico').should('not.exist');
   });
 

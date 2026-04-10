@@ -5,7 +5,7 @@ import { Footer } from '../components/layout/Footer';
 import { ROUTES, getProductDetailUrl } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
-import useUIStore from '../stores/uiStore';
+import useGlobalLoaderStore from '../stores/globalLoaderStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import { useCartApi } from '../hooks/useCartApi';
 import { useRemoveFromCart } from '../hooks/useRemoveFromCart';
@@ -60,8 +60,8 @@ const Cart = () => {
   const fetchCreditLineStatus = useCreditLineStatusStore((s) => s.fetchCreditLineStatus);
   const { fetchCart, loading: cartLoading } = useCartApi({ syncToStore: true });
   const showToast = useToastStore((s) => s.showToast);
-  const showGlobalLoader = useUIStore((s) => s.showGlobalLoader);
-  const hideGlobalLoader = useUIStore((s) => s.hideGlobalLoader);
+  const showGlobalLoader = useGlobalLoaderStore((s) => s.show);
+  const hideGlobalLoader = useGlobalLoaderStore((s) => s.hide);
   const addresses = useAddressesStore((s) => s.addresses);
   const addressesLoading = useAddressesStore((s) => s.isLoading);
   const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
@@ -119,13 +119,7 @@ const Cart = () => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    (async () => {
-      try {
-        await fetchCreditLineStatus();
-      } catch {
-        // El estado persistido o un reintento posterior define si se puede comprar
-      }
-    })();
+    void fetchCreditLineStatus();
   }, [isAuthenticated, fetchCreditLineStatus]);
 
   useEffect(() => {
@@ -230,7 +224,7 @@ const Cart = () => {
     }
 
     setIsProcessing(true);
-    showGlobalLoader();
+    showGlobalLoader('Creando tu orden…');
 
     try {
       const payload = buildOrderPayload({

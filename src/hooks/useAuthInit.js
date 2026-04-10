@@ -3,6 +3,7 @@ import { authService } from '../api/services/authService';
 import { getCookie } from '../utils/cookieUtils';
 import useUserStore from '../stores/userStore';
 import useProfileStore from '../stores/profileStore';
+import useCreditStore from '../stores/creditStore';
 
 /**
  * Initializes authentication state on app mount.
@@ -22,6 +23,7 @@ export const useAuthInit = () => {
 
         const storedUser = useUserStore.getState().user;
         if (storedUser) {
+          useCreditStore.getState().fetchCreditLineStatus().catch(() => {});
           setLoading(false);
           return;
         }
@@ -40,10 +42,15 @@ export const useAuthInit = () => {
             creditApproved: client.creditApproved ?? client.credit_approved,
             limitCreditAmount: client.limitCreditAmount ?? client.limit_credit_amount,
             creditStatus: client.creditStatus ?? client.credit_status,
+            hasCreditLine: client.hasCreditLine ?? client.has_credit_line,
+            showButtonCreditLineRequest:
+              client.showButtonCreditLineRequest ?? client.show_button_credit_line_request,
+            creditRequest: client.creditRequest ?? client.credit_request,
             address: client.address,
             emailVerified: client.emailVerified ?? client.verifiedEmail ?? client.verified_email ?? false,
           };
           useUserStore.getState().setUser(user);
+          useCreditStore.getState().fetchCreditLineStatus().catch(() => {});
           useProfileStore.getState().setClientFromLogin(user);
         }
       } catch {

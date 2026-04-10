@@ -47,6 +47,7 @@ const useProfileStore = create(
               birthdate: client.birthdate,
               limitCreditAmount: client.limitCreditAmount,
               creditStatus: client.creditStatus,
+              hasCreditLine: client.hasCreditLine,
               address: client.address,
             },
           },

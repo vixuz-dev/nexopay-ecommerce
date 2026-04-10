@@ -55,6 +55,7 @@ export const performLogout = () => {
 
   const creditStore = useCreditFormStore.getState();
   creditStore.resetForm();
+  creditStore.resetStatus?.();
   creditStore.clearCreditData?.();
 
   useAddressesStore.getState().clearAddresses();

@@ -1,5 +1,8 @@
 import { ENDPOINTS } from '../endpoints';
+import { getInternalApiHeaders } from '../utils/apiHeaders';
+import { parseResponseJsonSafe } from '../utils/parseResponseJson';
 import { getCookie, removeCookie } from '../../utils/cookieUtils';
+import { handleAuthError } from '../../utils/authInterceptor';
 
 /**
  * Authentication service
@@ -154,6 +157,47 @@ class AuthService {
     }
 
     throw new Error('Unexpected response format');
+  }
+
+  /**
+   * Elimina la cuenta del cliente autenticado (header `token` vía getInternalApiHeaders).
+   * @param {{ reasonDelete: string }} body - Motivo de baja (`reasonDelete`)
+   * @returns {Promise<object>}
+   */
+  async deleteClientAccount(body) {
+    const response = await fetch(ENDPOINTS.ECOMMERCE_AUTH.DELETE_CLIENT_ACCOUNT, {
+      method: 'PUT',
+      headers: getInternalApiHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const data = await parseResponseJsonSafe(response);
+
+    if (!response.ok) {
+      const error = new Error(
+        data.message || data.statusMessage || 'No se pudo eliminar la cuenta'
+      );
+      error.statusCode = response.status;
+      error.status = response.status;
+      error.statusMessage = data.statusMessage;
+      handleAuthError(error, response);
+      throw error;
+    }
+
+    const successFlag = data.success;
+    const isFailure =
+      successFlag === false ||
+      successFlag === 'false' ||
+      (typeof successFlag === 'string' && successFlag.toLowerCase() === 'false');
+    if (isFailure) {
+      const error = new Error(data.statusMessage || data.message || 'No se pudo eliminar la cuenta');
+      error.statusCode = data.statusCode ?? response.status;
+      error.success = false;
+      error.statusMessage = data.statusMessage;
+      throw error;
+    }
+
+    return data;
   }
 }
 

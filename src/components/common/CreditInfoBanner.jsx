@@ -1,30 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineInformationCircle, HiOutlineArrowRight } from 'react-icons/hi2';
 import { ROUTES } from '../../utils/routes';
 import useCreditLineStatusStore from '../../stores/creditLineStatusStore';
 
 const CreditInfoBanner = () => {
-  const [loading, setLoading] = useState(true);
   const showButton = useCreditLineStatusStore((state) => state.showButton);
+  const isStatusLoaded = useCreditLineStatusStore((state) => state.isStatusLoaded);
   const fetchCreditLineStatus = useCreditLineStatusStore((state) => state.fetchCreditLineStatus);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        await fetchCreditLineStatus();
-      } catch {
-        if (!cancelled) setLoading(false);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
+    void fetchCreditLineStatus();
   }, [fetchCreditLineStatus]);
 
-  if (loading || showButton !== 1) {
+  if (!isStatusLoaded || showButton !== 1) {
     return null;
   }
 

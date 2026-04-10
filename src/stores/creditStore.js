@@ -4,8 +4,11 @@ import { referenceSchema } from '../schemas/credit';
 import { creditLineRequestService } from '../api/services/creditLineRequestService';
 import { creditLineService } from '../api/services/creditLineService';
 import { profileService } from '../api/services/profileService';
-
-const CREDIT_STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
+import useUserStore from './userStore';
+import {
+  getCreditShowButtonFromApiBody,
+  getCreditRequestStatusFromApiBody,
+} from '../utils/creditLineShowButton';
 
 const useCreditStore = create(
   persist(
@@ -149,34 +152,23 @@ const useCreditStore = create(
         });
       },
 
-      fetchCreditLineStatus: async (options = {}) => {
-        const forceRefresh = options?.forceRefresh ?? false;
-        const state = get();
-        const cacheValid =
-          !forceRefresh &&
-          state.isStatusLoaded &&
-          state.lastCreditStatusFetchAt > 0 &&
-          Date.now() - state.lastCreditStatusFetchAt < CREDIT_STATUS_CACHE_TTL_MS;
-        if (cacheValid) {
-          return {
-            showButton: state.showButton,
-            requestStatus: state.requestStatus,
-          };
-        }
-        try {
-          const result = await creditLineRequestService.haveCreditLineRequest();
+      fetchCreditLineStatus: async () => {
+        const user = useUserStore.getState().user;
+        if (user) {
+          const showButtonNum = getCreditShowButtonFromApiBody(user);
+          const requestStatusStr = getCreditRequestStatusFromApiBody(user);
           set({
-            showButton: result.showButton !== undefined ? Number(result.showButton) : 1,
-            requestStatus: result.requestStatus != null ? String(result.requestStatus) : '',
+            showButton: showButtonNum,
+            requestStatus: requestStatusStr,
             isStatusLoaded: true,
             isLoaded: true,
             lastCreditStatusFetchAt: Date.now(),
           });
-          return result;
-        } catch (err) {
+        } else {
           set({ isStatusLoaded: true, isLoaded: true });
-          throw err;
         }
+        const s = get();
+        return { showButton: s.showButton, requestStatus: s.requestStatus };
       },
 
       canRequestCredit: () => get().showButton === 1,
