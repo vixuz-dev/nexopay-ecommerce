@@ -1,11 +1,10 @@
 import { useRef } from 'react';
-import { Link } from 'react-router-dom';
 import {
   HiOutlineLockClosed,
   HiOutlineShieldCheck,
 } from 'react-icons/hi2';
 import { formatPriceMXN } from '../../utils/format';
-import { ROUTES } from '../../utils/routes';
+import { TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import { CardPaymentForm } from './CardPaymentForm';
 
 export const CheckoutPaymentMethods = ({
@@ -106,13 +105,14 @@ export const CheckoutPaymentMethods = ({
         />
         <span className="text-sm text-gray-600">
           Acepto los{' '}
-          <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
+          <a
+            href={TERMS_AND_CONDITIONS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:underline"
+          >
             términos y condiciones
-          </Link>{' '}
-          y el{' '}
-          <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
-            aviso de privacidad
-          </Link>
+          </a>
         </span>
       </label>
 

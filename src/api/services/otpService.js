@@ -1,7 +1,15 @@
 import { ENDPOINTS } from '../endpoints';
+import { OTP_TYPE_VERIFICATION } from '../../constants/app';
 
 class OtpService {
-  async insertOtp(personalPhonenumber) {
+  /**
+   * Solicita generación y envío de OTP por SMS.
+   * @param {string} personalPhonenumber - Teléfono a 10 dígitos (sin incluir 0000000000).
+   * @param {'phone_number'|'reset_password'} [typeVerification] - Flujo de verificación (por defecto validación de número).
+   */
+  async insertOtp(personalPhonenumber, typeVerification = OTP_TYPE_VERIFICATION.PHONE_NUMBER) {
+    const resolvedTypeVerification = typeVerification ?? OTP_TYPE_VERIFICATION.PHONE_NUMBER;
+
     const response = await fetch(ENDPOINTS.OTP.INSERT, {
       method: 'POST',
       headers: {
@@ -9,6 +17,7 @@ class OtpService {
       },
       body: JSON.stringify({
         personalPhonenumber,
+        typeVerification: resolvedTypeVerification,
       }),
     });
 
@@ -27,10 +36,11 @@ class OtpService {
       throw error;
     }
 
-    if (response.status === 200 && data.statusMessage === 'SMS no enviado') {
-      const error = new Error('SMS no enviado');
+    if (response.status === 200 && data.success === false) {
+      const error = new Error(data.statusMessage || 'La operación no pudo completarse');
       error.statusCode = 200;
       error.statusMessage = data.statusMessage;
+      error.success = false;
       throw error;
     }
 
@@ -41,7 +51,19 @@ class OtpService {
     throw new Error('Unexpected response format');
   }
 
-  async validateOtp(personalPhonenumber, otp) {
+  /**
+   * Valida el código OTP recibido por SMS.
+   * @param {string} personalPhonenumber - Teléfono a 10 dígitos.
+   * @param {string} otp - Código de 6 dígitos.
+   * @param {'phone_number'|'reset_password'} [typeVerification] - Debe coincidir con el flujo usado en `insertOtp`.
+   */
+  async validateOtp(
+    personalPhonenumber,
+    otp,
+    typeVerification = OTP_TYPE_VERIFICATION.PHONE_NUMBER
+  ) {
+    const resolvedTypeVerification = typeVerification ?? OTP_TYPE_VERIFICATION.PHONE_NUMBER;
+
     const response = await fetch(ENDPOINTS.OTP.VALIDATE, {
       method: 'POST',
       headers: {
@@ -50,6 +72,7 @@ class OtpService {
       body: JSON.stringify({
         personalPhonenumber,
         otp,
+        typeVerification: resolvedTypeVerification,
       }),
     });
 

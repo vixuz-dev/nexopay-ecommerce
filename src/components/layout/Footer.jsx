@@ -1,10 +1,8 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineEnvelope, HiOutlinePhone, HiOutlineMapPin, HiOutlineShieldCheck } from 'react-icons/hi2';
 import { ROUTES } from '../../utils/routes';
+import { TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import nexopayLogo from '../../assets/images/NexoPay-Logo.png';
-
-const TERMS_URL = 'https://nexopay.mx/terminos-condiciones';
 
 const Footer = () => {
   return (
@@ -65,7 +63,7 @@ const Footer = () => {
               <ul className="space-y-2">
                 <li>
                   <a
-                    href={TERMS_URL}
+                    href={TERMS_AND_CONDITIONS_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-600 hover:text-primary-600 transition-colors duration-200 text-sm"

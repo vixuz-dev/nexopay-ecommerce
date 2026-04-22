@@ -160,6 +160,59 @@ class AuthService {
   }
 
   /**
+   * Actualiza la contraseña del cliente tras flujo OTP de recuperación.
+   * @param {string} phoneNumber - Número de teléfono del cliente.
+   * @param {string} password - Contraseña (p. ej. hash en el caller).
+   * @param {string} tokenResetPassword - Token devuelto por `validate_otp` con `typeVerification` de recuperación.
+   * @returns {Promise<object>}
+   */
+  async updateClientPassword(phoneNumber, password, tokenResetPassword) {
+    const response = await fetch(ENDPOINTS.ECOMMERCE_AUTH.UPDATE_CLIENT_PASSWORD, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phoneNumber,
+        password,
+        tokenResetPassword,
+      }),
+    });
+
+    const data = await parseResponseJsonSafe(response);
+
+    if (response.status === 400) {
+      const error = new Error(data.message || 'Ocurrió un error, no se encontraron todos los parámetros o tienen un formato inválido');
+      error.statusCode = 400;
+      error.errors = data.error || [];
+      throw error;
+    }
+
+    if (response.status === 500) {
+      const error = new Error(data.message || data.statusMessage || 'Se produjo un error con el servidor');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    if (response.status === 200 && data.success === false) {
+      const error = new Error(data.statusMessage || 'No se pudo actualizar la contraseña');
+      error.statusCode = 200;
+      error.success = false;
+      throw error;
+    }
+
+    if (response.status === 204) {
+      return data;
+    }
+
+    if ((response.status === 200 || response.status === 201) && data.success === true) {
+      return data;
+    }
+
+    throw new Error('Unexpected response format');
+  }
+
+  /**
    * Elimina la cuenta del cliente autenticado (header `token` vía getInternalApiHeaders).
    * @param {{ reasonDelete: string }} body - Motivo de baja (`reasonDelete`)
    * @returns {Promise<object>}

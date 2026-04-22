@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ROUTES } from '../utils/routes';
 import { otpService } from '../api/services/otpService';
 import { authService } from '../api/services/authService';
+import { OTP_TYPE_VERIFICATION } from '../constants/app';
 import { hashPassword } from '../utils/passwordUtils';
 import useToastStore from '../stores/toastStore';
 
@@ -89,7 +90,7 @@ const ValidateOtp = () => {
     setErrors({});
 
     try {
-      await otpService.insertOtp(phoneNumber);
+      await otpService.insertOtp(phoneNumber, OTP_TYPE_VERIFICATION.PHONE_NUMBER);
       showToast('Código OTP reenviado exitosamente', 'success', 3000);
       setCountdown(40);
       setCanResend(false);
@@ -99,8 +100,13 @@ const ValidateOtp = () => {
       console.error('Error al reenviar OTP:', error);
       if (error.statusCode === 400) {
         setErrors({ general: 'Error al reenviar el código. Verifica el número de teléfono.' });
-      } else if (error.statusCode === 200 && error.statusMessage === 'SMS no enviado') {
-        setErrors({ general: 'No se pudo enviar el código. Intenta más tarde.' });
+      } else if (error.statusCode === 200 && error.success === false) {
+        const msg = error.statusMessage || '';
+        if (msg.includes('SMS no enviado')) {
+          setErrors({ general: 'No se pudo enviar el código. Intenta más tarde.' });
+        } else {
+          setErrors({ general: msg || 'No se pudo reenviar el código. Intenta más tarde.' });
+        }
       } else {
         setErrors({ general: error.message || 'Error al reenviar el código. Intenta nuevamente.' });
       }
@@ -129,7 +135,7 @@ const ValidateOtp = () => {
     setErrors({});
 
     try {
-      await otpService.validateOtp(phoneNumber, otpString);
+      await otpService.validateOtp(phoneNumber, otpString, OTP_TYPE_VERIFICATION.PHONE_NUMBER);
 
       const trimmedPassword = registrationData.password.trim();
       const hashedPassword = hashPassword(trimmedPassword);

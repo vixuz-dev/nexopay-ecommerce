@@ -12,6 +12,10 @@ export const ROUTES = {
   LOGIN: '/iniciar-sesion',
   REGISTER: '/registro',
   VALIDATE_OTP: '/validar-otp',
+  /** Recuperación de contraseña (flujo en 3 pasos bajo esta ruta base) */
+  PASSWORD_RESET: '/actualizacion-contrasena',
+  PASSWORD_RESET_OTP: '/actualizacion-contrasena/codigo',
+  PASSWORD_RESET_NEW: '/actualizacion-contrasena/nueva-contrasena',
   EMAIL_VERIFICATION: '/verificacion-correo',
   EMAIL_VERIFICATION_ENTER_CODE: '/verificacion-correo/ingresar-codigo',
 

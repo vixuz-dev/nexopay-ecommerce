@@ -20,6 +20,7 @@ export const ENDPOINTS = {
   ECOMMERCE_AUTH: {
     LOGIN_CLIENT_WEB: `${API_BASE_URL}/ecommerce/auth/login_client_web`,
     REGISTER_CLIENT: `${API_BASE_URL}/ecommerce/auth/register_client`,
+    UPDATE_CLIENT_PASSWORD: `${API_BASE_URL}/ecommerce/auth/update_client_password`,
     DELETE_CLIENT_ACCOUNT: `${API_BASE_URL}/ecommerce/auth/delete_client_account`,
   },
 

@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash, HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../utils/routes';
+import { OTP_TYPE_VERIFICATION, TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import { otpService } from '../../api/services/otpService';
 import { formatPhoneNumber } from '../../utils/format';
-import useToastStore from '../../stores/toastStore';
-
 const RegisterForm = ({ onRegisterSuccess, onBack }) => {
   const navigate = useNavigate();
-  const showToast = useToastStore((state) => state.showToast);
   const [formData, setFormData] = useState({
     telefono: '',
     password: '',
@@ -19,6 +17,7 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
     maternalLastname: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -71,6 +70,10 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
       newErrors.maternalLastname = 'El apellido materno debe tener al menos 3 caracteres';
     }
 
+    if (!acceptedTerms) {
+      newErrors.acceptedTerms = 'Debes aceptar los términos y condiciones para continuar';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -88,7 +91,7 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
     try {
       const phoneNumber = formData.telefono.trim();
 
-      await otpService.insertOtp(phoneNumber);
+      await otpService.insertOtp(phoneNumber, OTP_TYPE_VERIFICATION.PHONE_NUMBER);
 
       const registrationData = {
         password: formData.password,
@@ -119,8 +122,17 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
         } else {
           setErrors({ general: error.message || 'Ocurrió un error, verifica los datos ingresados.' });
         }
-      } else if (error.statusCode === 200 && error.statusMessage === 'SMS no enviado') {
-        setErrors({ general: 'No se pudo enviar el código de verificación. Intenta más tarde.' });
+      } else if (error.statusCode === 200 && error.success === false) {
+        const msg = error.statusMessage || '';
+        if (msg.includes('ya esta ligado a una cuenta') || msg.includes('ya está ligado a una cuenta')) {
+          setErrors({ telefono: 'Este número ya está asociado a una cuenta.' });
+        } else if (msg.includes('SMS no enviado')) {
+          setErrors({ general: 'No se pudo enviar el código de verificación. Intenta más tarde.' });
+        } else if (msg.includes('usuario no existe') || msg.includes('esta eliminado') || msg.includes('está eliminado')) {
+          setErrors({ general: 'No se pudo completar la verificación. Verifica tus datos e intenta de nuevo.' });
+        } else {
+          setErrors({ general: msg || 'No se pudo enviar el código de verificación. Intenta más tarde.' });
+        }
       } else if (error.statusCode === 500) {
         setErrors({ general: error.message || 'Se produjo un error con el servidor. Inténtalo más tarde.' });
       } else {
@@ -277,9 +289,42 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
             )}
           </div>
 
+          <div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                id="register-accept-terms"
+                checked={acceptedTerms}
+                onChange={(e) => {
+                  setAcceptedTerms(e.target.checked);
+                  if (errors.acceptedTerms) {
+                    setErrors((prev) => ({ ...prev, acceptedTerms: '' }));
+                  }
+                }}
+                disabled={isLoading}
+                className="w-5 h-5 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-600 leading-snug">
+                He leído y acepto los{' '}
+                <a
+                  href={TERMS_AND_CONDITIONS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:underline font-medium"
+                >
+                  Términos y Condiciones
+                </a>
+                .
+              </span>
+            </label>
+            {errors.acceptedTerms && (
+              <p className="mt-2 text-sm text-red-600">{errors.acceptedTerms}</p>
+            )}
+          </div>
+
           <motion.button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !acceptedTerms}
             whileHover={{ scale: isLoading ? 1 : 1.02 }}
             whileTap={{ scale: isLoading ? 1 : 0.98 }}
             className="w-full bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
@@ -294,19 +339,6 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
             )}
           </motion.button>
         </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
-            Al crear tu cuenta, aceptas nuestros{' '}
-            <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
-              Términos y Condiciones
-            </Link>{' '}
-            y{' '}
-            <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
-              Aviso de Privacidad
-            </Link>
-          </p>
-        </div>
 
         <div className="mt-4 text-center">
           <Link

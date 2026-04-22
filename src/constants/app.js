@@ -17,6 +17,9 @@ export const APP_CONFIG = {
   WEBSITE: 'https://nexopay.mx',
 };
 
+/** URL pública de términos y condiciones (sitio NexoPay). */
+export const TERMS_AND_CONDITIONS_URL = `${APP_CONFIG.WEBSITE}/terminos-condiciones`;
+
 export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
   'visa',
   'master',
@@ -24,6 +27,12 @@ export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
   'debmaster',
   'oxxo',
 ];
+
+/** Valores de `typeVerification` para POST /otp/insert (API). */
+export const OTP_TYPE_VERIFICATION = {
+  PHONE_NUMBER: 'phone_number',
+  RESET_PASSWORD: 'reset_password',
+};
 
 export const ESTADOS_MEXICO = [
   'Aguascalientes',

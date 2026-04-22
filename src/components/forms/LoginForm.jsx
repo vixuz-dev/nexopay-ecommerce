@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
+import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash } from 'react-icons/hi2';
 import { authService } from '../../api/services/authService';
 import { formatPhoneNumber } from '../../utils/format';
 import { hashPassword } from '../../utils/passwordUtils';
@@ -9,11 +9,12 @@ import { setCookie } from '../../utils/cookieUtils';
 import useUserStore from '../../stores/userStore';
 import useProfileStore from '../../stores/profileStore';
 import useCreditStore from '../../stores/creditStore';
-import { ROUTES } from '../../utils/routes';
+import { TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import {
   getCreditShowButtonFromApiBody,
   getCreditRequestStatusFromApiBody
 } from '../../utils/creditLineShowButton';
+import { ROUTES } from '../../utils/routes';
 
 const LoginForm = ({ onLoginSuccess, onBack }) => {
   const setUser = useUserStore((state) => state.setUser);
@@ -155,6 +156,7 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
                 className={`input-field pl-10 ${errors.telefono ? 'border-red-500' : ''}`}
                 placeholder="5512345678"
                 maxLength="10"
+                autoComplete="tel"
               />
             </div>
             {errors.telefono && (
@@ -179,6 +181,7 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
                 onChange={handleChange}
                 className={`input-field pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
                 placeholder="Mínimo 8 caracteres"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -195,6 +198,14 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password}</p>
             )}
+            <div className="mt-2 text-right">
+              <Link
+                to={ROUTES.PASSWORD_RESET}
+                className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </div>
 
           {/* Botón principal */}
@@ -220,13 +231,14 @@ const LoginForm = ({ onLoginSuccess, onBack }) => {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Al iniciar sesión, aceptas nuestros{' '}
-            <Link to={ROUTES.TERMS} className="text-primary-600 hover:underline">
+            <a
+              href={TERMS_AND_CONDITIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:underline"
+            >
               Términos y Condiciones
-            </Link>{' '}
-            y{' '}
-            <Link to={ROUTES.PRIVACY} className="text-primary-600 hover:underline">
-              Aviso de Privacidad
-            </Link>
+            </a>
           </p>
         </div>
       </div>
