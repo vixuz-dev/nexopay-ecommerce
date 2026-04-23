@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CHECKOUT_CONFIG } from '../constants/checkoutConfig';
 import { isSameCartLine } from '../utils/cartLineUtils';
+import { resolveCartLineImageFromProduct } from '../utils/cartMapper';
 import { splitDeferredIntoInstallments } from '../utils/deferredInstallments';
 
 const resolvePaymentPerUnit = (product) => {
@@ -41,6 +42,8 @@ const useCartStore = create(
 
         const { unitTotalPrice, unitInitialPayment, unitDeferredAmount } = resolvePaymentPerUnit(product);
 
+        const lineImage = resolveCartLineImageFromProduct(product) ?? product.image;
+
         if (existingItemIndex >= 0) {
           const existingItem = items[existingItemIndex];
           const maxStock = product.stock ?? existingItem.stock ?? 999;
@@ -59,6 +62,7 @@ const useCartStore = create(
                   attributes: attributes.length > 0 ? attributes : item.attributes,
                   categoryId: product.categoryId ?? item.categoryId,
                   subcategoryId: product.subcategoryId ?? item.subcategoryId,
+                  image: lineImage ?? item.image,
                 }
               : item
           );
@@ -67,7 +71,7 @@ const useCartStore = create(
           const newItem = {
             id: product.id,
             name: product.name,
-            image: product.image,
+            image: lineImage,
             price: unitTotalPrice,
             originalPrice: product.originalPrice,
             discount: product.discount,

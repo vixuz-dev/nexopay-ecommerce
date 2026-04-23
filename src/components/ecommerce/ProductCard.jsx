@@ -4,7 +4,7 @@ import { HiOutlineShoppingCart, HiOutlineHeart } from 'react-icons/hi2';
 import ProductPlaceholder from '../common/ProductPlaceholder';
 import { useAddToCart } from '../../hooks/useAddToCart';
 import useUIStore from '../../stores/uiStore';
-import { ROUTES, getProductDetailUrl } from '../../utils/routes';
+import { getProductDetailUrl } from '../../utils/routes';
 import { CHECKOUT_CONFIG } from '../../constants/checkoutConfig';
 import { formatProductCardPrice, formatProductCardMonthlyPaymentText } from '../../utils/format';
 
@@ -25,7 +25,7 @@ const ProductCard = ({ product, showAddToCart = false }) => {
     inStock = true
   } = product;
 
-  const productDetailUrl = getProductDetailUrl(name, product.categoryId, product.subcategoryId);
+  const productDetailUrl = getProductDetailUrl(id);
 
   const handleCardClick = () => {
     navigate(productDetailUrl);

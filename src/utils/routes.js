@@ -59,17 +59,20 @@ export const EMAIL_VERIFY_FROM = {
 };
 
 /**
- * Genera la URL del detalle de un producto con query params
- * @param {string} productName - Nombre del producto
- * @param {number} categoryId - ID de la categoría
- * @param {number} subcategoryId - ID de la subcategoría
- * @returns {string} - URL completa con query params
+ * Genera la URL del detalle de un producto por ID (`?productId=`).
+ * @param {string|number} productId - ID de catálogo (`productId` del API)
+ * @returns {string} - URL con query `productId`
  */
-export const getProductDetailUrl = (productName, categoryId, subcategoryId) => {
+export const getProductDetailUrl = (productId) => {
+  const id =
+    productId != null && productId !== ''
+      ? String(productId).trim()
+      : '';
+  if (!id) {
+    return ROUTES.PRODUCT_DETAIL;
+  }
   const params = new URLSearchParams();
-  params.set('name', productName);
-  if (categoryId) params.set('categoryId', String(categoryId));
-  if (subcategoryId) params.set('subcategoryId', String(subcategoryId));
+  params.set('productId', id);
   return `${ROUTES.PRODUCT_DETAIL}?${params.toString()}`;
 };
 

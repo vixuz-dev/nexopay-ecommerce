@@ -27,6 +27,8 @@ import {
   HiOutlineMapPin,
   HiOutlinePencilSquare,
   HiOutlinePlus,
+  HiOutlineLockClosed,
+  HiOutlineEnvelope,
 } from 'react-icons/hi2';
 import ProductPlaceholder from '../components/common/ProductPlaceholder';
 import PurchaseFlowBreadcrumb from '../components/common/PurchaseFlowBreadcrumb';
@@ -34,7 +36,7 @@ import AddAddressModal from '../components/common/AddAddressModal';
 import CartCreditGateModal from '../components/common/CartCreditGateModal';
 import useAddressesStore from '../stores/addressesStore';
 import useCreditLineStatusStore from '../stores/creditLineStatusStore';
-import { getCartCreditAccessState } from '../utils/creditLinePurchaseAccess';
+import { creditLineBlockedCopy, getCartCreditAccessState } from '../utils/creditLinePurchaseAccess';
 import { isSameCartLine } from '../utils/cartLineUtils';
 import { isPrincipalAddress } from '../utils/addressForm';
 
@@ -53,7 +55,8 @@ const Cart = () => {
   const [creditGateVariant, setCreditGateVariant] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
-  const isAuthenticated = !!useUserStore((s) => s.user);
+  const user = useUserStore((s) => s.user);
+  const isAuthenticated = !!user;
   const showButton = useCreditLineStatusStore((s) => s.showButton);
   const requestStatus = useCreditLineStatusStore((s) => s.requestStatus);
   const isCreditStatusLoaded = useCreditLineStatusStore((s) => s.isStatusLoaded);
@@ -106,8 +109,13 @@ const Cart = () => {
       showButton,
       requestStatus,
       isStatusLoaded: isCreditStatusLoaded,
+      user,
     });
-  }, [isAuthenticated, showButton, requestStatus, isCreditStatusLoaded]);
+  }, [isAuthenticated, showButton, requestStatus, isCreditStatusLoaded, user]);
+
+  const isCreditLineBlockedForCart = isAuthenticated && cartCreditAccess.kind === 'line_blocked';
+
+  const isEmailUnverifiedForCart = isAuthenticated && cartCreditAccess.kind === 'email_unverified';
 
   const isCartCreditStatusLoading = isAuthenticated && cartCreditAccess.kind === 'loading';
 
@@ -347,7 +355,7 @@ const Cart = () => {
                 >
                   <div className="flex flex-col md:flex-row gap-6">
                     <Link
-                      to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
+                      to={getProductDetailUrl(item.id)}
                       className={`w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 block ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
                     >
                       {item.image ? (
@@ -365,7 +373,7 @@ const Cart = () => {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                           <Link
-                            to={getProductDetailUrl(item.name, item.categoryId, item.subcategoryId)}
+                            to={getProductDetailUrl(item.id)}
                             className={`text-lg font-semibold hover:text-primary-600 transition-colors ${isOutOfStock ? 'text-gray-400' : 'text-gray-900'}`}
                           >
                             {item.name}
@@ -716,6 +724,32 @@ const Cart = () => {
                 </div>
               </div>
 
+              {isCreditLineBlockedForCart && (
+                <div
+                  className="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-4 flex items-start gap-3"
+                  role="status"
+                >
+                  <HiOutlineLockClosed className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" aria-hidden />
+                  <p className="text-sm text-neutral-800 leading-relaxed">
+                    <span className="font-semibold">{creditLineBlockedCopy.headline}</span>{' '}
+                    {creditLineBlockedCopy.detail}
+                  </p>
+                </div>
+              )}
+
+              {isEmailUnverifiedForCart && (
+                <div
+                  className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3"
+                  role="status"
+                >
+                  <HiOutlineEnvelope className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden />
+                  <p className="text-sm text-neutral-800 leading-relaxed">
+                    <span className="font-semibold">Verifica tu correo electrónico</span> para poder crear tu
+                    orden y completar la compra.
+                  </p>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleCheckout}
@@ -723,7 +757,9 @@ const Cart = () => {
                   addressesLoading ||
                   isProcessing ||
                   hasOutOfStockItems ||
-                  isCartCreditStatusLoading
+                  isCartCreditStatusLoading ||
+                  isCreditLineBlockedForCart ||
+                  isEmailUnverifiedForCart
                 }
                 className="w-full min-h-[3.25rem] py-3 px-4 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600 disabled:hover:shadow-md"
               >
@@ -742,6 +778,16 @@ const Cart = () => {
                       aria-hidden
                     />
                     <span>{isCartCreditStatusLoading ? 'Verificando crédito…' : 'Cargando...'}</span>
+                  </>
+                ) : isEmailUnverifiedForCart ? (
+                  <>
+                    <HiOutlineEnvelope className="w-5 h-5 shrink-0" aria-hidden />
+                    <span>Verifica tu correo</span>
+                  </>
+                ) : isCreditLineBlockedForCart ? (
+                  <>
+                    <HiOutlineLockClosed className="w-5 h-5 shrink-0" aria-hidden />
+                    <span>Cuenta deshabilitada</span>
                   </>
                 ) : addresses.length === 0 ? (
                   <>

@@ -16,7 +16,7 @@ const ProductCardHorizontal = ({ product }) => {
     inStock = true
   } = product;
 
-  const productDetailUrl = getProductDetailUrl(name, product.categoryId, product.subcategoryId);
+  const productDetailUrl = getProductDetailUrl(id);
 
   return (
     <Link

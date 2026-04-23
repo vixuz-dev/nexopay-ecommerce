@@ -39,7 +39,7 @@ describe('Home — New Products Section', () => {
     visitHomeAuthenticated();
     cy.get('main').contains('iPhone 16 Pro').click();
     cy.url().should('include', '/producto');
-    cy.url().should('include', 'name=iPhone');
+    cy.url().should('include', 'productId=1');
   });
 
   it('shows empty state when no new products from API', () => {

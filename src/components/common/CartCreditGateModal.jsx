@@ -1,19 +1,34 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineXMark } from 'react-icons/hi2';
-import { ROUTES } from '../../utils/routes';
+import { ROUTES, EMAIL_VERIFY_FROM_QUERY, EMAIL_VERIFY_FROM } from '../../utils/routes';
+import { creditLineBlockedCopy } from '../../utils/creditLinePurchaseAccess';
 
 /**
  * @param {Object} props
  * @param {boolean} props.isOpen
- * @param {'need_request' | 'rejected' | 'pending' | 'no_active_line' | null} props.variant
+ * @param {'need_request' | 'rejected' | 'pending' | 'no_active_line' | 'line_blocked' | 'email_unverified' | null} props.variant
  * @param {() => void} props.onClose
  */
 const CartCreditGateModal = ({ isOpen, variant, onClose }) => {
   if (!isOpen || !variant) return null;
 
   const content =
-    variant === 'need_request'
+    variant === 'email_unverified'
+      ? {
+          title: 'Verifica tu correo electrónico',
+          body: 'Para realizar compras debes verificar primero tu correo electrónico. Revisa tu bandeja de entrada o solicita un nuevo código de verificación.',
+          primaryTo: `${ROUTES.EMAIL_VERIFICATION}?${EMAIL_VERIFY_FROM_QUERY}=${EMAIL_VERIFY_FROM.BANNER}`,
+          primaryLabel: 'Ir a verificar correo',
+        }
+      : variant === 'line_blocked'
+      ? {
+          title: creditLineBlockedCopy.headline,
+          body: creditLineBlockedCopy.detail,
+          primaryTo: null,
+          primaryLabel: null,
+        }
+      : variant === 'need_request'
       ? {
           title: 'Solicita tu línea de crédito',
           body: 'Para continuar con tu compra y agregar direcciones de envío, primero debes solicitar tu línea de crédito NexoPay.',
@@ -22,10 +37,10 @@ const CartCreditGateModal = ({ isOpen, variant, onClose }) => {
         }
       : variant === 'rejected'
         ? {
-            title: 'Sin línea de crédito disponible',
-            body: 'No cuentas con una línea de crédito activa y disponible. No puedes realizar compras en este momento.',
-            primaryTo: null,
-            primaryLabel: null,
+            title: 'Tu solicitud de crédito no fue aprobada',
+            body: 'Para comprar a plazos en NexoPay necesitas una línea de crédito aprobada. En esta ocasión tu solicitud no fue aprobada, por eso no podemos dejarte continuar con la compra ni usar financiamiento. Te agradecemos tu interés. Si más adelante hay cambios o una nueva evaluación, podrás volver a intentarlo. Puedes revisar el detalle en Mis solicitudes.',
+            primaryTo: ROUTES.MY_CREDIT,
+            primaryLabel: 'Ver mis solicitudes',
           }
         : variant === 'pending'
           ? {

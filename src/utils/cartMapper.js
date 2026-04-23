@@ -15,6 +15,27 @@ const getImageUrl = (img) => {
   return null;
 };
 
+/**
+ * URL de imagen para una línea del carrito a partir del objeto producto/variante
+ * (p. ej. lo que envía ProductDetail al añadir al carrito). Prioriza assets de la variante.
+ * @param {Object|null|undefined} product
+ * @returns {string|null}
+ */
+export const resolveCartLineImageFromProduct = (product) => {
+  if (!product) return null;
+  const fromVariantUrl = getImageUrl(product.variantImageUrl);
+  if (fromVariantUrl) return fromVariantUrl;
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const u = getImageUrl(product.images[0]);
+    if (u) return u;
+  }
+  if (Array.isArray(product.imagesVariant) && product.imagesVariant.length > 0) {
+    const u = getImageUrl(product.imagesVariant[0]);
+    if (u) return u;
+  }
+  return getImageUrl(product.image ?? product.imageUrl);
+};
+
 export const mapApiCartItemToStore = (apiItem) => {
   const id = apiItem.productId ?? apiItem.product_id ?? apiItem.id;
   const name = apiItem.productName ?? apiItem.product_name ?? apiItem.name ?? '';
@@ -53,6 +74,7 @@ export const mapApiCartItemToStore = (apiItem) => {
     ? getImageUrl(
         selectedVariant.variantImageUrl ??
           (Array.isArray(selectedVariant.images) ? selectedVariant.images[0] : null) ??
+          (Array.isArray(selectedVariant.imagesVariant) ? selectedVariant.imagesVariant[0] : null) ??
           apiItem.variantImageUrl ??
           apiItem.images?.[0]
       )

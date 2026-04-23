@@ -26,6 +26,17 @@ export function visitHomeAuthenticated(options = {}) {
     cy.intercept('GET', '**/ecommerce/profile/get_profile_information', data.profile).as('getProfile');
     cy.intercept('GET', '**/ecommerce/products/**', { statusCode: 200, body: data.searchEmpty }).as('getProducts');
 
+    const newSection = homeResponse?.body?.sections?.find((s) => s.key === 'new');
+    const detailProductStub = newSection?.products?.[0];
+    if (detailProductStub) {
+      cy.intercept('POST', '**/ecommerce/products/get_product_by_id', (req) => {
+        req.reply({
+          statusCode: 200,
+          body: { success: true, body: detailProductStub },
+        });
+      }).as('getProductById');
+    }
+
     cy.visit('/', {
       failOnStatusCode: false,
       onBeforeLoad(win) {

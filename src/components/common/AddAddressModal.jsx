@@ -1,12 +1,18 @@
-import { useState, useEffect } from 'react';
-import { HiOutlineXMark, HiOutlineMapPin } from 'react-icons/hi2';
+import { useState, useEffect, useMemo } from 'react';
+import { HiOutlineXMark, HiOutlineMapPin, HiOutlineArrowRight } from 'react-icons/hi2';
 import { addressService } from '../../api/services/addressService';
 import useToastStore from '../../stores/toastStore';
 import { addressApiRecordToForm, isPrincipalAddress } from '../../utils/addressForm';
 import { getBrowserGeolocationPosition } from '../../utils/browserGeolocation';
 import { geocodeAddressQuery } from '../../utils/geocodeAddress';
-import { isValidMexicanPhone, isValidMexicanPostalCode } from '../../utils/validation';
+import {
+  isValidMexicanPhone,
+  isValidMexicanPostalCode,
+  isValidMexicanExternalNumber,
+} from '../../utils/validation';
+import { ESTADOS_MEXICO } from '../../constants/app';
 import DeliveryAddressMapPicker from './DeliveryAddressMapPicker';
+import Dropdown from './Dropdown';
 
 const INITIAL_FORM = {
   alias: '',
@@ -24,6 +30,8 @@ const INITIAL_FORM = {
 
 const FALLBACK_MAP_LAT = 19.4326;
 const FALLBACK_MAP_LNG = -99.1332;
+
+const ESTADO_OPTIONS = ESTADOS_MEXICO.map((e) => ({ value: e, label: e }));
 
 /**
  * Centro inicial del mapa: coordenadas guardadas, geocoding del domicilio, GPS del usuario o CDMX.
@@ -117,9 +125,40 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
     if (name === 'zipCode') {
       finalValue = value.replace(/\D/g, '').slice(0, 5);
     }
+    if (name === 'externalNumber') {
+      finalValue = value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]/g, '').slice(0, 20);
+    }
+    if (name === 'internalNumber') {
+      finalValue = value.replace(/[^a-zA-Z0-9\s\-/]/g, '').slice(0, 20);
+    }
     setForm((prev) => ({ ...prev, [name]: finalValue }));
     setError('');
   };
+
+  const isStep1FormValid = useMemo(() => {
+    const alias = form.alias?.trim() || '';
+    const nameReceived = form.nameReceived?.trim() || '';
+    const phoneDigits = (form.phoneReceived || '').replace(/\D/g, '');
+    const street = form.street?.trim() || '';
+    const external = form.externalNumber?.trim() || '';
+    const internal = form.internalNumber?.trim() || '';
+    const neighborhood = form.neighborhood?.trim() || '';
+    const city = form.city?.trim() || '';
+    const state = form.state?.trim() || '';
+    const zipDigits = (form.zipCode || '').replace(/\D/g, '');
+
+    if (alias.length < 2) return false;
+    if (nameReceived.length < 3) return false;
+    if (!isValidMexicanPhone(phoneDigits)) return false;
+    if (street.length < 3) return false;
+    if (!isValidMexicanExternalNumber(external)) return false;
+    if (internal && (internal.length > 20 || !/^[a-zA-Z0-9\s\-/]*$/.test(internal))) return false;
+    if (neighborhood.length < 3) return false;
+    if (city.length < 2) return false;
+    if (!ESTADOS_MEXICO.includes(state)) return false;
+    if (!isValidMexicanPostalCode(zipDigits)) return false;
+    return true;
+  }, [form]);
 
   const validate = () => {
     if (!form.alias?.trim() || form.alias.length < 2) {
@@ -138,24 +177,30 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
       setError('La calle debe tener al menos 3 caracteres');
       return false;
     }
-    if (!form.externalNumber?.trim()) {
-      setError('El número exterior es obligatorio');
+    if (!isValidMexicanExternalNumber(form.externalNumber)) {
+      setError(
+        'El número exterior es obligatorio: solo letras y números (sin espacios) y debe incluir al menos un dígito'
+      );
       return false;
     }
-    if (form.internalNumber?.length > 10) {
-      setError('El número interior no puede exceder 10 caracteres');
+    const internalTrim = form.internalNumber?.trim() || '';
+    if (
+      internalTrim &&
+      (internalTrim.length > 20 || !/^[a-zA-Z0-9\s\-/]*$/.test(internalTrim))
+    ) {
+      setError('El número interior solo puede contener letras, números, espacios, guiones o / (máx. 20)');
       return false;
     }
-    if (!form.neighborhood?.trim()) {
-      setError('La colonia es obligatoria');
+    if (!form.neighborhood?.trim() || form.neighborhood.trim().length < 3) {
+      setError('La colonia debe tener al menos 3 caracteres');
       return false;
     }
-    if (!form.city?.trim()) {
-      setError('La ciudad es obligatoria');
+    if (!form.city?.trim() || form.city.trim().length < 2) {
+      setError('Ingresa una ciudad válida (mínimo 2 caracteres)');
       return false;
     }
-    if (!form.state?.trim()) {
-      setError('El estado es obligatorio');
+    if (!ESTADOS_MEXICO.includes(String(form.state || '').trim())) {
+      setError('Selecciona un estado de la lista');
       return false;
     }
     if (!isValidMexicanPostalCode(form.zipCode)) {
@@ -418,8 +463,10 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
                     name="externalNumber"
                     value={form.externalNumber}
                     onChange={handleChange}
-                    placeholder="Ej: 456"
-                    maxLength={10}
+                    placeholder="Ej: 456 o S/N"
+                    maxLength={20}
+                    inputMode="text"
+                    autoComplete="address-line2"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
@@ -434,7 +481,7 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
                     value={form.internalNumber}
                     onChange={handleChange}
                     placeholder="Depto, local, etc. (opcional)"
-                    maxLength={10}
+                    maxLength={20}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -469,15 +516,14 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estado *</label>
-                  <input
-                    type="text"
+                  <Dropdown
+                    id="address-state"
                     name="state"
+                    label="Estado *"
                     value={form.state}
                     onChange={handleChange}
-                    placeholder="Estado"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    required
+                    options={ESTADO_OPTIONS}
+                    placeholder="Selecciona un estado"
                   />
                 </div>
                 <div>
@@ -557,10 +603,19 @@ const AddAddressModal = ({ isOpen, onClose, onSuccess, editAddress = null }) => 
               <button
                 type="submit"
                 form="address-step-1"
-                disabled={isSubmitting || mapLoading || userLocationLoading}
-                className="flex-1 py-3.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  isSubmitting || mapLoading || userLocationLoading || !isStep1FormValid
+                }
+                className="flex-1 py-3.5 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
-                {mapLoading ? 'Preparando mapa…' : 'Continuar'}
+                {mapLoading ? (
+                  'Preparando mapa…'
+                ) : (
+                  <>
+                    Continuar
+                    <HiOutlineArrowRight className="w-5 h-5 shrink-0" aria-hidden />
+                  </>
+                )}
               </button>
             </>
           ) : (

@@ -197,8 +197,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
     reference1Data.colonia && 
     reference1Data.ciudad && 
     reference1Data.estado && 
-    reference1Data.codigoPostal && 
-    reference1Data.referenciaUbicacion;
+    reference1Data.codigoPostal;
 
   const isReference2Complete = reference2Data.nombres && 
     reference2Data.apellidoPaterno && 
@@ -209,8 +208,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
     reference2Data.colonia && 
     reference2Data.ciudad && 
     reference2Data.estado && 
-    reference2Data.codigoPostal && 
-    reference2Data.referenciaUbicacion;
+    reference2Data.codigoPostal;
 
   const externalErrors = currentReference === 1 
     ? (referenceValidationErrors?.reference1 || {})
@@ -467,7 +465,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
 
               <div>
                   <label htmlFor={`referenciaUbicacion-${formNumber}`} className="block text-sm font-semibold text-gray-700 mb-2">
-                  Referencia de ubicación <span className="text-red-500">*</span>
+                  Referencia de ubicación <span className="text-gray-500 font-normal">(opcional)</span>
                 </label>
                 <input
                   type="text"
@@ -476,7 +474,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 ${
                       (formErrors.referenciaUbicacion || extErrors.referenciaUbicacion) ? 'border-red-500' : 'border-gray-300'
                     }`}
-                  placeholder="Referencia de ubicación"
+                  placeholder="Referencia de ubicación (opcional)"
                 />
                   {(formErrors.referenciaUbicacion || extErrors.referenciaUbicacion) && (
                     <p className="mt-1 text-sm text-red-600">

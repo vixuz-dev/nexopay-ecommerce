@@ -86,6 +86,7 @@ export const ENDPOINTS = {
   // Products
   PRODUCTS: {
     GET_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_products`,
+    GET_PRODUCT_BY_ID: `${API_BASE_URL}/ecommerce/products/get_product_by_id`,
     GET_SIMILAR_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_similar_products`,
     GET_AFFILIATE_PRODUCTS: `${API_BASE_URL}/ecommerce/products/get_affiliate_products`,
   },

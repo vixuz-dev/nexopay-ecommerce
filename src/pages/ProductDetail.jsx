@@ -35,11 +35,10 @@ const ProductDetail = () => {
   const { addToCart } = useAddToCart();
   const openCartSidebar = useUIStore((state) => state.openCartSidebar);
   
-  const productName = searchParams.get('name') || searchParams.get('productName');
-  const categoryId = searchParams.get('categoryId');
-  const subcategoryId = searchParams.get('subcategoryId');
-  
-  const { product: apiProduct, loading, error } = useProductDetail(productName, categoryId, subcategoryId);
+  const productId =
+    searchParams.get('productId') || searchParams.get('id') || '';
+
+  const { product: apiProduct, loading, error } = useProductDetail(productId || null);
   
   const product = useMemo(() => {
     if (!apiProduct) return null;
@@ -156,6 +155,8 @@ const ProductDetail = () => {
     if (selectedVariantId && allVariants.length > 0) {
       const variant = allVariants.find(v => v.productVariantId === selectedVariantId);
       if (variant) {
+        const variantGalleryUrls = buildImagesList(variant);
+        const lineImage = variantGalleryUrls.length > 0 ? variantGalleryUrls[0] : product.image;
         return {
           ...product,
           price: variant.finalPrice || variant.price || product.price,
@@ -163,7 +164,10 @@ const ProductDetail = () => {
           remainingBalance: variant.remainingBalance || product.remainingBalance,
           stock: variant.stock ?? product.stock,
           inStock: (variant.stock ?? 0) > 0,
-          variantImageUrl: variant.variantImageUrl || product.variantImageUrl,
+          variantImageUrl: variant.variantImageUrl ?? null,
+          images: Array.isArray(variant.images) ? variant.images : product.images,
+          imagesVariant: Array.isArray(variant.imagesVariant) ? variant.imagesVariant : product.imagesVariant,
+          image: lineImage,
           productVariantId: variant.productVariantId,
         };
       }
@@ -259,7 +263,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (!productName) {
+  if (!productId?.trim()) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -626,9 +630,9 @@ const ProductDetail = () => {
                 {currentProduct.inStock ? (
                   <>
                     <p className="text-sm font-semibold mb-1 text-primary-600">Stock disponible</p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    {/* <p className="text-xs text-gray-600 mt-1">
                       Cantidad: {quantity} unidad{quantity > 1 ? 'es' : ''} ({currentProduct.stock} disponibles)
-                    </p>
+                    </p> */}
                   </>
                 ) : (
                   <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">

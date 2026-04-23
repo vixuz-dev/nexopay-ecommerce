@@ -127,16 +127,8 @@ export const referenceSchema = z.object({
     .regex(/^\d{5}$/, 'El código postal debe tener exactamente 5 dígitos numéricos'),
 
   referenciaUbicacion: z
-    .string({
-      required_error: 'Las referencias de ubicación son requeridas',
-      invalid_type_error: 'Las referencias de ubicación deben ser un texto'
-    })
-    .min(1, 'Las referencias de ubicación son requeridas')
-    .min(10, 'Las referencias de ubicación deben tener al menos 10 caracteres')
+    .string()
     .max(500, 'Las referencias de ubicación no pueden tener más de 500 caracteres')
-    .refine((val) => val.trim().length >= 10, {
-      message: 'Las referencias de ubicación no pueden ser solo espacios'
-    })
 });
 
 

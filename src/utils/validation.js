@@ -42,6 +42,20 @@ export const isValidMexicanPostalCode = (cp) => {
   return digits.length === 5 && digits !== '00000';
 };
 
+/**
+ * Número exterior (México): letras y números sin espacios ni símbolos, al menos un dígito, máx. 20.
+ * Alineado con la solicitud de crédito (`personalAddressSchema`).
+ * @param {string} v
+ * @returns {boolean}
+ */
+export const isValidMexicanExternalNumber = (v) => {
+  const s = String(v || '').trim();
+  if (s.length < 1 || s.length > 20) return false;
+  if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/.test(s)) return false;
+  if (!/\d/.test(s)) return false;
+  return true;
+};
+
 const CURP_REGEX = /^[A-Z]{4}\d{6}[HMX][A-Z]{2}[A-Z0-9]{5}$/;
 
 /**
@@ -52,4 +66,24 @@ const CURP_REGEX = /^[A-Z]{4}\d{6}[HMX][A-Z]{2}[A-Z0-9]{5}$/;
 export const isValidCURP = (curp) => {
   const trimmed = (curp || '').trim().toUpperCase();
   return trimmed.length === 18 && CURP_REGEX.test(trimmed);
+};
+
+/** Longitud mínima de contraseña en registro (ecommerce). */
+export const REGISTER_PASSWORD_MIN_LENGTH = 8;
+
+/**
+ * Evalúa la contraseña de registro frente a las reglas de la plataforma.
+ * Se usa el valor recortado por espacios (mismo criterio que al enviar el registro).
+ * @param {string} password
+ * @returns {{ minLength: boolean, uppercase: boolean, lowercase: boolean, digit: boolean, special: boolean, allMet: boolean }}
+ */
+export const getRegisterPasswordRequirements = (password) => {
+  const pwd = (password || '').trim();
+  const minLength = pwd.length >= REGISTER_PASSWORD_MIN_LENGTH;
+  const uppercase = /[A-Z]/.test(pwd);
+  const lowercase = /[a-z]/.test(pwd);
+  const digit = /\d/.test(pwd);
+  const special = /[^A-Za-z0-9]/.test(pwd);
+  const allMet = minLength && uppercase && lowercase && digit && special;
+  return { minLength, uppercase, lowercase, digit, special, allMet };
 };

@@ -58,10 +58,6 @@ export const personalAddressSchema = z.object({
 
   referencias: z
     .string()
-    .min(10, 'Ingresa referencias válidas (mínimo 10 caracteres)')
     .max(250, 'Las referencias son demasiado largas (máximo 250 caracteres)')
-    .refine((val) => val.trim().length >= 10, {
-      message: 'Ingresa referencias válidas (mínimo 10 caracteres)'
-    })
 });
 

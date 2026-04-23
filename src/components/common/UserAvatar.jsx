@@ -9,6 +9,10 @@ import { useCreditFormStore } from '../../stores/creditFormStore';
 import useCreditLineStatusStore from '../../stores/creditLineStatusStore';
 import useCreditStore from '../../stores/creditStore';
 import { isApprovedCreditLineStatus } from '../../utils/emailVerification';
+import {
+  isRejectedCreditRequestStatus,
+  isNoCreditRequestYetFromUser,
+} from '../../utils/creditLinePurchaseAccess';
 
 const UserAvatar = ({ isHomePage = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +34,9 @@ const UserAvatar = ({ isHomePage = false }) => {
 
   const hasApprovedCreditRequest =
     isStatusLoaded && isApprovedCreditLineStatus(showButton, requestStatus);
+
+  const hideMyAccountInMenu =
+    isRejectedCreditRequestStatus(user?.creditRequest) || isNoCreditRequestYetFromUser(user);
 
   const handleMouseEnter = () => setIsOpen(true);
   const handleMouseLeave = () => setIsOpen(false);
@@ -116,13 +123,15 @@ const UserAvatar = ({ isHomePage = false }) => {
         }`}
       >
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 py-2">
-          <Link
-            to={ROUTES.MY_ACCOUNT}
-          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
-        >
-          <HiOutlineUser className="w-5 h-5" />
-          <span>Mi cuenta</span>
-        </Link>
+          {!hideMyAccountInMenu && (
+            <Link
+              to={ROUTES.MY_ACCOUNT}
+              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200"
+            >
+              <HiOutlineUser className="w-5 h-5" />
+              <span>Mi cuenta</span>
+            </Link>
+          )}
 
         <Link
             to={ROUTES.MY_PROFILE}

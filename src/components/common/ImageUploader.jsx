@@ -7,7 +7,8 @@ const ImageUploader = ({
   currentImage = null,
   accept = 'image/*',
   maxSizeMB = 5,
-  label = 'Subir imagen'
+  label = 'Subir imagen',
+  cameraOnly = false,
 }) => {
   const [preview, setPreview] = useState(currentImage);
   const [error, setError] = useState('');
@@ -109,25 +110,27 @@ const ImageUploader = ({
   return (
     <div className="space-y-4">
       {!preview && !showCamera && (
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1 flex flex-col items-center justify-center gap-3 px-8 py-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 group"
-          >
-            <div className="w-16 h-16 bg-gray-100 group-hover:bg-primary-100 rounded-full flex items-center justify-center transition-colors duration-200">
-              <HiOutlinePhoto className="w-8 h-8 text-gray-600 group-hover:text-primary-600 transition-colors duration-200" />
-            </div>
-            <div className="text-center">
-              <span className="font-bold text-gray-900 block text-lg">Subir foto</span>
-              <span className="text-sm text-gray-500 mt-1">Desde tu dispositivo</span>
-            </div>
-          </button>
+        <div className={`flex gap-4 ${cameraOnly ? 'flex-col items-stretch' : 'flex-col sm:flex-row'}`}>
+          {!cameraOnly && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex flex-col items-center justify-center gap-3 px-8 py-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 group"
+            >
+              <div className="w-16 h-16 bg-gray-100 group-hover:bg-primary-100 rounded-full flex items-center justify-center transition-colors duration-200">
+                <HiOutlinePhoto className="w-8 h-8 text-gray-600 group-hover:text-primary-600 transition-colors duration-200" />
+              </div>
+              <div className="text-center">
+                <span className="font-bold text-gray-900 block text-lg">Subir foto</span>
+                <span className="text-sm text-gray-500 mt-1">Desde tu dispositivo</span>
+              </div>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={startCamera}
-            className="flex-1 flex flex-col items-center justify-center gap-3 px-8 py-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 group"
+            className={`flex flex-col items-center justify-center gap-3 px-8 py-8 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all duration-200 group ${cameraOnly ? 'w-full max-w-md mx-auto' : 'flex-1'}`}
           >
             <div className="w-16 h-16 bg-gray-100 group-hover:bg-primary-100 rounded-full flex items-center justify-center transition-colors duration-200">
               <HiOutlineCamera className="w-8 h-8 text-gray-600 group-hover:text-primary-600 transition-colors duration-200" />
@@ -176,13 +179,15 @@ const ImageUploader = ({
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={accept}
-        onChange={handleFileInputChange}
-        className="hidden"
-      />
+      {!cameraOnly && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={accept}
+          onChange={handleFileInputChange}
+          className="hidden"
+        />
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">

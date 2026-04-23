@@ -32,7 +32,7 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
       setCustomNextHandler(() => {
         // Validar que haya una foto de selfie (URL es suficiente, el File puede no estar si se recargó la página)
         if (!identityData.selfieUrl) {
-          setValidationError('Debes subir una foto de tu rostro (selfie) para continuar');
+          setValidationError('Debes tomar una selfie de tu rostro para continuar');
           // Hacer scroll al error
           setTimeout(() => {
             const errorElement = document.getElementById('selfie-validation-error');
@@ -66,7 +66,7 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
           Verificación de identidad
         </h2>
         <p className="text-gray-600">
-          Sube una foto de tu rostro para verificar tu identidad. Es importante que la foto sea clara y legible.
+          Toma una selfie con tu rostro para verificar tu identidad. Es importante que la foto sea clara y legible.
         </p>
       </div>
 
@@ -103,8 +103,9 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
           <ImageUploader
             onImageSelect={handleImageSelect}
             currentImage={identityData.selfieUrl}
-              accept="image/png,image/jpeg,image/jpg,image/webp"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
             maxSizeMB={5}
+            cameraOnly
           />
           {validationError && (
             <div id="selfie-validation-error" className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -129,7 +130,7 @@ const IdentityVerificationStep = ({ setCustomNextHandler }) => {
                 </div>
               </div>
               <p className="text-sm font-semibold text-green-800 leading-relaxed">
-                Foto cargada correctamente. Verifica que tu rostro sea claramente visible antes de continuar.
+                Selfie lista correctamente. Verifica que tu rostro sea claramente visible antes de continuar.
               </p>
             </div>
           </div>

@@ -27,6 +27,24 @@ export function visitCartAuthenticated(cartFixture, addressFixture) {
       body: { body: { order_id: 999, orderId: 'ORD-999' } },
     }).as('createOrder');
 
+    const cartItems = Array.isArray(cartResponse?.body) ? cartResponse.body : [];
+    if (cartItems.length > 0) {
+      const byProductId = Object.fromEntries(cartItems.map((item) => [String(item.productId), item]));
+      cy.intercept('POST', '**/ecommerce/products/get_product_by_id', (req) => {
+        let parsed = req.body;
+        if (typeof parsed === 'string') {
+          try {
+            parsed = JSON.parse(parsed);
+          } catch {
+            parsed = {};
+          }
+        }
+        const pid = String(parsed?.productId ?? '');
+        const product = byProductId[pid] || cartItems[0];
+        req.reply({ statusCode: 200, body: { success: true, body: product } });
+      }).as('getProductById');
+    }
+
     cy.visit(CART_PATH, {
       failOnStatusCode: false,
       onBeforeLoad(win) {

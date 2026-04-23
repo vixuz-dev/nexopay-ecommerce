@@ -63,11 +63,7 @@ const SearchBar = ({ placeholder = "Buscar productos, marcas y más...", onSearc
   const handleProductClick = (product) => {
     setShowResults(false);
     setSearchTerm('');
-    const url = getProductDetailUrl(
-      product.name,
-      product.categoryId ?? null,
-      product.subcategoryId ?? null
-    );
+    const url = getProductDetailUrl(product.id);
     navigate(url);
   };
 

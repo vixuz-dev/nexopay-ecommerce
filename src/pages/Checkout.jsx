@@ -9,6 +9,7 @@ import { useClearCart } from '../hooks/useClearCart';
 import useToastStore from '../stores/toastStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import useUserStore from '../stores/userStore';
+import { isCreditLineBlocked } from '../utils/creditLinePurchaseAccess';
 import { buildMercadoPagoPaymentPayload } from '../utils/mercadoPagoPayloadBuilder';
 import { mercadoPagoService } from '../api/services/mercadoPagoService';
 import { getShippingCost } from '../constants/checkoutConfig';
@@ -34,6 +35,7 @@ const Checkout = () => {
   const location = useLocation();
   const showToast = useToastStore((s) => s.showToast);
   const preOrder = usePreOrderStore((s) => s.preOrder);
+  const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
   const user = useUserStore((s) => s.user);
   const isAuthenticated = !!user;
   const { fetchCart } = useCartApi({ syncToStore: true });
@@ -128,6 +130,20 @@ const Checkout = () => {
     }
   }, [items.length, navigate]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    if (user.emailVerified !== true) {
+      setPreOrder(null);
+      showToast('Verifica tu correo electrónico para poder completar tu compra.', 'error');
+      navigate(ROUTES.CART, { replace: true });
+      return;
+    }
+    if (!isCreditLineBlocked(user)) return;
+    setPreOrder(null);
+    showToast('Tu cuenta no puede completar compras con crédito en este momento.', 'error');
+    navigate(ROUTES.CART, { replace: true });
+  }, [isAuthenticated, user, navigate, showToast, setPreOrder]);
+
   const subtotal = getSubtotal();
   const shipping = getShippingCost(subtotal);
   const total = subtotal + shipping;
@@ -142,6 +158,20 @@ const Checkout = () => {
   const selectedAddress = addresses.find((a) => a.client_address_id === selectedAddressId);
 
   const handleCheckout = async (cardTokenResult) => {
+    if (user && user.emailVerified !== true) {
+      showToast('Verifica tu correo electrónico para poder completar tu compra.', 'error');
+      setPreOrder(null);
+      navigate(ROUTES.CART, { replace: true });
+      return;
+    }
+
+    if (user && isCreditLineBlocked(user)) {
+      showToast('Tu cuenta no puede completar compras con crédito en este momento.', 'error');
+      setPreOrder(null);
+      navigate(ROUTES.CART, { replace: true });
+      return;
+    }
+
     if (!acceptedTerms) {
       showToast('Por favor acepta los términos y condiciones', 'error');
       return;

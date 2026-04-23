@@ -141,13 +141,18 @@ const CreditWizard = () => {
           showButton: sbNum,
         });
         setCreditLineStatus(sbNum, statusStr);
+        const creditFormEmail = String(formData?.emailCurp?.email ?? '').trim();
+        const sessionEmail = String(useUserStore.getState().user?.email ?? '').trim();
+        const verificationEmail = creditFormEmail || sessionEmail;
+
         useUserStore.getState().patchUser({
           showButtonCreditLineRequest: sbNum === 1,
           ...(statusStr !== '' ? { creditRequest: statusStr } : {}),
           ...(body.creditLineAmount != null && !Number.isNaN(Number(body.creditLineAmount))
             ? { limitCreditAmount: Number(body.creditLineAmount) }
             : {}),
-          ...(isApprovedRequest ? { creditApproved: true } : {}),
+          ...(isApprovedRequest ? { creditApproved: true, creditStatus: true } : {}),
+          ...(verificationEmail ? { email: verificationEmail } : {}),
         });
       }
       showToast(
@@ -156,6 +161,7 @@ const CreditWizard = () => {
           : 'Solicitud enviada correctamente. Te contactaremos pronto.',
         'success'
       );
+      const verificationEmailForNav = String(formData?.emailCurp?.email ?? '').trim();
       resetForm();
       await Promise.all([fetchCreditLineStatus(), fetchCreditLineRequests()]);
       if (isApprovedRequest) {
@@ -163,7 +169,10 @@ const CreditWizard = () => {
           `${ROUTES.EMAIL_VERIFICATION}?${EMAIL_VERIFY_FROM_QUERY}=${EMAIL_VERIFY_FROM.CREDIT_REQUEST}`,
           {
             replace: true,
-            state: { fromApprovedCreditRequest: true },
+            state: {
+              fromApprovedCreditRequest: true,
+              ...(verificationEmailForNav ? { verificationEmail: verificationEmailForNav } : {}),
+            },
           }
         );
       } else {

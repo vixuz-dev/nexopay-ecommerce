@@ -20,7 +20,11 @@ const VerificacionCorreo = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const email = user?.email || 'roger.vazquez14@gmail.com';
+  const email =
+    (location.state?.verificationEmail && String(location.state.verificationEmail).trim()) ||
+    (location.state?.email && String(location.state.email).trim()) ||
+    (user?.email && String(user.email).trim()) ||
+    '';
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -77,7 +81,12 @@ const VerificacionCorreo = () => {
                   Enviaremos un código de verificación a tu correo para confirmar tu identidad.
                 </p>
                 <div className="bg-gray-100 rounded-lg px-4 py-3">
-                  <p className="font-semibold text-gray-900 text-center">{email || 'Cargando...'}</p>
+                  <p className="font-semibold text-gray-900 text-center">
+                    {email ||
+                      (user?.client_id
+                        ? 'No tenemos tu correo en la sesión. Inicia sesión de nuevo o actualiza tu perfil.'
+                        : 'Cargando...')}
+                  </p>
                 </div>
               </div>
 

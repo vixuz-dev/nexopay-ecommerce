@@ -23,7 +23,10 @@ const VerificacionCorreoIngresarCodigo = () => {
   const setEmailVerified = useUserStore((state) => state.setEmailVerified);
   const showToast = useToastStore((state) => state.showToast);
 
-  const email = location.state?.email || user?.email || 'roger.vazquez14@gmail.com';
+  const email =
+    (location.state?.email && String(location.state.email).trim()) ||
+    (user?.email && String(user.email).trim()) ||
+    '';
 
   const [otp, setOtp] = useState(['', '', '', '']);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);

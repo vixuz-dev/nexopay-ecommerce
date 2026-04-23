@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import CreditSection from '../components/credit/CreditSection';
+import BlockedCreditLineAccountCard from '../components/account/BlockedCreditLineAccountCard';
+import { isCreditLineBlocked } from '../utils/creditLinePurchaseAccess';
 import ShopCTABanner from '../components/account/ShopCTABanner';
 import useCreditStore from '../stores/creditStore';
 import useUserStore from '../stores/userStore';
@@ -131,6 +133,8 @@ const MyAccount = () => {
               <div className="w-full h-10 bg-gray-200 rounded-lg" />
             </div>
           </div>
+        ) : isCreditLineBlocked(user) ? (
+          <BlockedCreditLineAccountCard />
         ) : (
           <CreditSection hasApproved={hasApprovedCreditRequest} />
         )}
@@ -146,11 +150,11 @@ const MyAccount = () => {
               <div className="w-28 h-10 bg-gray-200 rounded-lg" />
             </div>
           </div>
-        ) : (
+        ) : !isCreditLineBlocked(user) ? (
           <div className="mt-6">
             <ShopCTABanner />
           </div>
-        )}
+        ) : null}
       </main>
       
       <Footer />

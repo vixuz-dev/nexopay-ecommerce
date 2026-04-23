@@ -170,7 +170,7 @@ const CartSidebar = ({ isOpen, onClose }) => {
           ) : (
             <div className="p-6 space-y-4">
               {items.map((item) => {
-                const productDetailUrl = getProductDetailUrl(item.name, item.categoryId, item.subcategoryId);
+                const productDetailUrl = getProductDetailUrl(item.id);
                 const isOutOfStock = item.stock != null && item.stock <= 0;
                 return (
                 <div

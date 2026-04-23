@@ -158,7 +158,9 @@ export const CardPaymentForm = forwardRef(({
       )}
 
       {isLoading && (
-        <p className="text-sm text-gray-600">Generando token seguro…</p>
+        <div className="flex justify-center py-2" aria-busy="true" aria-label="Procesando">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+        </div>
       )}
     </form>
   );

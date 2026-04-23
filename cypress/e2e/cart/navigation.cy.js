@@ -16,6 +16,7 @@ describe('Cart — Navigation', () => {
     });
     cy.get('main').contains('a', 'iPhone 16 Pro').first().click();
     cy.url().should('include', '/producto');
+    cy.url().should('include', 'productId=10');
   });
 
   it('navigates to products page via "Continuar Comprando" link', () => {

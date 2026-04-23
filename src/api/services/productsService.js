@@ -44,6 +44,43 @@ class ProductService {
     }
   }
 
+  /**
+   * Obtiene el detalle de un producto por su identificador.
+   * @param {string|number} productId - ID del producto en catálogo
+   * @returns {Promise<object>} - Respuesta del API (p. ej. body con el producto)
+   */
+  async getProductById(productId) {
+    const token = authService.getToken();
+    if (!token) {
+      throw new Error('No se encontró una sesión activa. Por favor, inicia sesión.');
+    }
+
+    const payload = { productId: Math.floor(Number(productId)) };
+
+    try {
+      const response = await axios.post(
+        ENDPOINTS.PRODUCTS.GET_PRODUCT_BY_ID,
+        payload,
+        { headers: { token } },
+      );
+
+      if (response.data && response.data.success === false) {
+        throw response;
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        authService.logout();
+        window.location.href = ROUTES.HOME;
+      }
+
+      const errorMessage = this._parseErrorMessage(error);
+      console.error(`getProductById Error: ${errorMessage}`, error);
+      throw new Error(errorMessage);
+    }
+  }
+
   async getSimilarProducts(params) {
     const { categoryId, limit = 10, offset = 0 } = params;
 

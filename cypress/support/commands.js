@@ -5,6 +5,7 @@
 
 const AUTH_COOKIE = 'authToken';
 const PERSISTED_STORES = ['user-storage', 'profile-storage', 'cart-storage', 'credit-form-storage'];
+const SESSION_REGISTER_DRAFT = 'nexopay-register-draft';
 
 /**
  * Clears all authentication state: cookie + localStorage tokens and persisted stores.
@@ -15,6 +16,7 @@ Cypress.Commands.add('clearAuth', () => {
   cy.window({ log: false }).then((win) => {
     win.localStorage.removeItem(AUTH_COOKIE);
     PERSISTED_STORES.forEach((key) => win.localStorage.removeItem(key));
+    win.sessionStorage.removeItem(SESSION_REGISTER_DRAFT);
   });
 });
 

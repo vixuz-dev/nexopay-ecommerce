@@ -271,7 +271,7 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
 
         <div>
           <label htmlFor="referencias" className="block text-sm font-semibold text-gray-700 mb-2">
-            Referencias de ubicación <span className="text-red-500">*</span>
+            Referencias de ubicación <span className="text-gray-500 font-normal">(opcional)</span>
           </label>
           <textarea
             id="referencias"
@@ -281,7 +281,7 @@ const PersonalAddressStep = ({ setCustomNextHandler }) => {
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 resize-none ${
               errors.referencias ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Ej: Cerca del parque, entre calles X y Y, edificio de color..."
+            placeholder="Opcional. Ej: Cerca del parque, entre calles X y Y..."
           />
           <div className="mt-1 text-xs text-gray-500 text-right">
             {watch('referencias')?.length || 0}/250 caracteres

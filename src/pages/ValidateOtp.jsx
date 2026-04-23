@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineArrowLeft } from 'react-icons/hi2';
+import { HiOutlinePhone, HiOutlineArrowLeft } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../utils/routes';
 import { otpService } from '../api/services/otpService';
@@ -9,12 +9,16 @@ import { authService } from '../api/services/authService';
 import { OTP_TYPE_VERIFICATION } from '../constants/app';
 import { hashPassword } from '../utils/passwordUtils';
 import useToastStore from '../stores/toastStore';
+import useRegisterDraftStore from '../stores/registerDraftStore';
 
 const ValidateOtp = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const showToast = useToastStore((state) => state.showToast);
-  
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(() =>
+    useRegisterDraftStore.persist.hasHydrated()
+  );
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(40);
   const [canResend, setCanResend] = useState(false);
@@ -22,18 +26,38 @@ const ValidateOtp = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const registrationData = location.state?.registrationData;
-  const phoneNumber = location.state?.phoneNumber;
+  const pendingOtpStep = useRegisterDraftStore((s) => s.pendingOtpStep);
+  const storePhone = useRegisterDraftStore((s) => s.phoneNumber);
+  const storeRegistrationData = useRegisterDraftStore((s) => s.registrationData);
+
+  const { registrationData, phoneNumber } = useMemo(() => {
+    const fromState = location.state || {};
+    const phone =
+      fromState.phoneNumber || (pendingOtpStep ? storePhone : '') || '';
+    const reg =
+      fromState.registrationData ?? (pendingOtpStep ? storeRegistrationData : null);
+    return { phoneNumber: phone, registrationData: reg };
+  }, [location.state, pendingOtpStep, storePhone, storeRegistrationData]);
 
   useEffect(() => {
+    if (hasHydratedDraft) return undefined;
+    const unsub = useRegisterDraftStore.persist.onFinishHydration(() => {
+      setHasHydratedDraft(true);
+    });
+    return unsub;
+  }, [hasHydratedDraft]);
+
+  useEffect(() => {
+    if (!hasHydratedDraft) return undefined;
     if (!registrationData || !phoneNumber) {
       showToast('Acceso no autorizado. Debes venir desde el registro.', 'error', 4000);
-      setTimeout(() => {
+      const t = setTimeout(() => {
         navigate(ROUTES.REGISTER);
       }, 2000);
-      return;
+      return () => clearTimeout(t);
     }
-  }, [registrationData, phoneNumber, navigate, showToast]);
+    return undefined;
+  }, [hasHydratedDraft, registrationData, phoneNumber, navigate, showToast]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -154,6 +178,8 @@ const ValidateOtp = () => {
         4000
       );
 
+      useRegisterDraftStore.getState().clearRegistrationDraft();
+
       setTimeout(() => {
         navigate(ROUTES.LOGIN);
       }, 1500);
@@ -197,7 +223,7 @@ const ValidateOtp = () => {
     }
   };
 
-  if (!registrationData || !phoneNumber) {
+  if (!hasHydratedDraft || !registrationData || !phoneNumber) {
     return null;
   }
 

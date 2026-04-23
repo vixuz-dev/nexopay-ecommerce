@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiOutlinePhone, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeSlash, HiOutlineHome, HiOutlineUser } from 'react-icons/hi2';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,15 @@ import { ROUTES } from '../../utils/routes';
 import { OTP_TYPE_VERIFICATION, TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import { otpService } from '../../api/services/otpService';
 import { formatPhoneNumber } from '../../utils/format';
+import { getRegisterPasswordRequirements } from '../../utils/validation';
+import useRegisterDraftStore from '../../stores/registerDraftStore';
+
+const REGISTER_PASSWORD_HINT =
+  'Tu contraseña debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.';
+
+const REGISTER_PASSWORD_REQUIREMENTS_ERROR =
+  'Tu contraseña debe incluir al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.';
+
 const RegisterForm = ({ onRegisterSuccess, onBack }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -20,6 +29,25 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const applyDraftFromStore = () => {
+      const { pendingOtpStep, formDraft, acceptedTerms: storedAccepted } = useRegisterDraftStore.getState();
+      if (!pendingOtpStep) return;
+      setFormData((prev) => ({ ...prev, ...formDraft }));
+      setAcceptedTerms(!!storedAccepted);
+    };
+
+    if (useRegisterDraftStore.persist.hasHydrated()) {
+      applyDraftFromStore();
+      return undefined;
+    }
+
+    const unsub = useRegisterDraftStore.persist.onFinishHydration(() => {
+      applyDraftFromStore();
+    });
+    return unsub;
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,8 +76,11 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
 
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.trim().length < 8) {
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
+    } else {
+      const pwdReq = getRegisterPasswordRequirements(formData.password);
+      if (!pwdReq.allMet) {
+        newErrors.password = REGISTER_PASSWORD_REQUIREMENTS_ERROR;
+      }
     }
 
     if (!formData.name) {
@@ -99,6 +130,19 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
         paternalLastname: formData.paternalLastname.trim(),
         maternalLastname: formData.maternalLastname.trim(),
       };
+
+      useRegisterDraftStore.getState().saveAfterOtpSent({
+        phoneNumber,
+        registrationData,
+        formDraft: {
+          telefono: formData.telefono,
+          password: formData.password,
+          name: formData.name,
+          paternalLastname: formData.paternalLastname,
+          maternalLastname: formData.maternalLastname,
+        },
+        acceptedTerms,
+      });
 
       navigate(ROUTES.VALIDATE_OTP, {
         state: {
@@ -284,8 +328,11 @@ const RegisterForm = ({ onRegisterSuccess, onBack }) => {
                 )}
               </button>
             </div>
+            {!errors.password && (
+              <p className="mt-1.5 text-xs text-gray-600 leading-relaxed">{REGISTER_PASSWORD_HINT}</p>
+            )}
             {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              <p className="mt-1.5 text-xs text-red-600 leading-relaxed">{errors.password}</p>
             )}
           </div>
 

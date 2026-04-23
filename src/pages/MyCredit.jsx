@@ -7,6 +7,8 @@ import useCreditStore from '../stores/creditStore';
 import { ROUTES } from '../utils/routes';
 import { formatPriceMXN } from '../utils/format';
 import { parseCreditLineLimitAmount } from '../utils/creditUtils';
+import { isCreditLineBlocked, isRejectedCreditRequestStatus } from '../utils/creditLinePurchaseAccess';
+import BlockedCreditLineAccountCard from '../components/account/BlockedCreditLineAccountCard';
 import {
   HiOutlineCheckCircle,
   HiOutlineClock,
@@ -71,12 +73,14 @@ const MyCredit = () => {
     (r) => r.request_status && String(r.request_status).toLowerCase() === 'aprobado'
   );
   const hasApproved = lastCreditRequestResult?.approvedRequest === true || hasApprovedFromRequests;
+  const creditRequestRejectedFromLogin = isRejectedCreditRequestStatus(user?.creditRequest);
+  const hasApprovedEffective = hasApproved && !creditRequestRejectedFromLogin;
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-[3rem] md:pt-[5rem] pb-[10rem] md:pb-[15rem]">
-        {!hasApproved && (
+        {!hasApprovedEffective && (
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
               Mis solicitudes
@@ -108,7 +112,7 @@ const MyCredit = () => {
 
         {!loading && !error && (
           <>
-            {requests.length === 0 ? (
+            {requests.length === 0 && !creditRequestRejectedFromLogin ? (
               <div className="max-w-2xl space-y-8">
                 <section>
                   <p className="text-lg text-gray-600">
@@ -161,7 +165,40 @@ const MyCredit = () => {
                   </button>
                 </section>
               </div>
-            ) : hasApproved ? (
+            ) : hasApprovedEffective ? (
+              isCreditLineBlocked(user) ? (
+              <div className="space-y-8">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Mi línea de crédito</h1>
+                  <p className="text-gray-600">Consulta el estado de tu línea NexoPay.</p>
+                </div>
+                <BlockedCreditLineAccountCard />
+                {requests.length > 0 && (
+                  <section className="bg-gray-100/80 rounded-xl p-5 border border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-4">
+                      <HiOutlineDocumentText className="w-4 h-4" />
+                      Historial de solicitudes
+                    </h3>
+                    <ul className="space-y-3">
+                      {requests.map((req) => {
+                        const isApproved = req.request_status && String(req.request_status).toLowerCase() === 'aprobado';
+                        return (
+                          <li key={req.credit_line_request_id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                            <div>
+                              <p className="text-gray-700">{formatDate(req.created_at)}</p>
+                              <p className="text-gray-500">{req.name || 'Solicitud'}</p>
+                            </div>
+                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${isApproved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {isApproved ? 'Aprobado' : (req.request_status || 'En proceso')}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                )}
+              </div>
+              ) : (
               <div className="space-y-8">
                 <section className="text-center">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 mb-4 shadow-lg">
@@ -280,6 +317,7 @@ const MyCredit = () => {
                   </section>
                 )}
               </div>
+              )
             ) : (
               <>
                 <div className="bg-primary-50 border border-primary-200 rounded-xl p-6 mb-6">
@@ -312,7 +350,7 @@ const MyCredit = () => {
               </>
             )}
 
-            {!hasApproved && requests.length > 0 && (
+            {!hasApprovedEffective && requests.length > 0 && (
               <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
