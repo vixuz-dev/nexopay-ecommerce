@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { HiOutlineExclamationCircle, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineLockClosed, HiOutlineArrowPath, HiOutlineIdentification } from 'react-icons/hi2';
 import FileUploader from '../../common/FileUploader';
 import DocumentVerificationLoader from '../../common/DocumentVerificationLoader';
-import { useCreditForm } from '../../../stores/creditFormStore';
+import { useCreditForm, useCreditFormStore } from '../../../stores/creditFormStore';
 import useUserStore from '../../../stores/userStore';
 import { kycService } from '../../../api/services/kycService';
 import { fileToBase64 } from '../../../utils/imageUtils';
@@ -30,6 +30,37 @@ const buildKycContext = (formData, user) => {
     : undefined;
 
   return { fullName, address };
+};
+
+const normalizeCurp = (value) => String(value ?? '').trim().toUpperCase();
+
+/**
+ * Compara la CURP declarada en el paso de datos complementarios con la extraída por KYC.
+ * @returns {{ ok: true } | { ok: false, reason: 'missing_declared' | 'missing_kyc' | 'mismatch' }}
+ */
+const validateCurpAgainstDeclared = (formData, kycData) => {
+  const declared = normalizeCurp(formData?.emailCurp?.curp);
+  const fromDoc = normalizeCurp(kycData?.curp);
+  if (!declared) {
+    return { ok: false, reason: 'missing_declared' };
+  }
+  if (!fromDoc) {
+    return { ok: false, reason: 'missing_kyc' };
+  }
+  if (declared !== fromDoc) {
+    return { ok: false, reason: 'mismatch' };
+  }
+  return { ok: true };
+};
+
+const getCurpMismatchMessage = (reason) => {
+  if (reason === 'missing_declared') {
+    return 'No encontramos la CURP de tu solicitud. Regresa al paso de datos complementarios e ingrésala.';
+  }
+  if (reason === 'missing_kyc') {
+    return 'No pudimos leer la CURP en el documento. Asegúrate de que la imagen sea clara e intenta de nuevo.';
+  }
+  return 'La CURP del documento no coincide con la que ingresaste en el paso anterior. Verifica que sea correcta y vuelve a subir el documento.';
 };
 
 const OfficialIdStep = ({ setCustomNextHandler }) => {
@@ -71,6 +102,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
 
   const requiredPassportFields = [
     'documentType',
+    'curp',
     'issuingCountry',
     'documentNumber',
     'nationality',
@@ -215,19 +247,51 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
           });
         }
       } else {
-        updateFormData({
-          officialId: {
-            ...officialIdData,
-            passportFile: file,
-            passportUrl: imageUrl,
-            passportKycData: {
-              ...kycData,
-              position: 'passport'
-            },
-            passportValidated: true,
+        const latestFormData = useCreditFormStore.getState().formData;
+        const curpCheck = validateCurpAgainstDeclared(latestFormData, kycData);
+        if (!curpCheck.ok) {
+          const msg = getCurpMismatchMessage(curpCheck.reason);
+          const currentRetries = isRetry ? retryCountPassport + 1 : retryCountPassport;
+          if (currentRetries >= MAX_RETRIES) {
+            setProcessingErrorPassport(`${msg} Si el problema continúa, prueba con otra imagen más clara.`);
+            setRetryCountPassport(MAX_RETRIES);
+            updateFormData({
+              officialId: {
+                ...officialIdData,
+                passportFile: file,
+                passportUrl: imageUrl,
+                passportKycData: null,
+                passportValidated: false,
+              }
+            });
+          } else {
+            setProcessingErrorPassport(msg);
+            setRetryCountPassport(currentRetries);
+            updateFormData({
+              officialId: {
+                ...officialIdData,
+                passportFile: file,
+                passportUrl: imageUrl,
+                passportKycData: null,
+                passportValidated: false,
+              }
+            });
           }
-        });
-        setRetryCountPassport(0);
+        } else {
+          updateFormData({
+            officialId: {
+              ...officialIdData,
+              passportFile: file,
+              passportUrl: imageUrl,
+              passportKycData: {
+                ...kycData,
+                position: 'passport'
+              },
+              passportValidated: true,
+            }
+          });
+          setRetryCountPassport(0);
+        }
       }
     } catch (error) {
       console.error('Error procesando pasaporte:', error);
@@ -333,23 +397,55 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
           });
         }
       } else {
-        updateFormData({
-          officialId: {
-            ...officialIdData,
-            frontFile: file,
-            frontUrl: imageUrl,
-            frontKycData: {
-              ...kycData,
-              position: 'front'
-            },
-            frontValidated: true,
+        const latestFormData = useCreditFormStore.getState().formData;
+        const curpCheck = validateCurpAgainstDeclared(latestFormData, kycData);
+        if (!curpCheck.ok) {
+          const msg = getCurpMismatchMessage(curpCheck.reason);
+          const currentRetries = isRetry ? retryCountFront + 1 : retryCountFront;
+          if (currentRetries >= MAX_RETRIES) {
+            setProcessingErrorFront(`${msg} Si el problema continúa, prueba con otra imagen más clara.`);
+            setRetryCountFront(MAX_RETRIES);
+            updateFormData({
+              officialId: {
+                ...officialIdData,
+                frontFile: file,
+                frontUrl: imageUrl,
+                frontKycData: null,
+                frontValidated: false,
+              }
+            });
+          } else {
+            setProcessingErrorFront(msg);
+            setRetryCountFront(currentRetries);
+            updateFormData({
+              officialId: {
+                ...officialIdData,
+                frontFile: file,
+                frontUrl: imageUrl,
+                frontKycData: null,
+                frontValidated: false,
+              }
+            });
           }
-        });
-        setRetryCountFront(0);
-        setShowUnlockAnimation(true);
-        setTimeout(() => {
-          setShowUnlockAnimation(false);
-        }, 3000);
+        } else {
+          updateFormData({
+            officialId: {
+              ...officialIdData,
+              frontFile: file,
+              frontUrl: imageUrl,
+              frontKycData: {
+                ...kycData,
+                position: 'front'
+              },
+              frontValidated: true,
+            }
+          });
+          setRetryCountFront(0);
+          setShowUnlockAnimation(true);
+          setTimeout(() => {
+            setShowUnlockAnimation(false);
+          }, 3000);
+        }
       }
     } catch (error) {
       console.error('Error procesando documento frontal:', error);
@@ -713,7 +809,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
     return (
       <div>
         <div className="mb-6">
-          <h2 id="step-title-4" className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 id="step-title-5" className="text-2xl font-bold text-gray-900 mb-2">
             Identificación Oficial
           </h2>
           <p className="text-gray-600">
@@ -769,7 +865,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
       <div>
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 id="step-title-4" className="text-2xl font-bold text-gray-900">
+            <h2 id="step-title-5" className="text-2xl font-bold text-gray-900">
               Identificación Oficial - Pasaporte
             </h2>
             <button
@@ -927,7 +1023,7 @@ const OfficialIdStep = ({ setCustomNextHandler }) => {
     <div>
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h2 id="step-title-4" className="text-2xl font-bold text-gray-900">
+          <h2 id="step-title-5" className="text-2xl font-bold text-gray-900">
             Identificación Oficial - INE
           </h2>
           <button

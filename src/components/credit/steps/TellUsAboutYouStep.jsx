@@ -108,7 +108,7 @@ const TellUsAboutYouStep = ({ setCustomNextHandler }) => {
   return (
     <form onSubmit={handleSubmit(() => {})}>
       <div className="mb-6">
-        <h2 id="step-title-6" className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-7" className="text-2xl font-bold text-gray-900 mb-2">
           Conozcámonos mejor
         </h2>
         <p className="text-gray-600">

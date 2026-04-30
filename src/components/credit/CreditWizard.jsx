@@ -45,27 +45,27 @@ const steps = [
   },
   {
     id: 4,
+    title: 'Datos complementarios',
+    description: 'Correo y CURP',
+    component: EmailCurpStep
+  },
+  {
+    id: 5,
     title: 'Identificación Oficial',
     description: 'Documento de identidad',
     component: OfficialIdStep
   },
   {
-    id: 5,
+    id: 6,
     title: 'Referencias personales',
     description: 'Datos de referencias',
     component: PersonalReferencesStep
   },
   {
-    id: 6,
+    id: 7,
     title: 'Conozcámonos mejor',
     description: 'Preguntas rápidas',
     component: TellUsAboutYouStep
-  },
-  {
-    id: 7,
-    title: 'Datos complementarios',
-    description: 'Correo y CURP',
-    component: EmailCurpStep
   },
   {
     id: 8,
@@ -229,7 +229,7 @@ const CreditWizard = () => {
         message={emailErrorModal.message}
         onEdit={() => {
           setEmailErrorModal({ isOpen: false, message: '' });
-          goToStep(7);
+          goToStep(4);
         }}
         onClose={() => setEmailErrorModal({ isOpen: false, message: '' })}
       />

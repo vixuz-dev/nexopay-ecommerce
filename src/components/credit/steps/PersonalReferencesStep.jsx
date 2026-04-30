@@ -493,7 +493,7 @@ const PersonalReferencesStep = ({ setCustomNextHandler }) => {
   return (
     <div>
       <div className="mb-6">
-        <h2 id="step-title-5" className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 id="step-title-6" className="text-2xl font-bold text-gray-900 mb-2">
           Referencias personales
         </h2>
         <p className="text-gray-600">

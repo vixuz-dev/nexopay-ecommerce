@@ -67,7 +67,7 @@ const useCreditStore = create(
 
         if (!isCurrentStepValid) return;
 
-        if (currentStep === 5) {
+        if (currentStep === 6) {
           const referencesData = formData.personalReferences || {};
           const reference1 = referencesData.reference1 || {};
           const reference2 = referencesData.reference2 || {};
