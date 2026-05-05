@@ -75,14 +75,29 @@ export const mercadoPagoService = {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      const error = new Error('Respuesta inválida al obtener métodos de pago');
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    const statusMessage = data.status_Message ?? data.statusMessage;
 
     if (!response.ok) {
-      const error = new Error(data.message || data.statusMessage || 'Error al obtener los métodos de pago');
+      const error = new Error(statusMessage || data.message || 'Error al obtener los métodos de pago');
       error.statusCode = response.status;
       error.status = response.status;
-      error.statusMessage = data.statusMessage;
+      error.statusMessage = statusMessage;
       error.details = data.error || data.details;
+      throw error;
+    }
+
+    if (data.status === false) {
+      const error = new Error(statusMessage || 'Error al obtener los métodos de pago');
+      error.statusCode = response.status;
       throw error;
     }
 
@@ -112,20 +127,38 @@ export const mercadoPagoService = {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      const error = new Error('Respuesta inválida del servidor de pagos');
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    const statusMessage = data.status_Message ?? data.statusMessage;
 
     if (!response.ok) {
-      const error = new Error(data.message || data.statusMessage || 'Error al procesar el pago');
+      const error = new Error(statusMessage || data.message || 'Error al procesar el pago');
       error.statusCode = response.status;
       error.status = response.status;
-      error.statusMessage = data.statusMessage;
+      error.statusMessage = statusMessage;
       error.details = data.error || data.details;
+      throw error;
+    }
+
+    if (data.status === false) {
+      const error = new Error(statusMessage || 'Error al procesar el pago');
+      error.statusCode = response.status;
+      error.checkout_response = data.checkout_response;
+      error.status_detail = data.status_detail ?? data.statusDetail;
+      error.paymentStatus = data.status;
       throw error;
     }
 
     const result = data.body ?? data.data ?? data;
     const paymentBody = data?.payment?.body ?? result?.payment?.body ?? result;
-    const paymentStatus = paymentBody?.status ?? result?.payment?.status ?? result?.status;
+    const paymentStatus = paymentBody?.status ?? data?.payment?.status ?? result?.payment?.status ?? result?.status;
     const statusDetail = paymentBody?.status_detail ?? result?.payment?.status_detail ?? result?.status_detail;
 
     if (paymentStatus === 'rejected') {
@@ -133,19 +166,19 @@ export const mercadoPagoService = {
       const error = new Error(message);
       error.paymentStatus = paymentStatus;
       error.statusDetail = statusDetail;
-      error.paymentId = paymentBody?.payment_id ?? result?.payment_id ?? result?.payment?.id;
+      error.paymentId = paymentBody?.payment_id ?? result?.payment_id ?? result?.payment?.id ?? data?.payment?.mp_payment_id;
       throw error;
     }
 
     if (paymentStatus && paymentStatus !== 'approved' && paymentStatus !== 'pending' && paymentStatus !== 'in_process') {
       const error = new Error(
-        statusDetail ? getMercadoPagoErrorMessage(statusDetail) : (paymentBody?.status_Message ?? result?.status_Message ?? 'El pago no pudo completarse. Intenta de nuevo.')
+        statusDetail ? getMercadoPagoErrorMessage(statusDetail) : (statusMessage || 'El pago no pudo completarse. Intenta de nuevo.')
       );
       error.paymentStatus = paymentStatus;
       error.statusDetail = statusDetail;
       throw error;
     }
 
-    return result;
+    return data.body ?? data.data ?? data;
   },
 };

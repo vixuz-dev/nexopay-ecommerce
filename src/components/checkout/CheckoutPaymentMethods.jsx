@@ -8,12 +8,9 @@ import { TERMS_AND_CONDITIONS_URL } from '../../constants/app';
 import { CardPaymentForm } from './CardPaymentForm';
 
 export const CheckoutPaymentMethods = ({
-  paymentMethod,
-  onPaymentMethodChange,
-  paymentMethods,
-  visaLogo,
-  masterLogo,
-  showCardForm,
+  mpCardMethods,
+  selectedMpMethodId,
+  onSelectMpMethod,
   cardData,
   onCardDataChange,
   saveCard,
@@ -25,43 +22,48 @@ export const CheckoutPaymentMethods = ({
   initialPayment,
 }) => {
   const cardFormRef = useRef(null);
+  const showCardForm = mpCardMethods.length > 0;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <h3 className="font-semibold text-gray-900 mb-4">Método de Pago</h3>
 
       <div className="space-y-3 mb-6">
-        <label
-          className={`flex gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-            paymentMethod === 'card'
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-gray-200 hover:border-gray-300'
-          }`}
-        >
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="card"
-            checked={paymentMethod === 'card'}
-            onChange={(e) => onPaymentMethodChange(e.target.value)}
-            className="w-5 h-5 flex-shrink-0 mt-0.5 text-primary-600 focus:ring-primary-500"
-          />
-          <div className="flex-1 min-w-0">
-            <span className="font-medium text-gray-900 block">Tarjeta de crédito o débito</span>
-            <div className="flex gap-2 mt-2">
-              {visaLogo && <img src={visaLogo} alt="" className="h-7 w-10 object-contain" />}
-              {masterLogo && <img src={masterLogo} alt="" className="h-7 w-10 object-contain" />}
-            </div>
-          </div>
-        </label>
+        {mpCardMethods.map((pm) => {
+          const thumb = pm.thumbnail || pm.secure_thumbnail;
+          const isSelected = selectedMpMethodId === pm.id;
+          return (
+            <label
+              key={pm.id}
+              className={`flex gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                isSelected
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="mpCardMethod"
+                value={pm.id}
+                checked={isSelected}
+                onChange={() => onSelectMpMethod(pm.id)}
+                className="w-5 h-5 flex-shrink-0 mt-0.5 text-primary-600 focus:ring-primary-500"
+              />
+              <div className="flex-1 min-w-0 flex items-center gap-3">
+                <span className="font-medium text-gray-900">{pm.name}</span>
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="h-8 w-12 object-contain ml-auto shrink-0"
+                  />
+                ) : null}
+              </div>
+            </label>
+          );
+        })}
 
-        {/* OXXO - Oculto por ahora
-        {oxxoPm && (
-          ...
-        )}
-        */}
-
-        {paymentMethods.length === 0 && (
+        {mpCardMethods.length === 0 && (
           <div className="p-4 text-center text-gray-500 text-sm">
             Cargando métodos de pago...
           </div>
@@ -119,16 +121,16 @@ export const CheckoutPaymentMethods = ({
       <button
         type="button"
         onClick={async () => {
-          if (showCardForm && paymentMethod === 'card' && cardFormRef.current) {
+          if (showCardForm && cardFormRef.current) {
             const tokenResult = await cardFormRef.current.getToken();
             if (tokenResult) onCheckout(tokenResult);
           } else {
             onCheckout();
           }
         }}
-        disabled={!acceptedTerms || isProcessing}
+        disabled={!acceptedTerms || isProcessing || !selectedMpMethodId || mpCardMethods.length === 0}
         className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-          acceptedTerms && !isProcessing
+          acceptedTerms && !isProcessing && selectedMpMethodId && mpCardMethods.length > 0
             ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-md hover:shadow-lg'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
         }`}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -6,15 +6,12 @@ import { ROUTES, getProductDetailUrl } from '../utils/routes';
 import useCartStore from '../stores/cartStore';
 import useToastStore from '../stores/toastStore';
 import useGlobalLoaderStore from '../stores/globalLoaderStore';
-import usePreOrderStore from '../stores/preOrderStore';
 import { useCartApi } from '../hooks/useCartApi';
 import { useRemoveFromCart } from '../hooks/useRemoveFromCart';
 import { useUpdateCartQuantity } from '../hooks/useUpdateCartQuantity';
 import { useClearCart } from '../hooks/useClearCart';
 import useUserStore from '../stores/userStore';
 import { CHECKOUT_CONFIG, getShippingCost } from '../constants/checkoutConfig';
-import { orderService } from '../api/services/orderService';
-import { buildOrderPayload } from '../utils/orderPayloadBuilder';
 import {
   HiOutlineXMark,
   HiOutlineChevronLeft,
@@ -69,7 +66,6 @@ const Cart = () => {
   const addressesLoading = useAddressesStore((s) => s.isLoading);
   const fetchAddresses = useAddressesStore((s) => s.fetchAddresses);
   const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
-  const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
   const { removeFromCart } = useRemoveFromCart();
   const { updateQuantityInCart } = useUpdateCartQuantity();
   const { clearCart } = useClearCart();
@@ -232,36 +228,10 @@ const Cart = () => {
     }
 
     setIsProcessing(true);
-    showGlobalLoader('Creando tu orden…');
+    showGlobalLoader('Preparando tu pago…');
 
     try {
-      const payload = buildOrderPayload({
-        items,
-        totalAmount: subtotal,
-        deferralMonths,
-        deliveryAddress: selectedAddress,
-      });
-
-      const response = await orderService.createOrder(payload);
-
-      const orderData = response.order ?? response;
-      const numericOrderId = response.order_id ?? response.id ?? orderData.order_id ?? orderData.id ?? (typeof response.orderId === 'number' ? response.orderId : null);
-      const orderIdDisplay = response.orderId ?? response.order_id ?? response.id ?? orderData.orderId ?? orderData.order_id ?? orderData.id;
-
-      setPreOrder({
-        orderId: orderIdDisplay,
-        order_id: numericOrderId,
-        orderNumber: orderIdDisplay,
-        creditAmount: response.creditAmount,
-        total: response.total,
-        totalInitialPayment: response.totalInitialPayment,
-        payload,
-        createdAt: new Date().toISOString(),
-      });
-
       navigate(ROUTES.CHECKOUT, { state: { selectedAddressId } });
-    } catch (err) {
-      showToast(err?.message || 'Error al crear la orden. Intenta de nuevo.', 'error');
     } finally {
       hideGlobalLoader();
       setIsProcessing(false);

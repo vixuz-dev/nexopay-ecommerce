@@ -1,11 +1,11 @@
 /**
- * Builds the payload for create_order API
+ * Arma detailOrder, totales y dirección para checkout / mp_generate_payment (pago inicial).
  * @param {Object} params
  * @param {Array} params.items - Cart items
- * @param {number} params.totalAmount - Total purchase (subtotal + shipping)
+ * @param {number} params.totalAmount - Total compra (subtotal u objetivo equivalente)
  * @param {number} params.deferralMonths
  * @param {Object} params.deliveryAddress - Address from get_addresses (snake_case)
- * @returns {Object} - Payload for create_order
+ * @returns {Object} - { totalProductQuantity, total, deliveryAddress, detailOrder }
  */
 export const buildOrderPayload = ({ items, totalAmount, deferralMonths, deliveryAddress }) => {
   const totalProductQuantity = items.reduce((sum, item) => sum + item.quantity, 0);

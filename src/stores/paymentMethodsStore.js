@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { mercadoPagoService } from '../api/services/mercadoPagoService';
-import { MERCADO_PAGO_PAYMENT_METHOD_IDS } from '../constants/app';
+import {
+  MERCADO_PAGO_CHECKOUT_DEBIT_CARD_IDS,
+  MERCADO_PAGO_PAYMENT_METHOD_IDS,
+} from '../constants/app';
 
 const usePaymentMethodsStore = create(
   persist(
@@ -18,15 +21,14 @@ const usePaymentMethodsStore = create(
         set({ error: null, isLoading: true });
         try {
           const methods = await mercadoPagoService.getPaymentMethods();
+          const debitSet = new Set(MERCADO_PAGO_CHECKOUT_DEBIT_CARD_IDS);
           const filtered = (methods || [])
-            .filter((pm) => {
-              if (!MERCADO_PAGO_PAYMENT_METHOD_IDS.includes(pm.id)) return false;
-              if (pm.id === 'visa' || pm.id === 'master') {
-                return pm.payment_type_id === 'credit_card';
-              }
-              return true;
-            })
-            .sort((a, b) => MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(a.id) - MERCADO_PAGO_PAYMENT_METHOD_IDS.indexOf(b.id));
+            .filter((pm) => MERCADO_PAGO_PAYMENT_METHOD_IDS.includes(pm.id) && debitSet.has(pm.id))
+            .sort(
+              (a, b) =>
+                MERCADO_PAGO_CHECKOUT_DEBIT_CARD_IDS.indexOf(a.id) -
+                MERCADO_PAGO_CHECKOUT_DEBIT_CARD_IDS.indexOf(b.id)
+            );
           set({ paymentMethods: filtered, isLoaded: true, isLoading: false });
           return filtered;
         } catch (err) {
@@ -37,7 +39,7 @@ const usePaymentMethodsStore = create(
 
     }),
     {
-      name: 'payment-methods-storage',
+      name: 'payment-methods-storage-v2',
       partialize: (state) => ({
         paymentMethods: state.paymentMethods,
         isLoaded: state.isLoaded,

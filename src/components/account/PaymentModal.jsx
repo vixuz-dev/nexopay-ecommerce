@@ -8,7 +8,7 @@ import { buildMercadoPagoPaymentPayload } from '../../utils/mercadoPagoPayloadBu
 import { mercadoPagoService } from '../../api/services/mercadoPagoService';
 
 const PaymentModal = ({ isOpen, onClose, amount, onSuccess }) => {
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [selectedMpMethodId, setSelectedMpMethodId] = useState(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,16 +33,24 @@ const PaymentModal = ({ isOpen, onClose, amount, onSuccess }) => {
 
   useEffect(() => {
     if (!isOpen) {
+      setSelectedMpMethodId(null);
       setAcceptedTerms(false);
       setSaveCard(false);
       setPaymentError({ isOpen: false, message: '' });
     }
   }, [isOpen]);
 
-  const visaPm = paymentMethods.find((pm) => pm.id === 'visa' || pm.id === 'debvisa');
-  const masterPm = paymentMethods.find((pm) => pm.id === 'master' || pm.id === 'debmaster');
-  const visaLogo = visaPm?.secure_thumbnail || visaPm?.thumbnail;
-  const masterLogo = masterPm?.secure_thumbnail || masterPm?.thumbnail;
+  useEffect(() => {
+    if (!isOpen) return;
+    if (paymentMethods.length === 0) {
+      setSelectedMpMethodId(null);
+      return;
+    }
+    setSelectedMpMethodId((prev) => {
+      if (prev && paymentMethods.some((pm) => pm.id === prev)) return prev;
+      return paymentMethods[0].id;
+    });
+  }, [isOpen, paymentMethods]);
 
   const handleCardDataChange = (field, value) => {
     setCardData((prev) => ({ ...prev, [field]: value }));
@@ -70,17 +78,21 @@ const PaymentModal = ({ isOpen, onClose, amount, onSuccess }) => {
       return;
     }
 
+    const selectedPm = paymentMethods.find((pm) => pm.id === selectedMpMethodId);
+    if (!selectedPm) {
+      showToast('Selecciona un método de pago', 'error');
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
       const token = typeof cardTokenResult === 'string' ? cardTokenResult : cardTokenResult.token;
-      const paymentMethodId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_method_id ?? 'master') : 'master';
-      const paymentTypeId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_type_id ?? 'credit_card') : 'credit_card';
+      const paymentMethodId = selectedPm.id;
+      const paymentTypeId = selectedPm.payment_type_id;
 
       const payload = buildMercadoPagoPaymentPayload({
         clientId: user.client_id,
-        isInitialPayment: false,
-        orderId: null,
         transactionAmount: numericAmount,
         token,
         paymentMethodId,
@@ -141,15 +153,9 @@ const PaymentModal = ({ isOpen, onClose, amount, onSuccess }) => {
 
           <div className="flex-1 overflow-y-auto p-6">
             <CheckoutPaymentMethods
-              paymentMethod={paymentMethod}
-              onPaymentMethodChange={setPaymentMethod}
-              paymentMethods={paymentMethods}
-              visaLogo={visaLogo}
-              masterLogo={masterLogo}
-              oxxoLogo={null}
-              oxxoPm={null}
-              showCardForm={paymentMethod === 'card'}
-              showOxxoMessage={false}
+              mpCardMethods={paymentMethods}
+              selectedMpMethodId={selectedMpMethodId}
+              onSelectMpMethod={setSelectedMpMethodId}
               cardData={cardData}
               onCardDataChange={handleCardDataChange}
               saveCard={saveCard}

@@ -10,7 +10,10 @@ import useToastStore from '../stores/toastStore';
 import usePreOrderStore from '../stores/preOrderStore';
 import useUserStore from '../stores/userStore';
 import { isCreditLineBlocked } from '../utils/creditLinePurchaseAccess';
-import { buildMercadoPagoPaymentPayload } from '../utils/mercadoPagoPayloadBuilder';
+import {
+  buildInitialCheckoutMpPaymentPayload,
+} from '../utils/mercadoPagoPayloadBuilder';
+import { buildOrderPayload } from '../utils/orderPayloadBuilder';
 import { mercadoPagoService } from '../api/services/mercadoPagoService';
 import { getShippingCost } from '../constants/checkoutConfig';
 import useAddressesStore from '../stores/addressesStore';
@@ -34,7 +37,6 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const showToast = useToastStore((s) => s.showToast);
-  const preOrder = usePreOrderStore((s) => s.preOrder);
   const setPreOrder = usePreOrderStore((s) => s.setPreOrder);
   const user = useUserStore((s) => s.user);
   const isAuthenticated = !!user;
@@ -60,7 +62,7 @@ const Checkout = () => {
   const invalidateAddresses = useAddressesStore((s) => s.invalidateAddresses);
   const paymentMethods = usePaymentMethodsStore((s) => s.paymentMethods);
   const fetchPaymentMethods = usePaymentMethodsStore((s) => s.fetchPaymentMethods);
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [selectedMpMethodId, setSelectedMpMethodId] = useState(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,8 +82,21 @@ const Checkout = () => {
   }, [isAuthenticated, fetchCart]);
 
   useEffect(() => {
-    fetchPaymentMethods();
-  }, [fetchPaymentMethods]);
+    fetchPaymentMethods().catch(() => {
+      showToast('No se pudieron cargar los métodos de pago. Intenta de nuevo.', 'error');
+    });
+  }, [fetchPaymentMethods, showToast]);
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) {
+      setSelectedMpMethodId(null);
+      return;
+    }
+    setSelectedMpMethodId((prev) => {
+      if (prev && paymentMethods.some((pm) => pm.id === prev)) return prev;
+      return paymentMethods[0].id;
+    });
+  }, [paymentMethods]);
 
   useEffect(() => {
     fetchAddresses({ force: true });
@@ -182,11 +197,6 @@ const Checkout = () => {
       return;
     }
 
-    if (!preOrder) {
-      showToast('No hay orden creada. Regresa al carrito para proceder.', 'error');
-      return;
-    }
-
     const requiredAddressFields = ['name_received', 'phone_received', 'street', 'external_number', 'neighborhood', 'city', 'state', 'zip_code'];
     const missing = requiredAddressFields.filter((f) => !selectedAddress[f]?.trim());
     if (missing.length > 0) {
@@ -194,7 +204,13 @@ const Checkout = () => {
       return;
     }
 
-    const useCardPayment = paymentMethod === 'card' && cardTokenResult;
+    const selectedPm = paymentMethods.find((pm) => pm.id === selectedMpMethodId);
+    const useCardPayment = !!cardTokenResult && !!selectedPm;
+    if (cardTokenResult && !selectedPm) {
+      showToast('Selecciona un método de pago', 'error');
+      return;
+    }
+
     if (useCardPayment && !user?.client_id) {
       showToast('No se encontró la información del usuario. Inicia sesión nuevamente.', 'error');
       return;
@@ -205,33 +221,37 @@ const Checkout = () => {
       return;
     }
 
-    const numericOrderId = preOrder?.order_id ?? preOrder?.orderId;
-    const hasValidOrderId = numericOrderId != null && !Number.isNaN(Number(numericOrderId));
-    if (useCardPayment && !hasValidOrderId) {
-      showToast('No hay orden creada. Regresa al carrito para proceder.', 'error');
-      return;
-    }
-
     setIsProcessing(true);
+
+    let paymentResult = null;
 
     if (useCardPayment) {
       try {
         const token = typeof cardTokenResult === 'string' ? cardTokenResult : cardTokenResult.token;
-        const paymentMethodId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_method_id ?? 'master') : 'master';
-        const paymentTypeId = typeof cardTokenResult === 'object' ? (cardTokenResult.payment_type_id ?? 'credit_card') : 'credit_card';
+        const paymentMethodId = selectedPm.id;
+        const paymentTypeId = selectedPm.payment_type_id;
 
-        const payload = buildMercadoPagoPaymentPayload({
+        const orderPayload = buildOrderPayload({
+          items,
+          totalAmount: subtotal,
+          deferralMonths,
+          deliveryAddress: selectedAddress,
+        });
+
+        const totalInitialPaymentRounded = Math.round(initialPayment);
+
+        const payload = buildInitialCheckoutMpPaymentPayload({
           clientId: user.client_id,
-          isInitialPayment: true,
-          orderId: numericOrderId,
-          transactionAmount: preOrder.totalInitialPayment ?? initialPayment,
           token,
           paymentMethodId,
           paymentTypeId,
           payerEmail: user.email,
+          transactionAmount: totalInitialPaymentRounded,
+          totalInitialPayment: totalInitialPaymentRounded,
+          orderPayload,
         });
 
-        await mercadoPagoService.generatePayment(payload);
+        paymentResult = await mercadoPagoService.generatePayment(payload);
       } catch (err) {
         setPaymentError({
           isOpen: true,
@@ -259,11 +279,15 @@ const Checkout = () => {
       deferralMonths,
       paymentSchedule,
       orderDate: new Date(),
-      orderId: preOrder.orderId ?? preOrder.id,
-      orderNumber: preOrder.orderNumber ?? preOrder.order_id ?? `NXP-${Date.now().toString().slice(-8)}`,
+      orderId: paymentResult?.pre_order_id ?? paymentResult?.orderId ?? paymentResult?.order_id,
+      orderNumber:
+        paymentResult?.pre_order_id != null
+          ? `NXP-${paymentResult.pre_order_id}`
+          : `NXP-${Date.now().toString().slice(-8)}`,
     };
 
     clearCart();
+    setPreOrder(null);
 
     navigate(ROUTES.ORDER_CONFIRMATION, {
       state: { order: orderState },
@@ -275,15 +299,6 @@ const Checkout = () => {
   if (items.length === 0) {
     return null;
   }
-
-  const visaPm = paymentMethods.find((pm) => pm.id === 'visa' || pm.id === 'debvisa');
-  const masterPm = paymentMethods.find((pm) => pm.id === 'master' || pm.id === 'debmaster');
-  const oxxoPm = paymentMethods.find((pm) => pm.id === 'oxxo');
-  const visaLogo = visaPm?.secure_thumbnail || visaPm?.thumbnail;
-  const masterLogo = masterPm?.secure_thumbnail || masterPm?.thumbnail;
-  const oxxoLogo = oxxoPm?.secure_thumbnail || oxxoPm?.thumbnail;
-  const showCardForm = paymentMethod === 'card';
-  const showOxxoMessage = paymentMethod === 'oxxo';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -487,15 +502,9 @@ const Checkout = () => {
             )}
 
             <CheckoutPaymentMethods
-              paymentMethod={paymentMethod}
-              onPaymentMethodChange={setPaymentMethod}
-              paymentMethods={paymentMethods}
-              visaLogo={visaLogo}
-              masterLogo={masterLogo}
-              oxxoLogo={oxxoLogo}
-              oxxoPm={oxxoPm}
-              showCardForm={showCardForm}
-              showOxxoMessage={showOxxoMessage}
+              mpCardMethods={paymentMethods}
+              selectedMpMethodId={selectedMpMethodId}
+              onSelectMpMethod={setSelectedMpMethodId}
               cardData={cardData}
               onCardDataChange={handleCardDataChange}
               saveCard={saveCard}

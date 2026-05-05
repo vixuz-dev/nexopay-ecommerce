@@ -20,13 +20,11 @@ export const APP_CONFIG = {
 /** URL pública de términos y condiciones (sitio NexoPay). */
 export const TERMS_AND_CONDITIONS_URL = `${APP_CONFIG.WEBSITE}/terminos-condiciones`;
 
-export const MERCADO_PAGO_PAYMENT_METHOD_IDS = [
-  'visa',
-  'master',
-  'debvisa',
-  'debmaster',
-  'oxxo',
-];
+/** Query `payment_method_ids` para GET get-payment-methods-mp (incluye OXXO; la UI de tarjeta solo usa débito). */
+export const MERCADO_PAGO_PAYMENT_METHOD_IDS = ['debvisa', 'debmaster', 'oxxo'];
+
+/** Métodos de tarjeta mostrados en checkout y modal de abonos (id y payment_type_id vienen del API). */
+export const MERCADO_PAGO_CHECKOUT_DEBIT_CARD_IDS = ['debvisa', 'debmaster'];
 
 /** Valores de `typeVerification` para POST /otp/insert (API). */
 export const OTP_TYPE_VERIFICATION = {
